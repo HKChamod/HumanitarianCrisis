@@ -1,0 +1,10 @@
+{
+"SpaProxyServer": {
+"ServerUrl": "https://localhost:6821",
+"RedirectUrl": "",
+"LaunchCommand": "npm run dev",
+"WorkingDirectory": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\..\\humanitariancrisisapi.client",
+"MaxTimeoutInSeconds": "120",
+"KeepRunning": "false"
+}
+}

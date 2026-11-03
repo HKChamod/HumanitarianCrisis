@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

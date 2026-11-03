@@ -1,0 +1,6 @@
+@HumanitarianCrisisAPI.Server_HostAddress = http://localhost:5288
+
+GET {{HumanitarianCrisisAPI.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

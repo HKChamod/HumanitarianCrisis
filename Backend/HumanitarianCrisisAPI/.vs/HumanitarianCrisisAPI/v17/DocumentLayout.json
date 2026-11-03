@@ -1,0 +1,170 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\migrations\\20261102161922_initialcreate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\migrations\\20261102161922_initialcreate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\humanitariancrisisapi.server.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\humanitariancrisisapi.server.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\models\\userrole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|d:\\hiran\\sa project\\humanitariancrisis\\backend\\humanitariancrisisapi\\humanitariancrisisapi.server\\controllers\\databasecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{31408CE6-91AE-415F-99C7-04F1C89D8E97}|HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj|solutionrelative:humanitariancrisisapi.server\\controllers\\databasecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{fbcae063-e2c0-4ab1-a516-996ea3dafb72}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "20261102161922_InitialCreate.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Migrations\\20261102161922_InitialCreate.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Migrations\\20261102161922_InitialCreate.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Migrations\\20261102161922_InitialCreate.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Migrations\\20261102161922_InitialCreate.cs",
+              "ViewState": "AgIAAGcAAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T16:19:23.277Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\UserRole.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Models\\UserRole.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\UserRole.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Models\\UserRole.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T16:13:46.558Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Role.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\Role.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Models\\Role.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\Role.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Models\\Role.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T16:13:24.441Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\appsettings.json",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\appsettings.json",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\appsettings.json",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAABPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-11-02T14:42:55.502Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "User.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\User.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Models\\User.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Models\\User.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Models\\User.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAzwBYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T14:40:42.287Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Data\\ApplicationDbContext.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T14:42:08Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Program.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Program.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Program.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T14:45:01.234Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "HumanitarianCrisisAPI.Server.csproj",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\HumanitarianCrisisAPI.Server.csproj",
+              "ViewState": "AgIAABgAAAAAAAAAAAAAACUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-11-02T15:35:33.595Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "DatabaseController.cs",
+              "DocumentMoniker": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Controllers\\DatabaseController.cs",
+              "RelativeDocumentMoniker": "HumanitarianCrisisAPI.Server\\Controllers\\DatabaseController.cs",
+              "ToolTip": "D:\\Hiran\\SA project\\HumanitarianCrisis\\Backend\\HumanitarianCrisisAPI\\HumanitarianCrisisAPI.Server\\Controllers\\DatabaseController.cs",
+              "RelativeToolTip": "HumanitarianCrisisAPI.Server\\Controllers\\DatabaseController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-11-02T15:01:39.22Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
