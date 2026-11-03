@@ -1,1 +1,0 @@
-D:\Hiran\SA project\HumanitarianCrisis\Backend\HumanitarianCrisisAPI\humanitariancrisisapi.client\obj\Debug\humanitariancrisisapi.client.esproj.CoreCompileInputs.cache

@@ -1,0 +1,42 @@
+# Set default behavior to automatically handle line endings
+* text=auto
+
+# Visual Studio Solution files require CRLF
+*.sln text eol=crlf
+*.bat text eol=crlf
+
+# Shell scripts require LF
+*.sh text eol=lf
+
+# C# and .NET Source Files
+*.cs text diff=csharp
+*.csproj text
+*.sqlproj text
+*.props text
+*.targets text
+*.config text
+*.json text
+*.xml text
+*.sql text
+*.md text
+*.yml text
+*.yaml text
+
+# Binary Files
+*.dll binary
+*.exe binary
+*.pdb binary
+*.so binary
+*.dylib binary
+*.dacpac binary
+*.dbmdl binary
+*.jfm binary
+*.suo binary
+
+# Images and Media
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text

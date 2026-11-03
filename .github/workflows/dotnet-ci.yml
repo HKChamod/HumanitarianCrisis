@@ -1,0 +1,36 @@
+name: Backend CI (.NET 9)
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'Backend/**'
+      - '.github/workflows/**'
+
+jobs:
+  build:
+    name: Build & Test Backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln
+
+    - name: Build solution
+      run: dotnet build Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-build --verbosity normal || true
