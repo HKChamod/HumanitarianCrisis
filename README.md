@@ -104,3 +104,4 @@ Once running, access Swagger UI in your browser:
 
 ## 📄 License
 This project is developed for academic and humanitarian crisis management purposes.
+
