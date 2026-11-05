@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+
+using Microsoft.EntityFrameworkCore;
 using HumanitarianCrisisManagement.Domain.Entities;
-using System.Data;
+
+namespace HumanitarianCrisisManagement.Infrastructure.Data;
 
 public class ApplicationDbContext : DbContext
 {
@@ -17,4 +19,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(ApplicationDbContext).Assembly);
+    }
 }
