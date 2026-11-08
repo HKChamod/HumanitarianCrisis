@@ -17,7 +17,7 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -69,6 +69,171 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("CrisisEvents");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
+                {
+                    b.Property<int>("OrganizationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrganizationId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("RegistrationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("OrganizationId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("OrganizationType");
+
+                    b.HasIndex("RegistrationNumber")
+                        .IsUnique()
+                        .HasFilter("[RegistrationNumber] IS NOT NULL");
+
+                    b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.Property<int>("MembershipId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MembershipId"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MembershipStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MembershipId");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("MembershipStatus");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("UserId", "OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMemberships");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembershipRole", b =>
+                {
+                    b.Property<int>("MembershipRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MembershipRoleId"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AssignedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MembershipId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MembershipRoleId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("MembershipId", "OrganizationId");
+
+                    b.HasIndex("MembershipId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMembershipRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Property<int>("PermissionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PermissionName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("PermissionId");
+
+                    b.HasIndex("PermissionName")
+                        .IsUnique();
+
+                    b.ToTable("Permissions");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -76,6 +241,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsSystemDefined")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
@@ -85,9 +262,41 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasKey("RoleId");
 
                     b.HasIndex("RoleName")
+                        .IsUnique()
+                        .HasFilter("[OrganizationId] IS NULL");
+
+                    b.HasIndex("OrganizationId", "RoleName")
+                        .IsUnique()
+                        .HasFilter("[OrganizationId] IS NOT NULL");
+
+                    b.ToTable("Roles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Roles_SystemDefined_MustBeGlobal", "[IsSystemDefined] = 0 OR [OrganizationId] IS NULL");
+                        });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<int>("RolePermissionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RolePermissionId"));
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RolePermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.HasIndex("RoleId", "PermissionId")
                         .IsUnique();
 
-                    b.ToTable("Roles");
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
@@ -157,6 +366,88 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Organization", "Organization")
+                        .WithMany("Memberships")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "User")
+                        .WithMany("OrganizationMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembershipRole", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
+                        .WithMany("MembershipRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", "Membership")
+                        .WithMany("MembershipRoles")
+                        .HasForeignKey("MembershipId", "OrganizationId")
+                        .HasPrincipalKey("MembershipId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Membership");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Organization", "Organization")
+                        .WithMany("Roles")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
@@ -176,13 +467,36 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
+                {
+                    b.Navigation("Memberships");
+
+                    b.Navigation("Roles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.Navigation("MembershipRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
                 {
+                    b.Navigation("MembershipRoles");
+
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
                 {
+                    b.Navigation("OrganizationMemberships");
+
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
