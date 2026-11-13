@@ -22,6 +22,51 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.Property<int>("AreaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AreaId"));
+
+                    b.Property<string>("AreaName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AreaType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("ParentAreaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AreaId");
+
+                    b.HasIndex("AreaName");
+
+                    b.HasIndex("AreaType");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("[Code] IS NOT NULL");
+
+                    b.HasIndex("ParentAreaId");
+
+                    b.ToTable("Areas");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", b =>
                 {
                     b.Property<int>("CrisisId")
@@ -366,6 +411,16 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "ParentArea")
+                        .WithMany("ChildAreas")
+                        .HasForeignKey("ParentAreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentArea");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ApprovedByUser")
@@ -465,6 +520,11 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.Navigation("ChildAreas");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
