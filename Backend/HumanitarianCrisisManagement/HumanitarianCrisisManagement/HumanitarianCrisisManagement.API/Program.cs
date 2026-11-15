@@ -1,27 +1,32 @@
-﻿using Microsoft.EntityFrameworkCore;
-using HumanitarianCrisisManagement.Infrastructure.Data;
+
+using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Infrastructure Services
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "DefaultConnection connection string is not configured.");
 
+builder.Services.AddInfrastructure(connectionString);
+
+// API Services
 builder.Services.AddControllers();
-
-// Swagger / OpenAPI setup (Swashbuckle)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "HumanitarianCrisisManagement.API v1");
+        c.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "HumanitarianCrisisManagement.API v1");
     });
 }
 

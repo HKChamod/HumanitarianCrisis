@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HumanitarianCrisisManagement.Domain\HumanitarianCrisisManagement.Domain.csproj" />
+    <ProjectReference Include="..\HumanitarianCrisisManagement.Application\HumanitarianCrisisManagement.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 

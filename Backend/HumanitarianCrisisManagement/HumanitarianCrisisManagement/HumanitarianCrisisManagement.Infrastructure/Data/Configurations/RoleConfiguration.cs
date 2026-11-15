@@ -42,5 +42,57 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
             .WithMany(o => o.Roles)
             .HasForeignKey(r => r.OrganizationId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Seed initial system roles
+        builder.HasData(
+            new Role
+            {
+                RoleId = 1,
+                RoleName = "Citizen",
+                Description = "Registered public user",
+                OrganizationId = null,
+                IsSystemDefined = true
+            },
+            new Role
+            {
+                RoleId = 2,
+                RoleName = "Administrator",
+                Description = "System administrator",
+                OrganizationId = null,
+                IsSystemDefined = true
+            },
+            new Role
+            {
+                RoleId = 3,
+                RoleName = "CrisisManager",
+                Description = "Manages crisis events and operations",
+                OrganizationId = null,
+                IsSystemDefined = true
+            },
+            new Role
+            {
+                RoleId = 4,
+                RoleName = "Responder",
+                Description = "Emergency response personnel",
+                OrganizationId = null,
+                IsSystemDefined = true
+            },
+            new Role
+            {
+                RoleId = 5,
+                RoleName = "Donor",
+                Description = "Provides donations and resources",
+                OrganizationId = null,
+                IsSystemDefined = true
+            },
+            new Role
+            {
+                RoleId = 6,
+                RoleName = "Volunteer",
+                Description = "Provides voluntary assistance",
+                OrganizationId = null,
+                IsSystemDefined = true
+            }
+        );
     }
 }
