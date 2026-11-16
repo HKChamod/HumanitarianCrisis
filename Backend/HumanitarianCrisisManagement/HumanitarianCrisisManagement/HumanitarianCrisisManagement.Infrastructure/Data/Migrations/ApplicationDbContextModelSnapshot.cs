@@ -277,6 +277,146 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            PermissionId = 1,
+                            Description = "View user accounts",
+                            PermissionName = "Users.View"
+                        },
+                        new
+                        {
+                            PermissionId = 2,
+                            Description = "Manage user accounts",
+                            PermissionName = "Users.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 3,
+                            Description = "View organizations",
+                            PermissionName = "Organizations.View"
+                        },
+                        new
+                        {
+                            PermissionId = 4,
+                            Description = "Manage organizations",
+                            PermissionName = "Organizations.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 5,
+                            Description = "Approve organization membership requests",
+                            PermissionName = "Organizations.ApproveMembers"
+                        },
+                        new
+                        {
+                            PermissionId = 6,
+                            Description = "View crisis events",
+                            PermissionName = "CrisisEvents.View"
+                        },
+                        new
+                        {
+                            PermissionId = 7,
+                            Description = "Create crisis events",
+                            PermissionName = "CrisisEvents.Create"
+                        },
+                        new
+                        {
+                            PermissionId = 8,
+                            Description = "Update crisis events",
+                            PermissionName = "CrisisEvents.Update"
+                        },
+                        new
+                        {
+                            PermissionId = 9,
+                            Description = "Delete crisis events",
+                            PermissionName = "CrisisEvents.Delete"
+                        },
+                        new
+                        {
+                            PermissionId = 10,
+                            Description = "Manage crisis event operations",
+                            PermissionName = "CrisisEvents.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 11,
+                            Description = "View affected areas",
+                            PermissionName = "Areas.View"
+                        },
+                        new
+                        {
+                            PermissionId = 12,
+                            Description = "Manage affected areas",
+                            PermissionName = "Areas.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 13,
+                            Description = "View available resources",
+                            PermissionName = "Resources.View"
+                        },
+                        new
+                        {
+                            PermissionId = 14,
+                            Description = "Manage resource inventory",
+                            PermissionName = "Resources.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 15,
+                            Description = "Allocate resources to crisis operations",
+                            PermissionName = "Resources.Allocate"
+                        },
+                        new
+                        {
+                            PermissionId = 16,
+                            Description = "View donations",
+                            PermissionName = "Donations.View"
+                        },
+                        new
+                        {
+                            PermissionId = 17,
+                            Description = "Manage donations",
+                            PermissionName = "Donations.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 18,
+                            Description = "Verify donation records",
+                            PermissionName = "Donations.Verify"
+                        },
+                        new
+                        {
+                            PermissionId = 19,
+                            Description = "View volunteer information",
+                            PermissionName = "Volunteers.View"
+                        },
+                        new
+                        {
+                            PermissionId = 20,
+                            Description = "Manage volunteer information",
+                            PermissionName = "Volunteers.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 21,
+                            Description = "Approve volunteer applications",
+                            PermissionName = "Volunteers.Approve"
+                        },
+                        new
+                        {
+                            PermissionId = 22,
+                            Description = "View system reports",
+                            PermissionName = "Reports.View"
+                        },
+                        new
+                        {
+                            PermissionId = 23,
+                            Description = "Generate system reports",
+                            PermissionName = "Reports.Generate"
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
@@ -318,6 +458,50 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_Roles_SystemDefined_MustBeGlobal", "[IsSystemDefined] = 0 OR [OrganizationId] IS NULL");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = 1,
+                            Description = "Registered public user",
+                            IsSystemDefined = true,
+                            RoleName = "Citizen"
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            Description = "System administrator",
+                            IsSystemDefined = true,
+                            RoleName = "Administrator"
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            Description = "Manages crisis events and operations",
+                            IsSystemDefined = true,
+                            RoleName = "CrisisManager"
+                        },
+                        new
+                        {
+                            RoleId = 4,
+                            Description = "Emergency response personnel",
+                            IsSystemDefined = true,
+                            RoleName = "Responder"
+                        },
+                        new
+                        {
+                            RoleId = 5,
+                            Description = "Provides donations and resources",
+                            IsSystemDefined = true,
+                            RoleName = "Donor"
+                        },
+                        new
+                        {
+                            RoleId = 6,
+                            Description = "Provides voluntary assistance",
+                            IsSystemDefined = true,
+                            RoleName = "Volunteer"
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.RolePermission", b =>
@@ -342,6 +526,290 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("RolePermissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RolePermissionId = 1,
+                            PermissionId = 1,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 2,
+                            PermissionId = 2,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 3,
+                            PermissionId = 3,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 4,
+                            PermissionId = 4,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 5,
+                            PermissionId = 5,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 6,
+                            PermissionId = 6,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 7,
+                            PermissionId = 7,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 8,
+                            PermissionId = 8,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 9,
+                            PermissionId = 9,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 10,
+                            PermissionId = 10,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 11,
+                            PermissionId = 11,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 12,
+                            PermissionId = 12,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 13,
+                            PermissionId = 13,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 14,
+                            PermissionId = 14,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 15,
+                            PermissionId = 15,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 16,
+                            PermissionId = 16,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 17,
+                            PermissionId = 17,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 18,
+                            PermissionId = 18,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 19,
+                            PermissionId = 19,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 20,
+                            PermissionId = 20,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 21,
+                            PermissionId = 21,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 22,
+                            PermissionId = 22,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 23,
+                            PermissionId = 23,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 24,
+                            PermissionId = 6,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 25,
+                            PermissionId = 11,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 26,
+                            PermissionId = 3,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 27,
+                            PermissionId = 4,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 28,
+                            PermissionId = 5,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 29,
+                            PermissionId = 6,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 30,
+                            PermissionId = 7,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 31,
+                            PermissionId = 8,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 32,
+                            PermissionId = 9,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 33,
+                            PermissionId = 10,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 34,
+                            PermissionId = 11,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 35,
+                            PermissionId = 12,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 36,
+                            PermissionId = 13,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 37,
+                            PermissionId = 14,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 38,
+                            PermissionId = 15,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 39,
+                            PermissionId = 6,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 40,
+                            PermissionId = 11,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 41,
+                            PermissionId = 13,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 42,
+                            PermissionId = 15,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 43,
+                            PermissionId = 16,
+                            RoleId = 5
+                        },
+                        new
+                        {
+                            RolePermissionId = 44,
+                            PermissionId = 17,
+                            RoleId = 5
+                        },
+                        new
+                        {
+                            RolePermissionId = 45,
+                            PermissionId = 6,
+                            RoleId = 6
+                        },
+                        new
+                        {
+                            RolePermissionId = 46,
+                            PermissionId = 11,
+                            RoleId = 6
+                        },
+                        new
+                        {
+                            RolePermissionId = 47,
+                            PermissionId = 19,
+                            RoleId = 6
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
