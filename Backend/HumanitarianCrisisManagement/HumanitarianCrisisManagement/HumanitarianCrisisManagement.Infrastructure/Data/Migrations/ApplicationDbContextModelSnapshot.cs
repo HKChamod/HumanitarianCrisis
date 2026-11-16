@@ -17,10 +17,55 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.Property<int>("AreaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AreaId"));
+
+                    b.Property<string>("AreaName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AreaType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int?>("ParentAreaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AreaId");
+
+                    b.HasIndex("AreaName");
+
+                    b.HasIndex("AreaType");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("[Code] IS NOT NULL");
+
+                    b.HasIndex("ParentAreaId");
+
+                    b.ToTable("Areas");
+                });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", b =>
                 {
@@ -69,6 +114,311 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("CrisisEvents");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
+                {
+                    b.Property<int>("OrganizationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrganizationId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("RegistrationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("OrganizationId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("OrganizationType");
+
+                    b.HasIndex("RegistrationNumber")
+                        .IsUnique()
+                        .HasFilter("[RegistrationNumber] IS NOT NULL");
+
+                    b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.Property<int>("MembershipId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MembershipId"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MembershipStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MembershipId");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("MembershipStatus");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("UserId", "OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMemberships");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembershipRole", b =>
+                {
+                    b.Property<int>("MembershipRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MembershipRoleId"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AssignedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MembershipId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("MembershipRoleId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("MembershipId", "OrganizationId");
+
+                    b.HasIndex("MembershipId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMembershipRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Property<int>("PermissionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PermissionName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("PermissionId");
+
+                    b.HasIndex("PermissionName")
+                        .IsUnique();
+
+                    b.ToTable("Permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            PermissionId = 1,
+                            Description = "View user accounts",
+                            PermissionName = "Users.View"
+                        },
+                        new
+                        {
+                            PermissionId = 2,
+                            Description = "Manage user accounts",
+                            PermissionName = "Users.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 3,
+                            Description = "View organizations",
+                            PermissionName = "Organizations.View"
+                        },
+                        new
+                        {
+                            PermissionId = 4,
+                            Description = "Manage organizations",
+                            PermissionName = "Organizations.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 5,
+                            Description = "Approve organization membership requests",
+                            PermissionName = "Organizations.ApproveMembers"
+                        },
+                        new
+                        {
+                            PermissionId = 6,
+                            Description = "View crisis events",
+                            PermissionName = "CrisisEvents.View"
+                        },
+                        new
+                        {
+                            PermissionId = 7,
+                            Description = "Create crisis events",
+                            PermissionName = "CrisisEvents.Create"
+                        },
+                        new
+                        {
+                            PermissionId = 8,
+                            Description = "Update crisis events",
+                            PermissionName = "CrisisEvents.Update"
+                        },
+                        new
+                        {
+                            PermissionId = 9,
+                            Description = "Delete crisis events",
+                            PermissionName = "CrisisEvents.Delete"
+                        },
+                        new
+                        {
+                            PermissionId = 10,
+                            Description = "Manage crisis event operations",
+                            PermissionName = "CrisisEvents.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 11,
+                            Description = "View affected areas",
+                            PermissionName = "Areas.View"
+                        },
+                        new
+                        {
+                            PermissionId = 12,
+                            Description = "Manage affected areas",
+                            PermissionName = "Areas.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 13,
+                            Description = "View available resources",
+                            PermissionName = "Resources.View"
+                        },
+                        new
+                        {
+                            PermissionId = 14,
+                            Description = "Manage resource inventory",
+                            PermissionName = "Resources.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 15,
+                            Description = "Allocate resources to crisis operations",
+                            PermissionName = "Resources.Allocate"
+                        },
+                        new
+                        {
+                            PermissionId = 16,
+                            Description = "View donations",
+                            PermissionName = "Donations.View"
+                        },
+                        new
+                        {
+                            PermissionId = 17,
+                            Description = "Manage donations",
+                            PermissionName = "Donations.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 18,
+                            Description = "Verify donation records",
+                            PermissionName = "Donations.Verify"
+                        },
+                        new
+                        {
+                            PermissionId = 19,
+                            Description = "View volunteer information",
+                            PermissionName = "Volunteers.View"
+                        },
+                        new
+                        {
+                            PermissionId = 20,
+                            Description = "Manage volunteer information",
+                            PermissionName = "Volunteers.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 21,
+                            Description = "Approve volunteer applications",
+                            PermissionName = "Volunteers.Approve"
+                        },
+                        new
+                        {
+                            PermissionId = 22,
+                            Description = "View system reports",
+                            PermissionName = "Reports.View"
+                        },
+                        new
+                        {
+                            PermissionId = 23,
+                            Description = "Generate system reports",
+                            PermissionName = "Reports.Generate"
+                        });
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -76,6 +426,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsSystemDefined")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RoleName")
                         .IsRequired()
@@ -85,9 +447,369 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasKey("RoleId");
 
                     b.HasIndex("RoleName")
+                        .IsUnique()
+                        .HasFilter("[OrganizationId] IS NULL");
+
+                    b.HasIndex("OrganizationId", "RoleName")
+                        .IsUnique()
+                        .HasFilter("[OrganizationId] IS NOT NULL");
+
+                    b.ToTable("Roles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Roles_SystemDefined_MustBeGlobal", "[IsSystemDefined] = 0 OR [OrganizationId] IS NULL");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = 1,
+                            Description = "Registered public user",
+                            IsSystemDefined = true,
+                            RoleName = "Citizen"
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            Description = "System administrator",
+                            IsSystemDefined = true,
+                            RoleName = "Administrator"
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            Description = "Manages crisis events and operations",
+                            IsSystemDefined = true,
+                            RoleName = "CrisisManager"
+                        },
+                        new
+                        {
+                            RoleId = 4,
+                            Description = "Emergency response personnel",
+                            IsSystemDefined = true,
+                            RoleName = "Responder"
+                        },
+                        new
+                        {
+                            RoleId = 5,
+                            Description = "Provides donations and resources",
+                            IsSystemDefined = true,
+                            RoleName = "Donor"
+                        },
+                        new
+                        {
+                            RoleId = 6,
+                            Description = "Provides voluntary assistance",
+                            IsSystemDefined = true,
+                            RoleName = "Volunteer"
+                        });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<int>("RolePermissionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RolePermissionId"));
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RolePermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.HasIndex("RoleId", "PermissionId")
                         .IsUnique();
 
-                    b.ToTable("Roles");
+                    b.ToTable("RolePermissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RolePermissionId = 1,
+                            PermissionId = 1,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 2,
+                            PermissionId = 2,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 3,
+                            PermissionId = 3,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 4,
+                            PermissionId = 4,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 5,
+                            PermissionId = 5,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 6,
+                            PermissionId = 6,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 7,
+                            PermissionId = 7,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 8,
+                            PermissionId = 8,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 9,
+                            PermissionId = 9,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 10,
+                            PermissionId = 10,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 11,
+                            PermissionId = 11,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 12,
+                            PermissionId = 12,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 13,
+                            PermissionId = 13,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 14,
+                            PermissionId = 14,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 15,
+                            PermissionId = 15,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 16,
+                            PermissionId = 16,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 17,
+                            PermissionId = 17,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 18,
+                            PermissionId = 18,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 19,
+                            PermissionId = 19,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 20,
+                            PermissionId = 20,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 21,
+                            PermissionId = 21,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 22,
+                            PermissionId = 22,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 23,
+                            PermissionId = 23,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 24,
+                            PermissionId = 6,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 25,
+                            PermissionId = 11,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 26,
+                            PermissionId = 3,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 27,
+                            PermissionId = 4,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 28,
+                            PermissionId = 5,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 29,
+                            PermissionId = 6,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 30,
+                            PermissionId = 7,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 31,
+                            PermissionId = 8,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 32,
+                            PermissionId = 9,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 33,
+                            PermissionId = 10,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 34,
+                            PermissionId = 11,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 35,
+                            PermissionId = 12,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 36,
+                            PermissionId = 13,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 37,
+                            PermissionId = 14,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 38,
+                            PermissionId = 15,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 39,
+                            PermissionId = 6,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 40,
+                            PermissionId = 11,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 41,
+                            PermissionId = 13,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 42,
+                            PermissionId = 15,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 43,
+                            PermissionId = 16,
+                            RoleId = 5
+                        },
+                        new
+                        {
+                            RolePermissionId = 44,
+                            PermissionId = 17,
+                            RoleId = 5
+                        },
+                        new
+                        {
+                            RolePermissionId = 45,
+                            PermissionId = 6,
+                            RoleId = 6
+                        },
+                        new
+                        {
+                            RolePermissionId = 46,
+                            PermissionId = 11,
+                            RoleId = 6
+                        },
+                        new
+                        {
+                            RolePermissionId = 47,
+                            PermissionId = 19,
+                            RoleId = 6
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
@@ -157,6 +879,98 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "ParentArea")
+                        .WithMany("ChildAreas")
+                        .HasForeignKey("ParentAreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentArea");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Organization", "Organization")
+                        .WithMany("Memberships")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "User")
+                        .WithMany("OrganizationMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembershipRole", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
+                        .WithMany("MembershipRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", "Membership")
+                        .WithMany("MembershipRoles")
+                        .HasForeignKey("MembershipId", "OrganizationId")
+                        .HasPrincipalKey("MembershipId", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Membership");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Organization", "Organization")
+                        .WithMany("Roles")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
@@ -176,13 +990,41 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
+                {
+                    b.Navigation("ChildAreas");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
+                {
+                    b.Navigation("Memberships");
+
+                    b.Navigation("Roles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
+                {
+                    b.Navigation("MembershipRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
                 {
+                    b.Navigation("MembershipRoles");
+
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
                 {
+                    b.Navigation("OrganizationMemberships");
+
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618

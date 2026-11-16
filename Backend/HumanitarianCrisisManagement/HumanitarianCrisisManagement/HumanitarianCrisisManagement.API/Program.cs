@@ -1,32 +1,176 @@
-﻿using Microsoft.EntityFrameworkCore;
-using HumanitarianCrisisManagement.Infrastructure.Data;
+
+using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using HumanitarianCrisisManagement.API.Exceptions;
+using System.Security.Claims;
+using HumanitarianCrisisManagement.API.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Infrastructure Services
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "DefaultConnection connection string is not configured.");
 
+builder.Services.AddInfrastructure(connectionString);
+
+// JWT Configuration
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "JWT signing key is not configured.");
+
+var keyBytes = Convert.FromBase64String(jwtKey);
+
+if (keyBytes.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must contain at least 32 bytes.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException(
+        "JWT issuer is not configured.");
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException(
+        "JWT audience is not configured.");
+
+var permissionNames = new[]
+{
+    "Users.View",
+    "Users.Manage",
+
+    "Organizations.View",
+    "Organizations.Manage",
+    "Organizations.ApproveMembers",
+
+    "CrisisEvents.View",
+    "CrisisEvents.Create",
+    "CrisisEvents.Update",
+    "CrisisEvents.Delete",
+    "CrisisEvents.Manage",
+
+    "Areas.View",
+    "Areas.Manage",
+
+    "Resources.View",
+    "Resources.Manage",
+    "Resources.Allocate",
+
+    "Donations.View",
+    "Donations.Manage",
+    "Donations.Verify",
+
+    "Volunteers.View",
+    "Volunteers.Manage",
+    "Volunteers.Approve",
+
+    "Reports.View",
+    "Reports.Generate"
+};
+
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in permissionNames)
+    {
+        options.AddPolicy(permission, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+
+            policy.AddRequirements(
+                new PermissionRequirement(permission));
+        });
+    }
+});
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30),
+
+            RoleClaimType = ClaimTypes.Role
+        };
+    });
+
+// Global Exception Handling
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+// Permission-Based Authorization
+builder.Services.AddScoped<
+    IAuthorizationHandler,
+    PermissionAuthorizationHandler>();
+
+
+
+// API Services
 builder.Services.AddControllers();
-
-// Swagger / OpenAPI setup (Swashbuckle)
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter your JWT access token."
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "HumanitarianCrisisManagement.API v1");
+        c.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "HumanitarianCrisisManagement.API v1");
     });
 }
 
 app.UseHttpsRedirection();
 
+app.UseExceptionHandler();
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

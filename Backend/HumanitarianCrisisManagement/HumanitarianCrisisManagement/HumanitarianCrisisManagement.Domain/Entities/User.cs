@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -28,5 +28,10 @@ namespace HumanitarianCrisisManagement.Domain.Entities
         // Navigation property
         public ICollection<UserRole> UserRoles { get; set; }
             = new List<UserRole>();
+
+        public ICollection<OrganizationMembership> OrganizationMemberships { get; set; }
+    = new List<OrganizationMembership>();
+
+
     }
 }
