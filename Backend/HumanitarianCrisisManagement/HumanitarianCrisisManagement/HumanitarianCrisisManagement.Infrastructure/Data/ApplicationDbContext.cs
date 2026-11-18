@@ -29,7 +29,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
     public DbSet<Area> Areas => Set<Area>();
 
-   
+    public DbSet<Resource> Resources => Set<Resource>();
+
+    public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
