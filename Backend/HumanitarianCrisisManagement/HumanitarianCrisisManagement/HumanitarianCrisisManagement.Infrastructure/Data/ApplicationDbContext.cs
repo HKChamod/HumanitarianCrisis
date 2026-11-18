@@ -30,7 +30,10 @@ public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
 public DbSet<Area> Areas => Set<Area>();
 public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
 
-   
+    public DbSet<Resource> Resources => Set<Resource>();
+
+    public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
