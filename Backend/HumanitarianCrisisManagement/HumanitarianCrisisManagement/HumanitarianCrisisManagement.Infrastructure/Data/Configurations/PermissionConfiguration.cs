@@ -52,7 +52,20 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
             new Permission { PermissionId = 21, PermissionName = "Volunteers.Approve", Description = "Approve volunteer applications" },
 
             new Permission { PermissionId = 22, PermissionName = "Reports.View", Description = "View system reports" },
-            new Permission { PermissionId = 23, PermissionName = "Reports.Generate", Description = "Generate system reports" }
+            new Permission { PermissionId = 23, PermissionName = "Reports.Generate", Description = "Generate system reports" },
+            new Permission
+            {
+                PermissionId = 24,
+                PermissionName = "CitizenRequests.View",
+                Description = "View citizen assistance requests"
+            },
+
+new Permission
+{
+    PermissionId = 25,
+    PermissionName = "CitizenRequests.Manage",
+    Description = "Manage citizen request status and processing"
+}
         );
     }
 }
