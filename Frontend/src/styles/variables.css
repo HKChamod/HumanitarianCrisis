@@ -1,0 +1,83 @@
+/* 
+ * Humanitarian Crisis Management System (HCMS) - Calm Trust Design Tokens
+ * 
+ * Primary Palette (Strictly matching user's reference image):
+ * - Deep teal: #0F766E
+ * - Light mint background: #F0FDFA
+ * - Dark slate text: #0F172A
+ * - Urgent action amber: #F59E0B
+ */
+
+:root {
+  /* Brand Primary - Deep Teal */
+  --color-primary: #0F766E;
+  --color-primary-hover: #115E59;
+  --color-primary-dark: #134E4A;
+  --color-primary-light: #CCFBF1;
+  --color-primary-subtle: #E6FFFA;
+
+  /* Background - Light Mint & Surfaces */
+  --color-mint-bg: #F0FDFA;
+  --color-bg-base: #FFFFFF;
+  --color-surface-subtle: #F8FAFC;
+  --color-surface-mint: #F0FDFA;
+  --color-surface-card: #FFFFFF;
+
+  /* Typography - Dark Slate */
+  --color-slate-900: #0F172A;
+  --color-slate-800: #1E293B;
+  --color-slate-700: #334155;
+  --color-slate-600: #475569;
+  --color-slate-500: #64748B;
+  --color-slate-400: #94A3B8;
+  --color-slate-300: #CBD5E1;
+  --color-slate-200: #E2E8F0;
+  --color-slate-100: #F1F5F9;
+
+  --color-text-main: var(--color-slate-900);
+  --color-text-secondary: var(--color-slate-700);
+  --color-text-muted: var(--color-slate-500);
+  --color-text-inverse: #FFFFFF;
+
+  /* Urgent Action & Alerts - Amber */
+  --color-amber: #F59E0B;
+  --color-amber-hover: #D97706;
+  --color-amber-dark: #B45309;
+  --color-amber-light: #FEF3C7;
+  --color-amber-border: #FDE68A;
+
+  /* Emergency Critical - Red */
+  --color-red: #DC2626;
+  --color-red-light: #FEE2E2;
+  --color-red-border: #FECACA;
+  --color-red-dark: #991B1B;
+
+  /* Safe / Verified - Green */
+  --color-green: #10B981;
+  --color-green-light: #D1FAE5;
+  --color-green-border: #A7F3D0;
+  --color-green-dark: #065F46;
+
+  /* Borders & Shadows */
+  --border-subtle: 1px solid var(--color-slate-200);
+  --border-mint: 1px solid #CCFBF1;
+  --border-card: 1px solid #E2E8F0;
+
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Container */
+  --container-max: 1280px;
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+}

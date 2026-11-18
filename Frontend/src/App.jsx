@@ -1,122 +1,74 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { LanguageProvider } from './context/LanguageContext';
+import { PublicLayout } from './components/layout/PublicLayout';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Public Portal Pages (PUB-01 to PUB-14)
+import { LandingPage } from './features/public/pages/LandingPage';
+import { AboutUsPage } from './features/public/pages/AboutUsPage';
+import { ActiveCrisesPage } from './features/public/pages/ActiveCrisesPage';
+import { CrisisDetailsPage } from './features/public/pages/CrisisDetailsPage';
+import { CrisisMapPage } from './features/public/pages/CrisisMapPage';
+import { EmergencyAssistancePage } from './features/public/pages/EmergencyAssistancePage';
+import { TrackRequestPage } from './features/public/pages/TrackRequestPage';
+import { ShelterFinderPage } from './features/public/pages/ShelterFinderPage';
+import { VolunteerRegistrationPage } from './features/public/pages/VolunteerRegistrationPage';
+import { DonationInfoPage } from './features/public/pages/DonationInfoPage';
+import { ContactEmergencyPage } from './features/public/pages/ContactEmergencyPage';
 
+// Auth Pages
+import { LoginPage } from './features/auth/pages/LoginPage';
+import { RegisterPage } from './features/auth/pages/RegisterPage';
+import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
+
+// Import CSS Design System
+import './styles/variables.css';
+import './styles/base.css';
+import './styles/layout.css';
+import './styles/components.css';
+import './styles/pages.css';
+import './styles/forms.css';
+
+function NotFoundPage() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <div style={{ padding: '6rem 1rem', textAlign: 'center' }}>
+      <h1 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>404</h1>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 1rem' }}>Page Not Found</h2>
+      <p style={{ color: 'var(--color-slate-600)', marginBottom: '1.5rem' }}>
+        The emergency resource or page you are looking for does not exist.
+      </p>
+      <Link to="/" className="btn btn-primary">
+        Return to Public Portal
+      </Link>
+    </div>
+  );
 }
 
-export default App
+export function App() {
+  return (
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route index element={<LandingPage />} />
+            <Route path="about" element={<AboutUsPage />} />
+            <Route path="crises" element={<ActiveCrisesPage />} />
+            <Route path="crises/:id" element={<CrisisDetailsPage />} />
+            <Route path="map" element={<CrisisMapPage />} />
+            <Route path="request-help" element={<EmergencyAssistancePage />} />
+            <Route path="track" element={<TrackRequestPage />} />
+            <Route path="shelters" element={<ShelterFinderPage />} />
+            <Route path="volunteer" element={<VolunteerRegistrationPage />} />
+            <Route path="donations" element={<DonationInfoPage />} />
+            <Route path="contact" element={<ContactEmergencyPage />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="register" element={<RegisterPage />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
+  );
+}
+
+export default App;
