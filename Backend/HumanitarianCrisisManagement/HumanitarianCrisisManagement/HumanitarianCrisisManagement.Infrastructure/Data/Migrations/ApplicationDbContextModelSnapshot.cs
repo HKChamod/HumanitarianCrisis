@@ -67,6 +67,87 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("Areas");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CrisisId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<int>("PeopleCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UrgencyLevel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Medium");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CrisisId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UrgencyLevel");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CitizenRequests");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", b =>
                 {
                     b.Property<int>("CrisisId")
@@ -416,6 +497,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 23,
                             Description = "Generate system reports",
                             PermissionName = "Reports.Generate"
+                        },
+                        new
+                        {
+                            PermissionId = 24,
+                            Description = "View citizen assistance requests",
+                            PermissionName = "CitizenRequests.View"
+                        },
+                        new
+                        {
+                            PermissionId = 25,
+                            Description = "Manage citizen request status and processing",
+                            PermissionName = "CitizenRequests.Manage"
                         });
                 });
 
@@ -809,6 +902,42 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 47,
                             PermissionId = 19,
                             RoleId = 6
+                        },
+                        new
+                        {
+                            RolePermissionId = 48,
+                            PermissionId = 24,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 49,
+                            PermissionId = 25,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 50,
+                            PermissionId = 24,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 51,
+                            PermissionId = 25,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 52,
+                            PermissionId = 24,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 53,
+                            PermissionId = 25,
+                            RoleId = 4
                         });
                 });
 
@@ -887,6 +1016,32 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ParentArea");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "Area")
+                        .WithMany("CitizenRequests")
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "CrisisEvent")
+                        .WithMany("CitizenRequests")
+                        .HasForeignKey("CrisisId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "User")
+                        .WithMany("CitizenRequests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Area");
+
+                    b.Navigation("CrisisEvent");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
@@ -993,6 +1148,13 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
                 {
                     b.Navigation("ChildAreas");
+
+                    b.Navigation("CitizenRequests");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", b =>
+                {
+                    b.Navigation("CitizenRequests");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
@@ -1023,6 +1185,8 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
                 {
+                    b.Navigation("CitizenRequests");
+
                     b.Navigation("OrganizationMemberships");
 
                     b.Navigation("UserRoles");
