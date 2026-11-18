@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HumanitarianCrisisManagement.Domain.Entities
 {
@@ -23,7 +20,8 @@ namespace HumanitarianCrisisManagement.Domain.Entities
         public DateTime StartDate { get; set; }
 
         public string Status { get; set; } = "Active";
+
+        public ICollection<CitizenRequest> CitizenRequests { get; set; }
+            = new List<CitizenRequest>();
     }
-    public ICollection<CitizenRequest> CitizenRequests { get; set; }
-    = new List<CitizenRequest>();
-    }
+}

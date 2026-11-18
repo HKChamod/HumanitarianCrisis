@@ -87,7 +87,21 @@ public class RolePermissionConfiguration
             // Volunteer
             new RolePermission { RolePermissionId = 45, RoleId = 6, PermissionId = 6 },
             new RolePermission { RolePermissionId = 46, RoleId = 6, PermissionId = 11 },
-            new RolePermission { RolePermissionId = 47, RoleId = 6, PermissionId = 19 }
+            new RolePermission { RolePermissionId = 47, RoleId = 6, PermissionId = 19 },
+
+// Citizen Request Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 48, RoleId = 2, PermissionId = 24 },
+new RolePermission { RolePermissionId = 49, RoleId = 2, PermissionId = 25 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 50, RoleId = 3, PermissionId = 24 },
+new RolePermission { RolePermissionId = 51, RoleId = 3, PermissionId = 25 },
+
+// Responder
+new RolePermission { RolePermissionId = 52, RoleId = 4, PermissionId = 24 },
+new RolePermission { RolePermissionId = 53, RoleId = 4, PermissionId = 25 }
         );
     }
 }
