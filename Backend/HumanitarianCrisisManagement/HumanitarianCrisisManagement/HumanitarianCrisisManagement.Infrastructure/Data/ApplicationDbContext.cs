@@ -26,8 +26,9 @@ public class ApplicationDbContext : DbContext
         => Set<OrganizationMembershipRole>();
 
     // Crisis Management
-    public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
-    public DbSet<Area> Areas => Set<Area>();
+public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
+public DbSet<Area> Areas => Set<Area>();
+public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
 
    
 
