@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -24,4 +24,6 @@ namespace HumanitarianCrisisManagement.Domain.Entities
 
         public string Status { get; set; } = "Active";
     }
-}
+    public ICollection<CitizenRequest> CitizenRequests { get; set; }
+    = new List<CitizenRequest>();
+    }
