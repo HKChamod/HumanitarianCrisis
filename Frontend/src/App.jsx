@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
+import { AuthProvider } from './app/providers/AuthProvider';
 import { PublicLayout } from './components/layout/PublicLayout';
+import { renderAdminRoutes } from './app/adminRoutes';
 
 // Public Portal Pages (PUB-01 to PUB-14)
 import { LandingPage } from './features/public/pages/LandingPage';
@@ -20,7 +22,8 @@ import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
 
-// Import CSS Design System
+// Import CSS Design System & Tailwind
+import './styles/tailwind.css';
 import './styles/variables.css';
 import './styles/base.css';
 import './styles/layout.css';
@@ -46,27 +49,33 @@ function NotFoundPage() {
 export function App() {
   return (
     <LanguageProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<PublicLayout />}>
-            <Route index element={<LandingPage />} />
-            <Route path="about" element={<AboutUsPage />} />
-            <Route path="crises" element={<ActiveCrisesPage />} />
-            <Route path="crises/:id" element={<CrisisDetailsPage />} />
-            <Route path="map" element={<CrisisMapPage />} />
-            <Route path="request-help" element={<EmergencyAssistancePage />} />
-            <Route path="track" element={<TrackRequestPage />} />
-            <Route path="shelters" element={<ShelterFinderPage />} />
-            <Route path="volunteer" element={<VolunteerRegistrationPage />} />
-            <Route path="donations" element={<DonationInfoPage />} />
-            <Route path="contact" element={<ContactEmergencyPage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Central Administration Portal (/admin/*) */}
+            {renderAdminRoutes()}
+
+            {/* Public Portal (PUB-01 to PUB-14) */}
+            <Route element={<PublicLayout />}>
+              <Route index element={<LandingPage />} />
+              <Route path="about" element={<AboutUsPage />} />
+              <Route path="crises" element={<ActiveCrisesPage />} />
+              <Route path="crises/:id" element={<CrisisDetailsPage />} />
+              <Route path="map" element={<CrisisMapPage />} />
+              <Route path="request-help" element={<EmergencyAssistancePage />} />
+              <Route path="track" element={<TrackRequestPage />} />
+              <Route path="shelters" element={<ShelterFinderPage />} />
+              <Route path="volunteer" element={<VolunteerRegistrationPage />} />
+              <Route path="donations" element={<DonationInfoPage />} />
+              <Route path="contact" element={<ContactEmergencyPage />} />
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </LanguageProvider>
   );
 }
