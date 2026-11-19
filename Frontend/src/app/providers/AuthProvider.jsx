@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { USE_MOCK_API } from '../../services/api/axiosClient';
+import { authService } from '../../services/api/adminServices';
 
 const DEMO_PROFILES = {
   central_admin: {
@@ -91,6 +92,38 @@ export function AuthProvider({ children }) {
     setUser(profile);
   };
 
+  const loginWithCredentials = async (email, password) => {
+    if (USE_MOCK_API) {
+      loginAsDemoRole('central_admin');
+      return DEMO_PROFILES.central_admin;
+    }
+    const authRes = await authService.login(email, password);
+    if (authRes?.accessToken) {
+      localStorage.setItem('hcms_access_token', authRes.accessToken);
+    }
+    const me = await authService.getMe();
+    const fullName = me?.fullName || authRes?.fullName || email;
+    const initials = fullName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0].toUpperCase())
+      .join('');
+    const sessionUser = {
+      id: String(me?.userId ?? authRes?.userId ?? ''),
+      fullName,
+      email: me?.email || authRes?.email || email,
+      role: me?.roles?.[0] || 'Administrator',
+      roles: me?.roles || ['Administrator'],
+      permissions: me?.permissions || DEMO_PROFILES.central_admin.permissions,
+      avatarInitials: initials || 'AD',
+      isDemoSession: false,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
+    setUser(sessionUser);
+    return sessionUser;
+  };
+
   const logout = () => {
     localStorage.removeItem('hcms_access_token');
     localStorage.removeItem(STORAGE_KEY);
@@ -103,6 +136,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       isMockAuth: USE_MOCK_API,
       loginAsDemoRole,
+      loginWithCredentials,
       logout,
       hasPermission: (permission) => {
         if (!permission) return true;

@@ -1,5 +1,13 @@
 import { axiosClient, USE_MOCK_API } from './axiosClient';
 import {
+  mapCrisisCreateToApi,
+  mapCrisisFromApi,
+  mapOrganizationFromApi,
+  mapRequestFromApi,
+  mapResourceCreateToApi,
+  mapResourceFromApi,
+} from './backendMappers';
+import {
   MOCK_AI_RECOMMENDATIONS,
   MOCK_ASSISTANCE_REQUESTS,
   MOCK_AUDIT_LOGS,
@@ -78,12 +86,24 @@ function recordAudit(actorName, action, module, recordRef, details) {
   ];
 }
 
+export const authService = {
+  isMock: USE_MOCK_API,
+  async login(email, password) {
+    const res = await axiosClient.post('/auth/login', { email, password });
+    return res.data;
+  },
+  async getMe() {
+    const res = await axiosClient.get('/auth/me');
+    return res.data;
+  },
+};
+
 export const crisisService = {
   isMock: USE_MOCK_API,
   async list() {
     if (!USE_MOCK_API) {
       const res = await axiosClient.get('/crisisevents');
-      return res.data;
+      return (Array.isArray(res.data) ? res.data : []).map(mapCrisisFromApi);
     }
     await delay();
     return [...crisisStore];
@@ -91,15 +111,15 @@ export const crisisService = {
   async getById(id) {
     if (!USE_MOCK_API) {
       const res = await axiosClient.get(`/crisisevents/${id}`);
-      return res.data;
+      return mapCrisisFromApi(res.data);
     }
     await delay(100);
     return crisisStore.find((c) => c.id === id);
   },
   async create(payload) {
     if (!USE_MOCK_API) {
-      const res = await axiosClient.post('/crisisevents', payload);
-      return res.data;
+      const res = await axiosClient.post('/crisisevents', mapCrisisCreateToApi(payload));
+      return mapCrisisFromApi(res.data);
     }
     await delay();
     const created = {
@@ -122,8 +142,8 @@ export const crisisService = {
   },
   async update(id, payload) {
     if (!USE_MOCK_API) {
-      const res = await axiosClient.put(`/crisisevents/${id}`, payload);
-      return res.data;
+      const res = await axiosClient.put(`/crisisevents/${id}`, mapCrisisCreateToApi(payload));
+      return mapCrisisFromApi(res.data);
     }
     await delay();
     crisisStore = crisisStore.map((c) => (c.id === id ? { ...c, ...payload } : c));
@@ -136,7 +156,7 @@ export const crisisService = {
   async updateStatus(id, status) {
     if (!USE_MOCK_API) {
       const res = await axiosClient.patch(`/crisisevents/${id}/status`, { status });
-      return res.data;
+      return mapCrisisFromApi(res.data);
     }
     await delay();
     crisisStore = crisisStore.map((c) => (c.id === id ? { ...c, status } : c));
@@ -159,7 +179,7 @@ export const assistanceRequestService = {
   async list() {
     if (!USE_MOCK_API) {
       const res = await axiosClient.get('/citizenrequests');
-      return res.data;
+      return (Array.isArray(res.data) ? res.data : []).map(mapRequestFromApi);
     }
     await delay();
     return [...requestStore];
@@ -205,7 +225,7 @@ export const organizationService = {
   async list() {
     if (!USE_MOCK_API) {
       const res = await axiosClient.get('/organizations');
-      return res.data;
+      return (Array.isArray(res.data) ? res.data : []).map(mapOrganizationFromApi);
     }
     await delay();
     return [...orgStore];
@@ -287,12 +307,16 @@ export const resourceService = {
   async list() {
     if (!USE_MOCK_API) {
       const res = await axiosClient.get('/resources');
-      return res.data;
+      return (Array.isArray(res.data) ? res.data : []).map(mapResourceFromApi);
     }
     await delay();
     return [...resourceStore];
   },
   async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/resources', mapResourceCreateToApi(payload));
+      return mapResourceFromApi(res.data);
+    }
     await delay();
     const created = {
       ...payload,
