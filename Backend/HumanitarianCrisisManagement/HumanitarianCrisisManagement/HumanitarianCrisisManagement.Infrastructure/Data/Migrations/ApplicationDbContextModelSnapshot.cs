@@ -512,6 +512,57 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Resource", b =>
+                {
+                    b.Property<int>("ResourceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ResourceId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPerishable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ResourceCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ResourceName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("UnitOfMeasure")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("ResourceId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("ResourceCategory");
+
+                    b.HasIndex("ResourceName");
+
+                    b.ToTable("Resources", (string)null);
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
                 {
                     b.Property<int>("RoleId")
