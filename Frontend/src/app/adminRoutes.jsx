@@ -1,9 +1,79 @@
+import { Suspense, lazy } from 'react';
 import { Route } from 'react-router-dom';
 import { AdminLayout } from '../components/layout/AdminLayout';
 import { ProtectedAdminRoute } from './providers/AuthProvider';
-import { AdminDashboardPage } from '../features/dashboard/pages/AdminDashboardPage';
-import { UnauthorizedPage } from '../features/auth/pages/UnauthorizedPage';
-import { ModulePlaceholderPage } from '../components/common/ModulePlaceholderPage';
+import { LoadingState } from '../components/common/States';
+
+// Lazy-loaded Central Administration Portal pages for clean bundle code-splitting
+const AdminDashboardPage = lazy(() =>
+  import('../features/dashboard/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
+);
+const UnauthorizedPage = lazy(() =>
+  import('../features/auth/pages/UnauthorizedPage').then((m) => ({ default: m.UnauthorizedPage }))
+);
+const CrisisEventsPage = lazy(() =>
+  import('../features/crises/pages/CrisisEventsPage').then((m) => ({ default: m.CrisisEventsPage }))
+);
+const CreateCrisisEventPage = lazy(() =>
+  import('../features/crises/pages/CreateCrisisEventPage').then((m) => ({ default: m.CreateCrisisEventPage }))
+);
+const AdminCrisisMapPage = lazy(() =>
+  import('../features/crises/pages/AdminCrisisMapPage').then((m) => ({ default: m.AdminCrisisMapPage }))
+);
+const AssistanceRequestsPage = lazy(() =>
+  import('../features/assistance-requests/pages/AssistanceRequestsPage').then((m) => ({ default: m.AssistanceRequestsPage }))
+);
+const OrganizationsPage = lazy(() =>
+  import('../features/organizations/pages/OrganizationsPage').then((m) => ({ default: m.OrganizationsPage }))
+);
+const UsersPage = lazy(() =>
+  import('../features/users/pages/UsersPage').then((m) => ({ default: m.UsersPage }))
+);
+const RolesPage = lazy(() =>
+  import('../features/roles/pages/RolesPage').then((m) => ({ default: m.RolesPage }))
+);
+const PermissionsPage = lazy(() =>
+  import('../features/permissions/pages/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))
+);
+const ResourceInventoryPage = lazy(() =>
+  import('../features/resources/pages/ResourceInventoryPage').then((m) => ({ default: m.ResourceInventoryPage }))
+);
+const ResourceAllocationPage = lazy(() =>
+  import('../features/resources/pages/ResourceAllocationPage').then((m) => ({ default: m.ResourceAllocationPage }))
+);
+const SheltersPage = lazy(() =>
+  import('../features/shelters/pages/SheltersPage').then((m) => ({ default: m.SheltersPage }))
+);
+const VolunteersPage = lazy(() =>
+  import('../features/volunteers/pages/VolunteersPage').then((m) => ({ default: m.VolunteersPage }))
+);
+const DonationsPage = lazy(() =>
+  import('../features/donations/pages/DonationsPage').then((m) => ({ default: m.DonationsPage }))
+);
+const AiDecisionSupportPage = lazy(() =>
+  import('../features/ai-decision-support/pages/AiDecisionSupportPage').then((m) => ({ default: m.AiDecisionSupportPage }))
+);
+const ReportsPage = lazy(() =>
+  import('../features/reports/pages/ReportsPage').then((m) => ({ default: m.ReportsPage }))
+);
+const NotificationsPage = lazy(() =>
+  import('../features/notifications/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage }))
+);
+const AuditLogsPage = lazy(() =>
+  import('../features/audit-logs/pages/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage }))
+);
+const SystemSettingsPage = lazy(() =>
+  import('../features/settings/pages/SystemSettingsPage').then((m) => ({ default: m.SystemSettingsPage }))
+);
+
+function withSuspense(element, requiredPermission) {
+  const wrapped = <Suspense fallback={<LoadingState message="Loading module..." />}>{element}</Suspense>;
+  return requiredPermission ? (
+    <ProtectedAdminRoute requiredPermission={requiredPermission}>{wrapped}</ProtectedAdminRoute>
+  ) : (
+    wrapped
+  );
+}
 
 export function renderAdminRoutes() {
   return (
@@ -15,263 +85,62 @@ export function renderAdminRoutes() {
         </ProtectedAdminRoute>
       }
     >
-      {/* Phase 2: ADM-01 Central Administration Dashboard */}
-      <Route index element={<AdminDashboardPage />} />
-      <Route path="unauthorized" element={<UnauthorizedPage />} />
+      {/* ADM-01: Central Administration Dashboard */}
+      <Route index element={withSuspense(<AdminDashboardPage />)} />
+      <Route path="unauthorized" element={withSuspense(<UnauthorizedPage />)} />
 
-      {/* Phase 3: Core Administration */}
-      <Route
-        path="crises"
-        element={
-          <ProtectedAdminRoute requiredPermission="CrisisEvents.View">
-            <ModulePlaceholderPage code="ADM-02" title="Crisis Events Management" description="Manage national crisis events, severity levels, affected areas, and lifecycle status." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="crises/active"
-        element={
-          <ProtectedAdminRoute requiredPermission="CrisisEvents.View">
-            <ModulePlaceholderPage code="ADM-02" title="Active Crisis Events" description="Filter and monitor currently active and monitoring crisis events." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="crises/create"
-        element={
-          <ProtectedAdminRoute requiredPermission="CrisisEvents.Create">
-            <ModulePlaceholderPage code="ADM-02" title="Create Crisis Event" description="Declare a new crisis event with cascading Sri Lankan geographic hierarchy." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="crises/map"
-        element={
-          <ProtectedAdminRoute requiredPermission="CrisisEvents.View">
-            <ModulePlaceholderPage code="ADM-03" title="Live Crisis Map" description="Interactive full-screen Sri Lanka crisis map with severity markers and filters." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="requests"
-        element={
-          <ProtectedAdminRoute requiredPermission="CitizenRequests.View">
-            <ModulePlaceholderPage code="ADM-04" title="Citizen Assistance Requests" description="Review, verify, approve, reject, and assign incoming citizen assistance requests." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="requests/pending"
-        element={
-          <ProtectedAdminRoute requiredPermission="CitizenRequests.View">
-            <ModulePlaceholderPage code="ADM-04" title="Pending Assistance Requests" description="Triage requests awaiting central verification and approval." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="requests/approved"
-        element={
-          <ProtectedAdminRoute requiredPermission="CitizenRequests.View">
-            <ModulePlaceholderPage code="ADM-04" title="Approved Assistance Requests" description="Track approved and assigned assistance requests in progress." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="requests/rejected"
-        element={
-          <ProtectedAdminRoute requiredPermission="CitizenRequests.View">
-            <ModulePlaceholderPage code="ADM-04" title="Rejected Assistance Requests" description="Review rejected requests and their verification notes." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="organizations"
-        element={
-          <ProtectedAdminRoute requiredPermission="Organizations.View">
-            <ModulePlaceholderPage code="ADM-05" title="Organization Management" description="Manage registered partner NGOs, government departments, and hospitals." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="organizations/applications"
-        element={
-          <ProtectedAdminRoute requiredPermission="Organizations.Manage">
-            <ModulePlaceholderPage code="ADM-05" title="Organization Applications" description="Approve or reject pending partner organization applications." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="organizations/memberships"
-        element={
-          <ProtectedAdminRoute requiredPermission="Organizations.View">
-            <ModulePlaceholderPage code="ADM-05" title="Organization Memberships" description="Inspect organization memberships and scoped roles." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="users"
-        element={
-          <ProtectedAdminRoute requiredPermission="Users.Manage">
-            <ModulePlaceholderPage code="ADM-06" title="User Management" description="Manage system users, activation status, and assigned system roles." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="roles"
-        element={
-          <ProtectedAdminRoute requiredPermission="Roles.Manage">
-            <ModulePlaceholderPage code="ADM-07" title="Role Management" description="Create and configure RBAC system roles and their permissions." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="permissions"
-        element={
-          <ProtectedAdminRoute requiredPermission="Permissions.View">
-            <ModulePlaceholderPage code="ADM-08" title="Permission Management" description="Inspect permission categories and role-permission mappings." phase="Phase 3" />
-          </ProtectedAdminRoute>
-        }
-      />
+      {/* ADM-02 & ADM-03: Crisis Management */}
+      <Route path="crises" element={withSuspense(<CrisisEventsPage />, 'CrisisEvents.View')} />
+      <Route path="crises/active" element={withSuspense(<CrisisEventsPage initialStatusFilter="Active" />, 'CrisisEvents.View')} />
+      <Route path="crises/create" element={withSuspense(<CreateCrisisEventPage />, 'CrisisEvents.Create')} />
+      <Route path="crises/map" element={withSuspense(<AdminCrisisMapPage />, 'CrisisEvents.View')} />
 
-      {/* Phase 4: Operational Modules */}
-      <Route
-        path="resources/inventory"
-        element={
-          <ProtectedAdminRoute requiredPermission="Resources.View">
-            <ModulePlaceholderPage code="ADM-09" title="Resource Inventory" description="Monitor national stock balances, warehouses, conditions, and low-stock alerts." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="resources/allocations"
-        element={
-          <ProtectedAdminRoute requiredPermission="Resources.View">
-            <ModulePlaceholderPage code="ADM-10" title="Resource Allocation" description="Create and track resource allocations to crises, shelters, and organizations." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="resources/requests"
-        element={
-          <ProtectedAdminRoute requiredPermission="Resources.View">
-            <ModulePlaceholderPage code="ADM-10" title="Resource Requests" description="Review inter-organization and district resource supply requests." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="shelters"
-        element={
-          <ProtectedAdminRoute requiredPermission="Shelters.View">
-            <ModulePlaceholderPage code="ADM-11" title="Shelter Management" description="Manage emergency shelters, capacities, facilities, and operating status." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="shelters/occupancy"
-        element={
-          <ProtectedAdminRoute requiredPermission="Shelters.View">
-            <ModulePlaceholderPage code="ADM-11" title="Shelter Occupancy" description="Monitor live shelter occupancy percentages and overflow warnings." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="volunteers"
-        element={
-          <ProtectedAdminRoute requiredPermission="Volunteers.View">
-            <ModulePlaceholderPage code="ADM-12" title="Volunteer Management" description="View registered volunteers, skills, verification status, and availability." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="volunteers/assignments"
-        element={
-          <ProtectedAdminRoute requiredPermission="Volunteers.View">
-            <ModulePlaceholderPage code="ADM-13" title="Volunteer Assignments" description="Assign verified volunteers to active crisis events and track task status." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="donations"
-        element={
-          <ProtectedAdminRoute requiredPermission="Donations.View">
-            <ModulePlaceholderPage code="ADM-14" title="Donation Management" description="Track monetary pledges, donated goods, verification, and distribution." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="donations/campaigns"
-        element={
-          <ProtectedAdminRoute requiredPermission="Donations.View">
-            <ModulePlaceholderPage code="ADM-14" title="Donation Campaigns" description="Manage active emergency relief donation campaigns." phase="Phase 4" />
-          </ProtectedAdminRoute>
-        }
-      />
+      {/* ADM-04: Citizen Assistance Requests */}
+      <Route path="requests" element={withSuspense(<AssistanceRequestsPage />, 'CitizenRequests.View')} />
+      <Route path="requests/pending" element={withSuspense(<AssistanceRequestsPage initialStatusFilter="Pending" />, 'CitizenRequests.View')} />
+      <Route path="requests/approved" element={withSuspense(<AssistanceRequestsPage initialStatusFilter="Approved" />, 'CitizenRequests.View')} />
+      <Route path="requests/rejected" element={withSuspense(<AssistanceRequestsPage initialStatusFilter="Rejected" />, 'CitizenRequests.View')} />
 
-      {/* Phase 5: Intelligence & Reporting */}
-      <Route
-        path="ai"
-        element={
-          <ProtectedAdminRoute requiredPermission="AI.Review">
-            <ModulePlaceholderPage code="ADM-15" title="AI Decision Support Overview" description="Overview of advisory AI analyses and recommendations pending human review." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="ai/recommendations"
-        element={
-          <ProtectedAdminRoute requiredPermission="AI.Review">
-            <ModulePlaceholderPage code="ADM-16" title="AI Recommendations" description="Review supporting evidence and record authorized human accept/reject/modify decisions." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="ai/analytics"
-        element={
-          <ProtectedAdminRoute requiredPermission="AI.Review">
-            <ModulePlaceholderPage code="ADM-15" title="Predictions and Analytics" description="Review crisis forecasts and anomaly alerts with provenance metadata." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="reports"
-        element={
-          <ProtectedAdminRoute requiredPermission="Reports.Read">
-            <ModulePlaceholderPage code="ADM-17" title="Reports & Analytics" description="Generate filtered operational reports across crises, requests, resources, shelters, volunteers, and donations." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="reports/analytics"
-        element={
-          <ProtectedAdminRoute requiredPermission="Reports.Read">
-            <ModulePlaceholderPage code="ADM-17" title="Analytics Dashboard" description="Cross-module operational trends and exportable summaries." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="notifications"
-        element={
-          <ProtectedAdminRoute requiredPermission="Notifications.View">
-            <ModulePlaceholderPage code="ADM-18" title="Notifications Center" description="Filter, inspect, and mark operational notifications as read." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="audit-logs"
-        element={
-          <ProtectedAdminRoute requiredPermission="AuditLogs.Read">
-            <ModulePlaceholderPage code="ADM-19" title="Audit Logs" description="Search immutable administrative activity logs by actor, module, and timestamp." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="settings"
-        element={
-          <ProtectedAdminRoute requiredPermission="Settings.Manage">
-            <ModulePlaceholderPage code="ADM-20" title="System Settings" description="Configure general, notification, localization, and administrative settings." phase="Phase 5" />
-          </ProtectedAdminRoute>
-        }
-      />
+      {/* ADM-05: Organization Management */}
+      <Route path="organizations" element={withSuspense(<OrganizationsPage mode="all" />, 'Organizations.View')} />
+      <Route path="organizations/applications" element={withSuspense(<OrganizationsPage mode="applications" />, 'Organizations.Manage')} />
+      <Route path="organizations/memberships" element={withSuspense(<OrganizationsPage mode="memberships" />, 'Organizations.View')} />
+
+      {/* ADM-06, ADM-07, ADM-08: User & Access Management */}
+      <Route path="users" element={withSuspense(<UsersPage />, 'Users.Manage')} />
+      <Route path="roles" element={withSuspense(<RolesPage />, 'Roles.Manage')} />
+      <Route path="permissions" element={withSuspense(<PermissionsPage />, 'Permissions.View')} />
+
+      {/* ADM-09 & ADM-10: Resource Management */}
+      <Route path="resources/inventory" element={withSuspense(<ResourceInventoryPage />, 'Resources.View')} />
+      <Route path="resources/allocations" element={withSuspense(<ResourceAllocationPage mode="allocations" />, 'Resources.View')} />
+      <Route path="resources/requests" element={withSuspense(<ResourceAllocationPage mode="requests" />, 'Resources.View')} />
+
+      {/* ADM-11: Shelter Management */}
+      <Route path="shelters" element={withSuspense(<SheltersPage mode="all" />, 'Shelters.View')} />
+      <Route path="shelters/occupancy" element={withSuspense(<SheltersPage mode="occupancy" />, 'Shelters.View')} />
+
+      {/* ADM-12 & ADM-13: Volunteer Management */}
+      <Route path="volunteers" element={withSuspense(<VolunteersPage mode="volunteers" />, 'Volunteers.View')} />
+      <Route path="volunteers/assignments" element={withSuspense(<VolunteersPage mode="assignments" />, 'Volunteers.View')} />
+
+      {/* ADM-14: Donation Management */}
+      <Route path="donations" element={withSuspense(<DonationsPage mode="donations" />, 'Donations.View')} />
+      <Route path="donations/campaigns" element={withSuspense(<DonationsPage mode="campaigns" />, 'Donations.View')} />
+
+      {/* ADM-15 & ADM-16: AI Decision Support */}
+      <Route path="ai" element={withSuspense(<AiDecisionSupportPage mode="overview" />, 'AI.Review')} />
+      <Route path="ai/recommendations" element={withSuspense(<AiDecisionSupportPage mode="recommendations" />, 'AI.Review')} />
+      <Route path="ai/analytics" element={withSuspense(<AiDecisionSupportPage mode="analytics" />, 'AI.Review')} />
+
+      {/* ADM-17: Reports & Analytics */}
+      <Route path="reports" element={withSuspense(<ReportsPage mode="reports" />, 'Reports.Read')} />
+      <Route path="reports/analytics" element={withSuspense(<ReportsPage mode="analytics" />, 'Reports.Read')} />
+
+      {/* ADM-18, ADM-19, ADM-20: System Management */}
+      <Route path="notifications" element={withSuspense(<NotificationsPage />, 'Notifications.View')} />
+      <Route path="audit-logs" element={withSuspense(<AuditLogsPage />, 'AuditLogs.Read')} />
+      <Route path="settings" element={withSuspense(<SystemSettingsPage />, 'Settings.Manage')} />
     </Route>
   );
 }
