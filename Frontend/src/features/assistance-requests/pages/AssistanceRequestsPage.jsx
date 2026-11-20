@@ -257,7 +257,7 @@ export function AssistanceRequestsPage({ initialStatusFilter = '' }) {
         subtitle={selectedRequest ? `${selectedRequest.category} • Submitted by ${selectedRequest.citizenName}` : ''}
         footer={
           selectedRequest && (
-            <PermissionGate permission="CitizenRequests.Verify">
+            <PermissionGate permission="CitizenRequests.Manage">
               <div className="flex flex-wrap items-center gap-2 w-full justify-end">
                 <button
                   type="button"

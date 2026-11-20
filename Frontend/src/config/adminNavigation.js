@@ -117,8 +117,8 @@ export const ADMIN_NAV_GROUPS = [
     label: 'Reports & Analytics',
     icon: BarChart3,
     items: [
-      { label: 'Reports', path: '/admin/reports', permission: 'Reports.Read' },
-      { label: 'Analytics Dashboard', path: '/admin/reports/analytics', permission: 'Reports.Read' },
+      { label: 'Reports', path: '/admin/reports', permission: 'Reports.View' },
+      { label: 'Analytics Dashboard', path: '/admin/reports/analytics', permission: 'Reports.View' },
     ],
   },
   {
@@ -127,7 +127,7 @@ export const ADMIN_NAV_GROUPS = [
     icon: Settings,
     items: [
       { label: 'Notifications', path: '/admin/notifications', permission: 'Notifications.View' },
-      { label: 'Audit Logs', path: '/admin/audit-logs', permission: 'AuditLogs.Read' },
+      { label: 'Audit Logs', path: '/admin/audit-logs', permission: 'AuditLogs.View' },
       { label: 'System Settings', path: '/admin/settings', permission: 'Settings.Manage' },
     ],
   },

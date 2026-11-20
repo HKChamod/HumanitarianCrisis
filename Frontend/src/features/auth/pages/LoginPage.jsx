@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Lock, Mail, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import { publicApi } from '../../../api/publicApi';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
+import { isAdminUser, useAuth } from '../../../app/providers/AuthProvider';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
+  const { loginWithCredentials } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,20 +18,29 @@ export function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (loading) return;
+
+    if (!email.trim() || !password) {
       setError(t('loginErrorRequired'));
       return;
     }
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      await publicApi.login({ email, password });
+      const loggedInUser = await loginWithCredentials(email.trim(), password);
       setSuccess(t('loginSuccess'));
-      setTimeout(() => navigate('/'), 1200);
+      const requestedPath = location.state?.from;
+      const target = isAdminUser(loggedInUser)
+        ? requestedPath && requestedPath.startsWith('/admin')
+          ? requestedPath
+          : '/admin'
+        : '/';
+      setTimeout(() => navigate(target, { replace: true }), 600);
     } catch (err) {
-      setError(err.detail || err.title || t('loginErrorInvalid'));
+      setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {
       setLoading(false);
     }

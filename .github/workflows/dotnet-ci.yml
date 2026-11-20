@@ -1,4 +1,4 @@
-name: Backend CI (.NET 9)
+name: Backend CI (.NET 10)
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: '10.0.x'
 
     - name: Restore dependencies
       run: dotnet restore Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln
