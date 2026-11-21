@@ -4,6 +4,22 @@ import { USE_MOCK_API } from '../../services/api/axiosClient';
 import { authService } from '../../services/api/adminServices';
 
 const DEMO_PROFILES = {
+  citizen: {
+    id: 'USR-CIT-001',
+    fullName: 'Kavinda Perera',
+    email: 'citizen@relieflink.lk',
+    role: 'Citizen',
+    roles: ['Citizen'],
+    department: 'General Public',
+    district: 'Kalutara',
+    avatarInitials: 'KP',
+    isDemoSession: true,
+    permissions: [
+      'CitizenRequests.Submit',
+      'CitizenRequests.ViewMy',
+      'Notifications.View',
+    ],
+  },
   central_admin: {
     id: 'USR-001',
     fullName: 'D. Senanayake',
@@ -73,7 +89,7 @@ export function AuthProvider({ children }) {
     } catch {
       // ignore storage errors
     }
-    return USE_MOCK_API ? DEMO_PROFILES.central_admin : null;
+    return null;
   });
 
   useEffect(() => {
@@ -89,13 +105,23 @@ export function AuthProvider({ children }) {
     const profile = DEMO_PROFILES[rolePreset];
     if (!profile) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    localStorage.setItem('hcms_user', JSON.stringify(profile));
     setUser(profile);
   };
 
   const loginWithCredentials = async (email, password) => {
     if (USE_MOCK_API) {
-      loginAsDemoRole('central_admin');
-      return DEMO_PROFILES.central_admin;
+      const lower = (email || '').toLowerCase();
+      let profile = DEMO_PROFILES.citizen;
+      if (lower.includes('admin') || lower.includes('officer') || lower.includes('dmc')) {
+        profile = DEMO_PROFILES.central_admin;
+      } else if (lower.includes('coord') || lower.includes('bandara')) {
+        profile = DEMO_PROFILES.crisis_coordinator;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      localStorage.setItem('hcms_user', JSON.stringify(profile));
+      setUser(profile);
+      return profile;
     }
     const authRes = await authService.login(email, password);
     if (authRes?.accessToken) {
@@ -171,6 +197,17 @@ export function ProtectedAdminRoute({ children, requiredPermission }) {
 
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/admin/unauthorized" replace />;
+  }
+
+  return children;
+}
+
+export function ProtectedCitizenRoute({ children }) {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return children;

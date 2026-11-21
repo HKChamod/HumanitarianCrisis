@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shield, Lock, Mail, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import { publicApi } from '../../../api/publicApi';
+import { useAuth } from '../../../app/providers/AuthProvider';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { loginWithCredentials } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,11 +27,27 @@ export function LoginPage() {
     setError('');
 
     try {
-      await publicApi.login({ email, password });
+      let loggedUser = null;
+      if (loginWithCredentials) {
+        loggedUser = await loginWithCredentials(email, password);
+      } else {
+        const res = await publicApi.login({ email, password });
+        loggedUser = res?.data?.user;
+      }
+
       setSuccess(t('loginSuccess'));
-      setTimeout(() => navigate('/'), 1200);
+
+      const role = loggedUser?.role || loggedUser?.roles?.[0] || 'Citizen';
+
+      setTimeout(() => {
+        if (role === 'Citizen') {
+          navigate('/citizen');
+        } else {
+          navigate('/admin/dashboard');
+        }
+      }, 600);
     } catch (err) {
-      setError(err.detail || err.title || t('loginErrorInvalid'));
+      setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {
       setLoading(false);
     }

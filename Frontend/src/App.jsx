@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
-import { AuthProvider } from './app/providers/AuthProvider';
+import { AuthProvider, ProtectedCitizenRoute } from './app/providers/AuthProvider';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { renderAdminRoutes } from './app/adminRoutes';
+
+// Citizen Portal (CIT-01 to CIT-09)
+import { CitizenDashboard } from './features/citizen/CitizenDashboard';
 
 // Public Portal Pages (PUB-01 to PUB-14)
 import { LandingPage } from './features/public/pages/LandingPage';
@@ -54,6 +57,32 @@ export function App() {
           <Routes>
             {/* Central Administration Portal (/admin/*) */}
             {renderAdminRoutes()}
+
+            {/* Citizen Portal (CIT-01 to CIT-09) - Protected by Role */}
+            <Route
+              path="/citizen"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
+            <Route
+              path="/citizen/dashboard"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
+            <Route
+              path="/citizen/requests"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
 
             {/* Public Portal (PUB-01 to PUB-14) */}
             <Route element={<PublicLayout />}>
