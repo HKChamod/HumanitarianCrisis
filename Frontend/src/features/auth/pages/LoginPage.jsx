@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Lock, Mail, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import { publicApi } from '../../../api/publicApi';
-import { useAuth } from '../../../app/providers/AuthProvider';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
+import { isAdminUser, useAuth } from '../../../app/providers/AuthProvider';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { loginWithCredentials } = useAuth();
+  const location = useLocation();
   const { t } = useLanguage();
+  const { loginWithCredentials } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,35 +18,29 @@ export function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (loading) return;
+
+    if (!email.trim() || !password) {
       setError(t('loginErrorRequired'));
       return;
     }
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      let loggedUser = null;
-      if (loginWithCredentials) {
-        loggedUser = await loginWithCredentials(email, password);
-      } else {
-        const res = await publicApi.login({ email, password });
-        loggedUser = res?.data?.user;
-      }
-
+      const loggedInUser = await loginWithCredentials(email.trim(), password);
       setSuccess(t('loginSuccess'));
-
-      const role = loggedUser?.role || loggedUser?.roles?.[0] || 'Citizen';
-
-      setTimeout(() => {
-        if (role === 'Citizen') {
-          navigate('/citizen');
-        } else {
-          navigate('/admin/dashboard');
-        }
-      }, 600);
+      const requestedPath = location.state?.from;
+      const target = isAdminUser(loggedInUser)
+        ? requestedPath && requestedPath.startsWith('/admin')
+          ? requestedPath
+          : '/admin'
+        : '/';
+      setTimeout(() => navigate(target, { replace: true }), 600);
     } catch (err) {
+      setError(err?.detail || err?.title || t('loginErrorInvalid'));
       setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {
       setLoading(false);

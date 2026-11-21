@@ -257,7 +257,7 @@ export function AssistanceRequestsPage({ initialStatusFilter = '' }) {
         subtitle={selectedRequest ? `${selectedRequest.category} • Submitted by ${selectedRequest.citizenName}` : ''}
         footer={
           selectedRequest && (
-            <PermissionGate permission="CitizenRequests.Verify">
+            <PermissionGate permission="CitizenRequests.Manage">
               <div className="flex flex-wrap items-center gap-2 w-full justify-end">
                 <button
                   type="button"
@@ -405,9 +405,8 @@ export function AssistanceRequestsPage({ initialStatusFilter = '' }) {
             <button
               type="submit"
               disabled={processing}
-              className={`px-4 py-2 text-xs font-semibold rounded-lg text-white ${
-                actionModal?.type === 'Reject' ? 'bg-[#DC2626] hover:bg-red-700' : 'bg-[#0F766E] hover:bg-[#115E59]'
-              }`}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg text-white ${actionModal?.type === 'Reject' ? 'bg-[#DC2626] hover:bg-red-700' : 'bg-[#0F766E] hover:bg-[#115E59]'
+                }`}
             >
               {processing ? 'Saving...' : `Confirm ${actionModal?.type}`}
             </button>

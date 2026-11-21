@@ -134,12 +134,12 @@ export function renderAdminRoutes() {
       <Route path="ai/analytics" element={withSuspense(<AiDecisionSupportPage mode="analytics" />, 'AI.Review')} />
 
       {/* ADM-17: Reports & Analytics */}
-      <Route path="reports" element={withSuspense(<ReportsPage mode="reports" />, 'Reports.Read')} />
-      <Route path="reports/analytics" element={withSuspense(<ReportsPage mode="analytics" />, 'Reports.Read')} />
+      <Route path="reports" element={withSuspense(<ReportsPage mode="reports" />, 'Reports.View')} />
+      <Route path="reports/analytics" element={withSuspense(<ReportsPage mode="analytics" />, 'Reports.View')} />
 
       {/* ADM-18, ADM-19, ADM-20: System Management */}
       <Route path="notifications" element={withSuspense(<NotificationsPage />, 'Notifications.View')} />
-      <Route path="audit-logs" element={withSuspense(<AuditLogsPage />, 'AuditLogs.Read')} />
+      <Route path="audit-logs" element={withSuspense(<AuditLogsPage />, 'AuditLogs.View')} />
       <Route path="settings" element={withSuspense(<SystemSettingsPage />, 'Settings.Manage')} />
     </Route>
   );

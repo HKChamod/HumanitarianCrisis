@@ -104,4 +104,51 @@ public class AuthService : IAuthService
 
         return _jwtTokenService.GenerateToken(user);
     }
+
+    public async Task<CurrentUserResponse?> GetCurrentUserAsync(int userId)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == userId && u.IsActive)
+            .Select(u => new
+            {
+                u.UserId,
+                u.FullName,
+                u.Email,
+                u.PhoneNumber,
+                u.CreatedAt,
+                Roles = u.UserRoles
+                    .Select(ur => ur.Role.RoleName)
+                    .ToList(),
+                Permissions = u.UserRoles
+                    .SelectMany(ur => ur.Role.RolePermissions)
+                    .Select(rp => rp.Permission.PermissionName)
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        return new CurrentUserResponse
+        {
+            UserId = user.UserId,
+            FullName = user.FullName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            CreatedAt = user.CreatedAt,
+            Roles = user.Roles
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => r, StringComparer.Ordinal)
+                .ToList(),
+            Permissions = user.Permissions
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToList()
+        };
+    }
 }

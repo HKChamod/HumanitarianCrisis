@@ -1,39 +1,51 @@
 /**
- * Shared HTTP Client
- * Aligned with Section 9.2 of HCMS Frontend-Backend API Integration Specification
+ * Shared Fetch HTTP Client (used by Public Portal services)
+ * Aligned with shared apiConfig for consistent base URL, JWT auth headers, 401 handling, and error shape.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+import {
+  API_BASE_URL,
+  getAuthHeaders,
+  handleUnauthorizedResponse,
+  normalizeApiError,
+} from '../services/api/apiConfig';
 
 export const httpClient = {
   baseURL: API_BASE_URL,
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-    const token = localStorage.getItem('hcms_access_token');
-    const orgId = localStorage.getItem('hcms_active_org_id');
 
     const headers = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(orgId ? { 'X-Organization-Id': orgId } : {}),
+      ...getAuthHeaders(),
       ...options.headers,
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+      });
+    } catch (err) {
+      throw normalizeApiError(0, null, err?.message);
+    }
 
     if (!response.ok) {
-      let errorData;
+      let errorData = null;
       try {
         errorData = await response.json();
       } catch {
-        errorData = { title: 'Network response was not ok', status: response.status };
+        // Non-JSON error response
       }
-      throw errorData;
+
+      if (response.status === 401) {
+        handleUnauthorizedResponse();
+      }
+
+      throw normalizeApiError(response.status, errorData, response.statusText);
     }
 
     if (response.status === 204) return null;
