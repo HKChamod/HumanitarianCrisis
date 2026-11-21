@@ -509,6 +509,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 25,
                             Description = "Manage citizen request status and processing",
                             PermissionName = "CitizenRequests.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 26,
+                            Description = "View warehouse information",
+                            PermissionName = "Warehouses.View"
+                        },
+                        new
+                        {
+                            PermissionId = 27,
+                            Description = "Create, update and delete warehouses",
+                            PermissionName = "Warehouses.Manage"
                         });
                 });
 
@@ -989,6 +1001,36 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 53,
                             PermissionId = 25,
                             RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 54,
+                            PermissionId = 26,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 55,
+                            PermissionId = 27,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 56,
+                            PermissionId = 26,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 57,
+                            PermissionId = 27,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 58,
+                            PermissionId = 26,
+                            RoleId = 4
                         });
                 });
 
@@ -1057,6 +1099,66 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Warehouse", b =>
+                {
+                    b.Property<int>("WarehouseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WarehouseId"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContactNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("WarehouseCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("WarehouseName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("WarehouseId");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("WarehouseCode")
+                        .IsUnique();
+
+                    b.HasIndex("WarehouseName");
+
+                    b.ToTable("Warehouses");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
@@ -1194,6 +1296,17 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Warehouse", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Area");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>

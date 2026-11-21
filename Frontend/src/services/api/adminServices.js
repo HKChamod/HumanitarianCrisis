@@ -2,10 +2,15 @@ import { axiosClient, USE_MOCK_API } from './axiosClient';
 import {
   mapCrisisCreateToApi,
   mapCrisisFromApi,
+  mapMemberFromApi,
+  mapOrganizationCreateToApi,
   mapOrganizationFromApi,
+  mapOrganizationUpdateToApi,
   mapRequestFromApi,
+  mapRequestStatusToApi,
   mapResourceCreateToApi,
   mapResourceFromApi,
+  mapResourceUpdateToApi,
 } from './backendMappers';
 import {
   MOCK_AI_RECOMMENDATIONS,
@@ -172,6 +177,16 @@ export const crisisService = {
     }
     return updated;
   },
+  async delete(id) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/crisisevents/${id}`);
+      return true;
+    }
+    await delay();
+    crisisStore = crisisStore.filter((c) => c.id !== id);
+    recordAudit('Central Administrator', 'CRISIS_DELETED', 'Crisis Management', id, `Deleted crisis ${id}.`);
+    return true;
+  },
 };
 
 export const assistanceRequestService = {
@@ -184,7 +199,28 @@ export const assistanceRequestService = {
     await delay();
     return [...requestStore];
   },
+  async getMy() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/citizenrequests/my');
+      return (Array.isArray(res.data) ? res.data : []).map(mapRequestFromApi);
+    }
+    await delay();
+    return [...requestStore];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/citizenrequests/${id}`);
+      return mapRequestFromApi(res.data);
+    }
+    await delay(100);
+    return requestStore.find((r) => r.id === id);
+  },
   async updateStatus(id, status, note, assignedOrganization) {
+    if (!USE_MOCK_API) {
+      const apiStatus = mapRequestStatusToApi(status);
+      const res = await axiosClient.patch(`/citizenrequests/${id}/status`, { status: apiStatus });
+      return mapRequestFromApi(res.data);
+    }
     await delay();
     const now = new Date().toISOString();
     requestStore = requestStore.map((r) => {
@@ -230,7 +266,31 @@ export const organizationService = {
     await delay();
     return [...orgStore];
   },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/organizations/${id}`);
+      return mapOrganizationFromApi(res.data);
+    }
+    await delay(100);
+    return orgStore.find((o) => o.id === id);
+  },
+  async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/organizations', mapOrganizationCreateToApi(payload));
+      return mapOrganizationFromApi(res.data);
+    }
+    await delay();
+    const created = { ...payload, id: `ORG-${String(orgStore.length + 1).padStart(3, '0')}`, status: 'Active', memberCount: 0, activeCrisisCount: 0, registeredAt: new Date().toISOString() };
+    orgStore = [created, ...orgStore];
+    return created;
+  },
   async updateStatus(id, status) {
+    if (!USE_MOCK_API) {
+      const current = await this.getById(id);
+      const isActive = status === 'Active' || status === 'Approved';
+      const res = await axiosClient.put(`/organizations/${id}`, mapOrganizationUpdateToApi(current, isActive));
+      return mapOrganizationFromApi(res.data);
+    }
     await delay();
     orgStore = orgStore.map((o) => (o.id === id ? { ...o, status } : o));
     const updated = orgStore.find((o) => o.id === id);
@@ -245,7 +305,49 @@ export const organizationService = {
     }
     return updated;
   },
+  async delete(id) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/organizations/${id}`);
+      return true;
+    }
+    await delay();
+    orgStore = orgStore.filter((o) => o.id !== id);
+    return true;
+  },
+  async getMembers(orgId, orgName = '') {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/organizations/${orgId}/members`);
+      return (Array.isArray(res.data) ? res.data : []).map((m) => mapMemberFromApi(m, orgId, orgName));
+    }
+    await delay();
+    return membershipStore.filter((m) => m.organizationId === orgId);
+  },
+  async approveMembership(orgId, membershipId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.patch(`/organizations/${orgId}/members/${membershipId}/approve`);
+      return res.data;
+    }
+    await delay();
+    membershipStore = membershipStore.map((m) => (m.id === membershipId ? { ...m, status: 'Active' } : m));
+    return membershipStore.find((m) => m.id === membershipId);
+  },
+  async rejectMembership(orgId, membershipId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.patch(`/organizations/${orgId}/members/${membershipId}/reject`);
+      return res.data;
+    }
+    await delay();
+    membershipStore = membershipStore.map((m) => (m.id === membershipId ? { ...m, status: 'Suspended' } : m));
+    return membershipStore.find((m) => m.id === membershipId);
+  },
   async listMemberships() {
+    if (!USE_MOCK_API) {
+      const orgs = await this.list();
+      const memberLists = await Promise.allSettled(orgs.map((o) => this.getMembers(o.id, o.name)));
+      return memberLists
+        .filter((r) => r.status === 'fulfilled')
+        .flatMap((r) => r.value);
+    }
     await delay();
     return [...membershipStore];
   },
@@ -332,6 +434,32 @@ export const resourceService = {
       `Added ${created.availableQuantity} ${created.unit} of ${created.name}.`
     );
     return created;
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/resources/${id}`);
+      return mapResourceFromApi(res.data);
+    }
+    await delay(100);
+    return resourceStore.find((r) => r.id === id);
+  },
+  async update(id, payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.put(`/resources/${id}`, mapResourceUpdateToApi(payload));
+      return mapResourceFromApi(res.data);
+    }
+    await delay();
+    resourceStore = resourceStore.map((r) => (r.id === id ? { ...r, ...payload } : r));
+    return resourceStore.find((r) => r.id === id);
+  },
+  async delete(id) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/resources/${id}`);
+      return true;
+    }
+    await delay();
+    resourceStore = resourceStore.filter((r) => r.id !== id);
+    return true;
   },
   async listAllocations() {
     await delay();
@@ -476,31 +604,60 @@ export const auditLogService = {
   },
 };
 
+export const areaService = {
+  isMock: USE_MOCK_API,
+  async list() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/areas');
+      return Array.isArray(res.data) ? res.data : [];
+    }
+    await delay(100);
+    return [];
+  },
+  async getHierarchy() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/areas/hierarchy');
+      return Array.isArray(res.data) ? res.data : [];
+    }
+    await delay(100);
+    return [];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/areas/${id}`);
+      return res.data;
+    }
+    await delay(100);
+    return null;
+  },
+};
+
 export const reportService = {
-  isMock: true,
+  isMock: USE_MOCK_API,
   async getDashboardSnapshot() {
-    const [crises, requests, organizations, users, resources, shelters, volunteers, aiRecommendations] =
-      await Promise.all([
-        crisisService.list(),
-        assistanceRequestService.list(),
-        organizationService.list(),
-        userService.list(),
-        resourceService.list(),
-        shelterService.list(),
-        volunteerService.list(),
-        aiRecommendationService.list(),
-      ]);
+    const results = await Promise.allSettled([
+      crisisService.list(),
+      assistanceRequestService.list(),
+      organizationService.list(),
+      userService.list(),
+      resourceService.list(),
+      shelterService.list(),
+      volunteerService.list(),
+      aiRecommendationService.list(),
+    ]);
+
+    const getVal = (idx) => (results[idx].status === 'fulfilled' ? results[idx].value : []);
 
     return {
       isMock: USE_MOCK_API,
-      crises,
-      requests,
-      organizations,
-      users,
-      resources,
-      shelters,
-      volunteers,
-      aiRecommendations,
+      crises: getVal(0),
+      requests: getVal(1),
+      organizations: getVal(2),
+      users: getVal(3),
+      resources: getVal(4),
+      shelters: getVal(5),
+      volunteers: getVal(6),
+      aiRecommendations: getVal(7),
       recentActivities: [...activityStore],
     };
   },
