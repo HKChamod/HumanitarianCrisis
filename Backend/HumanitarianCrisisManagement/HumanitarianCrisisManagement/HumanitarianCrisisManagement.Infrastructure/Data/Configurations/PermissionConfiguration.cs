@@ -78,6 +78,19 @@ new Permission
     PermissionId = 27,
     PermissionName = "Warehouses.Manage",
     Description = "Create, update and delete warehouses"
+},
+new Permission
+{
+    PermissionId = 28,
+    PermissionName = "Inventory.View",
+    Description = "View warehouse inventory and stock levels"
+},
+
+new Permission
+{
+    PermissionId = 29,
+    PermissionName = "Inventory.Manage",
+    Description = "Manage warehouse inventory records and reorder levels"
 } );
     }
 }
