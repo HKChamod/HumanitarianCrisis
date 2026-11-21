@@ -1,13 +1,22 @@
+
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+
 import { LanguageProvider } from './context/LanguageContext';
-import { AuthProvider, ProtectedCitizenRoute } from './app/providers/AuthProvider';
+import {
+  AuthProvider,
+  ProtectedCitizenRoute,
+} from './app/providers/AuthProvider';
+
 import { PublicLayout } from './components/layout/PublicLayout';
 import { renderAdminRoutes } from './app/adminRoutes';
 
-// Citizen Portal (CIT-01 to CIT-09)
+// Citizen Portal
 import { CitizenDashboard } from './features/citizen/CitizenDashboard';
 
-// Public Portal Pages (PUB-01 to PUB-14)
+// Organization Portal
+import { OrganizationPortal } from './organization/OrganizationPortal';
+
+// Public Portal Pages
 import { LandingPage } from './features/public/pages/LandingPage';
 import { AboutUsPage } from './features/public/pages/AboutUsPage';
 import { ActiveCrisesPage } from './features/public/pages/ActiveCrisesPage';
@@ -20,12 +29,12 @@ import { VolunteerRegistrationPage } from './features/public/pages/VolunteerRegi
 import { DonationInfoPage } from './features/public/pages/DonationInfoPage';
 import { ContactEmergencyPage } from './features/public/pages/ContactEmergencyPage';
 
-// Auth Pages
+// Authentication Pages
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
 
-// Import CSS Design System & Tailwind
+// CSS Design System
 import './styles/tailwind.css';
 import './styles/variables.css';
 import './styles/base.css';
@@ -34,14 +43,39 @@ import './styles/components.css';
 import './styles/pages.css';
 import './styles/forms.css';
 
+
 function NotFoundPage() {
   return (
     <div style={{ padding: '6rem 1rem', textAlign: 'center' }}>
-      <h1 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>404</h1>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 1rem' }}>Page Not Found</h2>
-      <p style={{ color: 'var(--color-slate-600)', marginBottom: '1.5rem' }}>
+      <h1
+        style={{
+          fontSize: '3rem',
+          fontWeight: 800,
+          color: 'var(--color-primary-dark)',
+        }}
+      >
+        404
+      </h1>
+
+      <h2
+        style={{
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          margin: '0.5rem 0 1rem',
+        }}
+      >
+        Page Not Found
+      </h2>
+
+      <p
+        style={{
+          color: 'var(--color-slate-600)',
+          marginBottom: '1.5rem',
+        }}
+      >
         The emergency resource or page you are looking for does not exist.
       </p>
+
       <Link to="/" className="btn btn-primary">
         Return to Public Portal
       </Link>
@@ -49,16 +83,24 @@ function NotFoundPage() {
   );
 }
 
+
 export function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Central Administration Portal (/admin/*) */}
+
+            {/* Central Administration Portal */}
             {renderAdminRoutes()}
 
-            {/* Citizen Portal (CIT-01 to CIT-09) - Protected by Role */}
+            {/* Organization Management Portal */}
+            <Route
+              path="/organization/*"
+              element={<OrganizationPortal />}
+            />
+
+            {/* Citizen Portal */}
             <Route
               path="/citizen"
               element={
@@ -67,6 +109,7 @@ export function App() {
                 </ProtectedCitizenRoute>
               }
             />
+
             <Route
               path="/citizen/dashboard"
               element={
@@ -75,6 +118,7 @@ export function App() {
                 </ProtectedCitizenRoute>
               }
             />
+
             <Route
               path="/citizen/requests"
               element={
@@ -84,24 +128,41 @@ export function App() {
               }
             />
 
-            {/* Public Portal (PUB-01 to PUB-14) */}
+            {/* Public Portal */}
             <Route element={<PublicLayout />}>
               <Route index element={<LandingPage />} />
+
               <Route path="about" element={<AboutUsPage />} />
               <Route path="crises" element={<ActiveCrisesPage />} />
               <Route path="crises/:id" element={<CrisisDetailsPage />} />
               <Route path="map" element={<CrisisMapPage />} />
-              <Route path="request-help" element={<EmergencyAssistancePage />} />
+
+              <Route
+                path="request-help"
+                element={<EmergencyAssistancePage />}
+              />
+
               <Route path="track" element={<TrackRequestPage />} />
               <Route path="shelters" element={<ShelterFinderPage />} />
-              <Route path="volunteer" element={<VolunteerRegistrationPage />} />
+              <Route
+                path="volunteer"
+                element={<VolunteerRegistrationPage />}
+              />
               <Route path="donations" element={<DonationInfoPage />} />
               <Route path="contact" element={<ContactEmergencyPage />} />
+
+              {/* Authentication */}
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
-              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route
+                path="forgot-password"
+                element={<ForgotPasswordPage />}
+              />
+
+              {/* Public Portal 404 */}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
+
           </Routes>
         </BrowserRouter>
       </AuthProvider>
