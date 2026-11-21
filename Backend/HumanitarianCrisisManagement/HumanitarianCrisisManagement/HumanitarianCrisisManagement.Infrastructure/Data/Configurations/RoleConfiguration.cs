@@ -93,6 +93,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
                 OrganizationId = null,
                 IsSystemDefined = true
             }
+            
         );
     }
 }

@@ -65,7 +65,19 @@ new Permission
     PermissionId = 25,
     PermissionName = "CitizenRequests.Manage",
     Description = "Manage citizen request status and processing"
-}
-        );
+},
+       new Permission
+{
+    PermissionId = 26,
+    PermissionName = "Warehouses.View",
+    Description = "View warehouse information"
+},
+
+new Permission
+{
+    PermissionId = 27,
+    PermissionName = "Warehouses.Manage",
+    Description = "Create, update and delete warehouses"
+} );
     }
 }
