@@ -58,6 +58,22 @@ function mapCurrentUserFromApi(me, fallbackAuth = {}) {
 
 // Clearly separated demo profiles used ONLY when VITE_USE_MOCK_API=true
 const DEMO_PROFILES = {
+  citizen: {
+    id: 'USR-CIT-001',
+    fullName: 'Kavinda Perera',
+    email: 'citizen@relieflink.lk',
+    role: 'Citizen',
+    roles: ['Citizen'],
+    department: 'General Public',
+    district: 'Kalutara',
+    avatarInitials: 'KP',
+    isDemoSession: true,
+    permissions: [
+      'CitizenRequests.Submit',
+      'CitizenRequests.ViewMy',
+      'Notifications.View',
+    ],
+  },
   central_admin: {
     id: 'USR-001',
     fullName: 'D. Senanayake',
@@ -304,6 +320,17 @@ export function ProtectedAdminRoute({ children, requiredPermission }) {
 
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/admin/unauthorized" replace />;
+  }
+
+  return children;
+}
+
+export function ProtectedCitizenRoute({ children }) {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return children;

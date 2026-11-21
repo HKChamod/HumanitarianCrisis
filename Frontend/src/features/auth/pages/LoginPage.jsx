@@ -41,6 +41,7 @@ export function LoginPage() {
       setTimeout(() => navigate(target, { replace: true }), 600);
     } catch (err) {
       setError(err?.detail || err?.title || t('loginErrorInvalid'));
+      setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {
       setLoading(false);
     }
