@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using HumanitarianCrisisManagement.Infrastructure.Data;
 
 #nullable disable
 
@@ -6,7 +8,8 @@
 
 namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20261116040845_SeedInitialPermissionsAndRoleMappings")]
     public partial class SeedInitialPermissionsAndRoleMappings : Migration
     {
         /// <inheritdoc />
@@ -15,6 +18,7 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
             migrationBuilder.InsertData(
                 table: "Permissions",
                 columns: new[] { "PermissionId", "Description", "PermissionName" },
+                columnTypes: new string[] { "int", "nvarchar(max)", "nvarchar(max)" },
                 values: new object[,]
                 {
                     { 1, "View user accounts", "Users.View" },
@@ -45,6 +49,7 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
             migrationBuilder.InsertData(
                 table: "RolePermissions",
                 columns: new[] { "RolePermissionId", "PermissionId", "RoleId" },
+                columnTypes: new string[] { "int", "int", "int" },
                 values: new object[,]
                 {
                     { 1, 1, 2 },
