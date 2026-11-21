@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
 
     // Organizations
     public DbSet<Organization> Organizations => Set<Organization>();
