@@ -33,14 +33,16 @@ export function LoginPage() {
       const loggedInUser = await loginWithCredentials(email.trim(), password);
       setSuccess(t('loginSuccess'));
       const requestedPath = location.state?.from;
-      const target = isAdminUser(loggedInUser)
-        ? requestedPath && requestedPath.startsWith('/admin')
-          ? requestedPath
-          : '/admin'
-        : '/';
+      let target = '/';
+      if (isAdminUser(loggedInUser)) {
+        target = requestedPath && requestedPath.startsWith('/admin') ? requestedPath : '/admin';
+      } else if (loggedInUser?.roles?.some((r) => ['CrisisManager', 'OrganizationCoordinator', 'Responder'].includes(r))) {
+        target = requestedPath && requestedPath.startsWith('/organization') ? requestedPath : '/organization';
+      } else {
+        target = requestedPath && requestedPath.startsWith('/citizen') ? requestedPath : '/citizen';
+      }
       setTimeout(() => navigate(target, { replace: true }), 600);
     } catch (err) {
-      setError(err?.detail || err?.title || t('loginErrorInvalid'));
       setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {
       setLoading(false);

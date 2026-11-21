@@ -24,8 +24,6 @@ export const AssignNewAreaModal = ({
   onClose = () => {},
   onSave = () => {}
 }) => {
-  if (!isOpen) return null;
-
   const isEditing = Boolean(areaToEdit);
 
   const [formData, setFormData] = useState({
@@ -153,6 +151,8 @@ export const AssignNewAreaModal = ({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="org-modal-backdrop" onClick={onClose}>

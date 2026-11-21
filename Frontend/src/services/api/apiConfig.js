@@ -8,7 +8,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 export const USE_MOCK_API =
   import.meta.env.VITE_USE_MOCK_API !== undefined
     ? import.meta.env.VITE_USE_MOCK_API === 'true'
-    : true;
+    : false;
 
 export const TOKEN_STORAGE_KEY = 'hcms_access_token';
 export const ORG_STORAGE_KEY = 'hcms_active_org_id';
