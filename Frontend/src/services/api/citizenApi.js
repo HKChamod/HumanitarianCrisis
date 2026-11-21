@@ -72,8 +72,9 @@ export const citizenApi = {
       return { data, total: data.length };
     }
     try {
-      const response = await axiosClient.get('/assistance-requests/my');
-      return response.data;
+      const response = await axiosClient.get('/CitizenRequests/my');
+      const items = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      return { data: items, total: items.length };
     } catch {
       // Fallback to local storage if backend endpoint is still pending
       const data = getStoredRequests();
@@ -142,8 +143,21 @@ export const citizenApi = {
     }
 
     try {
-      const response = await axiosClient.post('/assistance-requests', payload);
-      return response.data;
+      const requestPayload = {
+        requestType: payload.category || 'Other',
+        description: payload.description || 'Emergency assistance needed',
+        urgencyLevel: ['Low', 'Medium', 'High', 'Critical'].includes(payload.urgencyLevel)
+          ? payload.urgencyLevel
+          : 'High',
+        peopleCount: parseInt(payload.peopleAffected, 10) || 1,
+        areaId: payload.areaId ? parseInt(payload.areaId, 10) : 1,
+        crisisId: payload.crisisId ? parseInt(payload.crisisId, 10) : null,
+        address: payload.location?.addressLine || payload.addressLine || payload.address || null,
+        latitude: payload.latitude ? Number(payload.latitude) : null,
+        longitude: payload.longitude ? Number(payload.longitude) : null,
+      };
+      const response = await axiosClient.post('/CitizenRequests', requestPayload);
+      return { data: response.data };
     } catch {
       const current = getStoredRequests();
       const updated = [newRequest, ...current];

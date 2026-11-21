@@ -6,8 +6,9 @@
  */
 
 import { mockCrisisEvents } from '../data/mockCrisisEvents';
+import { getAuthHeaders, API_BASE_URL as SHARED_BASE_URL } from '../../services/api/apiConfig';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7104/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || SHARED_BASE_URL || 'http://localhost:5107/api';
 
 export const crisisEventsService = {
   /**
@@ -28,7 +29,7 @@ export const crisisEventsService = {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}`
+          ...getAuthHeaders(),
         }
       });
 

@@ -63,6 +63,9 @@ var permissionNames = new[]
 "Warehouses.View",
 "Warehouses.Manage",
 
+"Inventory.View",
+"Inventory.Manage",
+
 "Resources.View",
     "Resources.Manage",
     "Resources.Allocate",
