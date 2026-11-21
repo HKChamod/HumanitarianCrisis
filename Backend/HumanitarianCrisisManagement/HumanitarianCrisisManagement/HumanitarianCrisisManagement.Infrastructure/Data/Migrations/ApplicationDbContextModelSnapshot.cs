@@ -521,6 +521,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 27,
                             Description = "Create, update and delete warehouses",
                             PermissionName = "Warehouses.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 28,
+                            Description = "View warehouse inventory and stock levels",
+                            PermissionName = "Inventory.View"
+                        },
+                        new
+                        {
+                            PermissionId = 29,
+                            Description = "Manage warehouse inventory records and reorder levels",
+                            PermissionName = "Inventory.Manage"
                         });
                 });
 
@@ -1031,6 +1043,36 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 58,
                             PermissionId = 26,
                             RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 59,
+                            PermissionId = 28,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 60,
+                            PermissionId = 29,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 61,
+                            PermissionId = 28,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 62,
+                            PermissionId = 29,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 63,
+                            PermissionId = 28,
+                            RoleId = 4
                         });
                 });
 
@@ -1159,6 +1201,48 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasIndex("WarehouseName");
 
                     b.ToTable("Warehouses");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", b =>
+                {
+                    b.Property<int>("InventoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryId"));
+
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("QuantityAvailable")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReorderLevel")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("int");
+
+                    b.HasKey("InventoryId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("WarehouseId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("WarehouseInventories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WarehouseInventories_QuantityAvailable", "[QuantityAvailable] >= 0");
+
+                            t.HasCheckConstraint("CK_WarehouseInventories_ReorderLevel", "[ReorderLevel] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
@@ -1307,6 +1391,25 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("Warehouse");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
