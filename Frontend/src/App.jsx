@@ -1,14 +1,147 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
+import { OrganizationPortal } from './organization/OrganizationPortal'
 
 function App() {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path)
+    setCurrentPath(path)
+  }
+
+  // Preview Organization Portal at /organization
+  if (currentPath.startsWith('/organization')) {
+    return <OrganizationPortal />
+  }
 
   return (
     <>
+      {/* Quick Navigation Banner for Portal Development Preview */}
+      <div style={{
+        backgroundColor: '#ECFBF8',
+        borderBottom: '1px solid #BCEFE6',
+        padding: '12px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10756F', fontWeight: 600, fontSize: '14px' }}>
+          <span>🛡️ ReliefLink Development Preview:</span>
+          <span style={{ color: '#0F172A', fontWeight: 500 }}>Organization Management Portal is available at <code>/organization</code></span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => navigateTo('/organization')}
+            style={{
+              backgroundColor: '#10756F',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            Dashboard &rarr;
+          </button>
+          <button
+            onClick={() => navigateTo('/organization/incidents')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              color: '#10756F',
+              border: '1px solid #BCEFE6',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            🚨 Crisis Incidents &rarr;
+          </button>
+          <button
+            onClick={() => navigateTo('/organization/aid-requests')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              color: '#10756F',
+              border: '1px solid #BCEFE6',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            📦 Aid Requests &rarr;
+          </button>
+          <button
+            onClick={() => navigateTo('/organization/response-teams')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              color: '#10756F',
+              border: '1px solid #BCEFE6',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            👥 Response Teams &rarr;
+          </button>
+          <button
+            onClick={() => navigateTo('/organization/assigned-areas')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              color: '#10756F',
+              border: '1px solid #BCEFE6',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            📍 Assigned Areas &rarr;
+          </button>
+          <button
+            onClick={() => navigateTo('/organization/settings')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              color: '#10756F',
+              border: '1px solid #BCEFE6',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+            type="button"
+          >
+            ⚙️ Org Settings &rarr;
+          </button>
+        </div>
+      </div>
+
       <section id="center">
         <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />
