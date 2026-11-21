@@ -314,15 +314,20 @@ export const publicApi = {
       throw { status: 400, title: 'Email and password required' };
     }
 
+    const isOfficer = email.toLowerCase().includes('officer') || email.toLowerCase().includes('admin');
+    const role = isOfficer ? 'Central Administrator' : 'Citizen';
+
     const mockUser = {
-      id: 'usr-cit-01',
-      fullName: email.split('@')[0].toUpperCase(),
+      id: isOfficer ? 'USR-001' : 'usr-cit-01',
+      fullName: isOfficer ? 'D. Senanayake (DMC Officer)' : email.split('@')[0].toUpperCase(),
       email,
-      role: 'Citizen',
+      role: role,
+      roles: [role],
     };
 
     localStorage.setItem('hcms_access_token', 'mock_jwt_token_2026_xyz');
     localStorage.setItem('hcms_user', JSON.stringify(mockUser));
+    localStorage.setItem('hcms_admin_session_user', JSON.stringify(mockUser));
 
     return {
       data: {
