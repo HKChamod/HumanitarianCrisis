@@ -113,7 +113,20 @@ new RolePermission { RolePermissionId = 56, RoleId = 3, PermissionId = 26 },
 new RolePermission { RolePermissionId = 57, RoleId = 3, PermissionId = 27 },
 
 // Responder
-new RolePermission { RolePermissionId = 58, RoleId = 4, PermissionId = 26 }
+new RolePermission { RolePermissionId = 58, RoleId = 4, PermissionId = 26 },
+
+// Inventory Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 59, RoleId = 2, PermissionId = 28 },
+new RolePermission { RolePermissionId = 60, RoleId = 2, PermissionId = 29 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 61, RoleId = 3, PermissionId = 28 },
+new RolePermission { RolePermissionId = 62, RoleId = 3, PermissionId = 29 },
+
+// Responder
+new RolePermission { RolePermissionId = 63, RoleId = 4, PermissionId = 28 }
         );
     }
 }
