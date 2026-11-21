@@ -14,7 +14,7 @@
     "leaflet": "^1.9.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^18.0.2"
+    "react-i18next": "^18.0.2",
     "@hookform/resolvers": "^7.0.7",
     "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-table": "^9.3.1",
