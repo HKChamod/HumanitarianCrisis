@@ -22,4 +22,6 @@ public class Area
 
     public ICollection<Area> ChildAreas { get; set; }
         = new List<Area>();
+    public ICollection<CitizenRequest> CitizenRequests { get; set; }
+    = new List<CitizenRequest>();
 }

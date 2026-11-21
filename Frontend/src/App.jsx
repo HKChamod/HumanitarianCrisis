@@ -1,255 +1,173 @@
-import { useState, useEffect } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
-import { OrganizationPortal } from './organization/OrganizationPortal'
 
-function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname)
-  const [count, setCount] = useState(0)
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
-  useEffect(() => {
-    const onPopState = () => setCurrentPath(window.location.pathname)
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
+import { LanguageProvider } from './context/LanguageContext';
+import {
+  AuthProvider,
+  ProtectedCitizenRoute,
+} from './app/providers/AuthProvider';
 
-  const navigateTo = (path) => {
-    window.history.pushState({}, '', path)
-    setCurrentPath(path)
-  }
+import { PublicLayout } from './components/layout/PublicLayout';
+import { renderAdminRoutes } from './app/adminRoutes';
 
-  // Preview Organization Portal at /organization
-  if (currentPath.startsWith('/organization')) {
-    return <OrganizationPortal />
-  }
+// Citizen Portal
+import { CitizenDashboard } from './features/citizen/CitizenDashboard';
 
+// Organization Portal
+import { OrganizationPortal } from './organization/OrganizationPortal';
+
+// Public Portal Pages
+import { LandingPage } from './features/public/pages/LandingPage';
+import { AboutUsPage } from './features/public/pages/AboutUsPage';
+import { ActiveCrisesPage } from './features/public/pages/ActiveCrisesPage';
+import { CrisisDetailsPage } from './features/public/pages/CrisisDetailsPage';
+import { CrisisMapPage } from './features/public/pages/CrisisMapPage';
+import { EmergencyAssistancePage } from './features/public/pages/EmergencyAssistancePage';
+import { TrackRequestPage } from './features/public/pages/TrackRequestPage';
+import { ShelterFinderPage } from './features/public/pages/ShelterFinderPage';
+import { VolunteerRegistrationPage } from './features/public/pages/VolunteerRegistrationPage';
+import { DonationInfoPage } from './features/public/pages/DonationInfoPage';
+import { ContactEmergencyPage } from './features/public/pages/ContactEmergencyPage';
+
+// Authentication Pages
+import { LoginPage } from './features/auth/pages/LoginPage';
+import { RegisterPage } from './features/auth/pages/RegisterPage';
+import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
+
+// CSS Design System
+import './styles/tailwind.css';
+import './styles/variables.css';
+import './styles/base.css';
+import './styles/layout.css';
+import './styles/components.css';
+import './styles/pages.css';
+import './styles/forms.css';
+
+
+function NotFoundPage() {
   return (
-    <>
-      {/* Quick Navigation Banner for Portal Development Preview */}
-      <div style={{
-        backgroundColor: '#ECFBF8',
-        borderBottom: '1px solid #BCEFE6',
-        padding: '12px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10756F', fontWeight: 600, fontSize: '14px' }}>
-          <span>🛡️ ReliefLink Development Preview:</span>
-          <span style={{ color: '#0F172A', fontWeight: 500 }}>Organization Management Portal is available at <code>/organization</code></span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => navigateTo('/organization')}
-            style={{
-              backgroundColor: '#10756F',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            Dashboard &rarr;
-          </button>
-          <button
-            onClick={() => navigateTo('/organization/incidents')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#10756F',
-              border: '1px solid #BCEFE6',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            🚨 Crisis Incidents &rarr;
-          </button>
-          <button
-            onClick={() => navigateTo('/organization/aid-requests')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#10756F',
-              border: '1px solid #BCEFE6',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            📦 Aid Requests &rarr;
-          </button>
-          <button
-            onClick={() => navigateTo('/organization/response-teams')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#10756F',
-              border: '1px solid #BCEFE6',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            👥 Response Teams &rarr;
-          </button>
-          <button
-            onClick={() => navigateTo('/organization/assigned-areas')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#10756F',
-              border: '1px solid #BCEFE6',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            📍 Assigned Areas &rarr;
-          </button>
-          <button
-            onClick={() => navigateTo('/organization/settings')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#10756F',
-              border: '1px solid #BCEFE6',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-            type="button"
-          >
-            ⚙️ Org Settings &rarr;
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '6rem 1rem', textAlign: 'center' }}>
+      <h1
+        style={{
+          fontSize: '3rem',
+          fontWeight: 800,
+          color: 'var(--color-primary-dark)',
+        }}
+      >
+        404
+      </h1>
 
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <h2
+        style={{
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          margin: '0.5rem 0 1rem',
+        }}
+      >
+        Page Not Found
+      </h2>
 
-      <div className="ticks"></div>
+      <p
+        style={{
+          color: 'var(--color-slate-600)',
+          marginBottom: '1.5rem',
+        }}
+      >
+        The emergency resource or page you are looking for does not exist.
+      </p>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <Link to="/" className="btn btn-primary">
+        Return to Public Portal
+      </Link>
+    </div>
+  );
 }
 
-export default App
+
+export function App() {
+  return (
+    <LanguageProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+
+            {/* Central Administration Portal */}
+            {renderAdminRoutes()}
+
+            {/* Organization Management Portal */}
+            <Route
+              path="/organization/*"
+              element={<OrganizationPortal />}
+            />
+
+            {/* Citizen Portal */}
+            <Route
+              path="/citizen"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
+
+            <Route
+              path="/citizen/dashboard"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
+
+            <Route
+              path="/citizen/requests"
+              element={
+                <ProtectedCitizenRoute>
+                  <CitizenDashboard />
+                </ProtectedCitizenRoute>
+              }
+            />
+
+            {/* Public Portal */}
+            <Route element={<PublicLayout />}>
+              <Route index element={<LandingPage />} />
+
+              <Route path="about" element={<AboutUsPage />} />
+              <Route path="crises" element={<ActiveCrisesPage />} />
+              <Route path="crises/:id" element={<CrisisDetailsPage />} />
+              <Route path="map" element={<CrisisMapPage />} />
+
+              <Route
+                path="request-help"
+                element={<EmergencyAssistancePage />}
+              />
+
+              <Route path="track" element={<TrackRequestPage />} />
+              <Route path="shelters" element={<ShelterFinderPage />} />
+              <Route
+                path="volunteer"
+                element={<VolunteerRegistrationPage />}
+              />
+              <Route path="donations" element={<DonationInfoPage />} />
+              <Route path="contact" element={<ContactEmergencyPage />} />
+
+              {/* Authentication */}
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route
+                path="forgot-password"
+                element={<ForgotPasswordPage />}
+              />
+
+              {/* Public Portal 404 */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </LanguageProvider>
+  );
+}
+
+export default App;

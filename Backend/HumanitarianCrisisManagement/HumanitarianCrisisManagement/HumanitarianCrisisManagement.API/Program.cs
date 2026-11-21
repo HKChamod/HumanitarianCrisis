@@ -53,6 +53,9 @@ var permissionNames = new[]
     "CrisisEvents.Delete",
     "CrisisEvents.Manage",
 
+    "CitizenRequests.View",
+    "CitizenRequests.Manage",
+
     "Areas.View",
     "Areas.Manage",
 
@@ -119,6 +122,28 @@ builder.Services.AddScoped<
 
 
 
+// CORS Configuration
+const string FrontendCorsPolicy = "FrontendDevPolicy";
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>();
+
+if (allowedOrigins == null || allowedOrigins.Length == 0)
+{
+    allowedOrigins = ["http://localhost:5173"];
+}
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            .WithHeaders("Authorization", "Content-Type", "Accept", "X-Organization-Id", "X-Correlation-ID");
+    });
+});
+
 // API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -169,6 +194,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseExceptionHandler();
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
