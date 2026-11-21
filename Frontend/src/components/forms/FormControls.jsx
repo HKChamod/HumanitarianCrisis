@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import {
   DISTRICTS,
@@ -5,6 +6,8 @@ import {
   getDsDivisionsForDistrict,
   getGnDivisionsForDs,
 } from '../../data/sriLankaAreas';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
+import { areaService } from '../../services/api/adminServices';
 
 export function FormField({ label, htmlFor, error, required, hint, children }) {
   return (
@@ -126,13 +129,58 @@ export function CascadingAreaSelector({
   compact = false,
 }) {
   const { provinceId = '', districtId = '', dsDivisionId = '', gnDivisionId = '', village = '' } = value;
+  const [liveTree, setLiveTree] = useState(null);
 
-  const districts = provinceId ? DISTRICTS.filter((d) => d.provinceId === provinceId) : [];
-  const dsDivisions = districtId ? getDsDivisionsForDistrict(districtId) : [];
-  const gnDivisions = dsDivisionId ? getGnDivisionsForDs(dsDivisionId) : [];
+  useEffect(() => {
+    if (USE_MOCK_API) return;
+    let cancelled = false;
+    areaService
+      .getHierarchy()
+      .then((nodes) => {
+        if (!cancelled && Array.isArray(nodes) && nodes.length > 0) {
+          setLiveTree(nodes);
+        }
+      })
+      .catch(() => {
+        // Fallback to static area config if /api/areas/hierarchy is unavailable
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const usingLiveAreas = Array.isArray(liveTree) && liveTree.length > 0;
+
+  const provinces = usingLiveAreas
+    ? liveTree.map((n) => ({ id: String(n.areaId), name: n.areaName, children: n.childAreas || [] }))
+    : PROVINCES;
+
+  const selectedProvNode = usingLiveAreas ? provinces.find((p) => p.id === String(provinceId)) : null;
+
+  const districts = usingLiveAreas
+    ? (selectedProvNode?.children || []).map((n) => ({ id: String(n.areaId), name: n.areaName, children: n.childAreas || [] }))
+    : provinceId
+      ? DISTRICTS.filter((d) => d.provinceId === provinceId)
+      : [];
+
+  const selectedDistNode = usingLiveAreas ? districts.find((d) => d.id === String(districtId)) : null;
+
+  const dsDivisions = usingLiveAreas
+    ? (selectedDistNode?.children || []).map((n) => ({ id: String(n.areaId), name: n.areaName, children: n.childAreas || [] }))
+    : districtId
+      ? getDsDivisionsForDistrict(districtId)
+      : [];
+
+  const selectedDsNode = usingLiveAreas ? dsDivisions.find((ds) => ds.id === String(dsDivisionId)) : null;
+
+  const gnDivisions = usingLiveAreas
+    ? (selectedDsNode?.children || []).map((n) => ({ id: String(n.areaId), name: n.areaName }))
+    : dsDivisionId
+      ? getGnDivisionsForDs(dsDivisionId)
+      : [];
 
   const handleProvinceChange = (nextProvinceId) => {
-    const prov = PROVINCES.find((p) => p.id === nextProvinceId);
+    const prov = provinces.find((p) => p.id === nextProvinceId);
     onChange({
       provinceId: nextProvinceId,
       provinceName: prov?.name || '',
@@ -186,7 +234,7 @@ export function CascadingAreaSelector({
         value={provinceId}
         onChange={handleProvinceChange}
         placeholder="All / Select Province"
-        options={PROVINCES.map((p) => ({ value: p.id, label: p.name }))}
+        options={provinces.map((p) => ({ value: p.id, label: p.name }))}
       />
       <SelectField
         label="District"

@@ -21,12 +21,20 @@ export function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
 
-        {USE_MOCK_API && (
+        {USE_MOCK_API ? (
           <div className="bg-amber-50 border-b border-amber-200 px-4 lg:px-6 py-1.5 flex items-center gap-2 text-xs text-amber-900">
             <Info className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
             <span>
               <strong>Mock Integration Mode Active</strong> — Displaying clearly separated sample operational data. Set{' '}
               <code className="font-mono bg-amber-100/80 px-1 rounded">VITE_USE_MOCK_API=false</code> to connect live .NET 10 endpoints.
+            </span>
+          </div>
+        ) : (
+          <div className="bg-[#F0FDFA] border-b border-teal-200 px-4 lg:px-6 py-1.5 flex items-center gap-2 text-xs text-[#134E4A]">
+            <Info className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
+            <span>
+              <strong>Live .NET 10 API Mode</strong> — Auth, Crises, Citizen Requests, Organizations, Resources, and Areas
+              are connected to SQL Server; unimplemented modules remain mock-backed until backend endpoints are added.
             </span>
           </div>
         )}

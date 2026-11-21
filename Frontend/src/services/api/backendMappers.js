@@ -105,8 +105,65 @@ export function mapResourceCreateToApi(payload) {
   return {
     resourceName: payload.name,
     resourceCategory: payload.category,
-    description: `${payload.name} (${payload.warehouseName})`,
+    description: `${payload.name} (${payload.warehouseName || 'Central Depot'})`,
     unitOfMeasure: payload.unit,
     isPerishable: payload.condition === 'Expiring Soon',
+  };
+}
+
+export function mapResourceUpdateToApi(payload) {
+  return {
+    resourceName: payload.name,
+    resourceCategory: payload.category,
+    description: payload.description || `${payload.name} (${payload.warehouseName || 'Central Depot'})`,
+    unitOfMeasure: payload.unit,
+    isPerishable: payload.condition === 'Expiring Soon',
+    isActive: payload.isActive ?? true,
+  };
+}
+
+export function mapOrganizationCreateToApi(payload) {
+  return {
+    organizationName: payload.name,
+    organizationType: payload.type || 'NGO',
+    registrationNumber: payload.registrationNumber || null,
+    description: payload.description || null,
+    email: payload.contactEmail || null,
+    phoneNumber: payload.contactPhone || null,
+    address: payload.district || payload.address || null,
+  };
+}
+
+export function mapOrganizationUpdateToApi(org, isActive) {
+  return {
+    organizationName: org.name,
+    organizationType: org.type || 'NGO',
+    registrationNumber: org.registrationNumber === '—' ? null : org.registrationNumber,
+    description: org.description || null,
+    email: org.contactEmail === '—' ? null : org.contactEmail,
+    phoneNumber: org.contactPhone === '—' ? null : org.contactPhone,
+    address: org.district === '—' ? null : org.district,
+    isActive,
+  };
+}
+
+export function mapRequestStatusToApi(status) {
+  if (status === 'Approved') return 'Verified';
+  if (status === 'Completed') return 'Fulfilled';
+  if (['Pending', 'Verified', 'Assigned', 'Fulfilled', 'Rejected'].includes(status)) return status;
+  return 'Pending';
+}
+
+export function mapMemberFromApi(dto, orgId, orgName) {
+  return {
+    id: String(dto.membershipId ?? dto.id),
+    userId: String(dto.userId ?? ''),
+    userName: dto.fullName || dto.userName || 'Member',
+    userEmail: dto.email || dto.userEmail || '—',
+    organizationId: String(orgId),
+    organizationName: orgName,
+    scopedRole: Array.isArray(dto.roles) && dto.roles.length > 0 ? dto.roles.join(', ') : dto.scopedRole || 'Member',
+    status: dto.status || 'Active',
+    joinedAt: dto.joinedAt || dto.createdAt || new Date().toISOString(),
   };
 }
