@@ -1,5 +1,7 @@
 
 using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
+using HumanitarianCrisisManagement.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using HumanitarianCrisisManagement.API.Exceptions;
@@ -139,10 +141,20 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
-        policy
-            .WithOrigins(allowedOrigins)
-            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .WithHeaders("Authorization", "Content-Type", "Accept", "X-Organization-Id", "X-Correlation-ID");
+        if (builder.Environment.IsDevelopment())
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
+        else
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .WithHeaders("Authorization", "Content-Type", "Accept", "X-Organization-Id", "X-Correlation-ID");
+        }
     });
 });
 
@@ -152,6 +164,12 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "HumanitarianCrisisManagement.API",
+        Version = "v1"
+    });
+
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -184,6 +202,12 @@ var app = builder.Build();
 // HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
+
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
@@ -193,11 +217,14 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
 app.UseExceptionHandler();
 
 app.UseCors(FrontendCorsPolicy);
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
