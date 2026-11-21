@@ -33,6 +33,8 @@ public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
 
     public DbSet<Resource> Resources => Set<Resource>();
 
+    public DbSet<WarehouseInventory> WarehouseInventories => Set<WarehouseInventory>();
+
     
 
 

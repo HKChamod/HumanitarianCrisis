@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationMembershipService, OrganizationMembershipService>();
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
+        services.AddScoped<IWarehouseInventoryService, WarehouseInventoryService>();
         services.AddScoped<ICitizenRequestService, CitizenRequestService>();
 
         return services;
