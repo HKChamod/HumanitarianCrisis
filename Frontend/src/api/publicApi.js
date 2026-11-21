@@ -54,7 +54,14 @@ export const publicApi = {
    */
   async getCrises(params = {}) {
     if (!USE_MOCK) {
-      return httpClient.get('/public/crises', params);
+      try {
+        const res = await httpClient.get('/CrisisEvents');
+        if (res && Array.isArray(res) && res.length > 0) {
+          return { data: res, pagination: { totalItems: res.length, page: 1, pageSize: 20 } };
+        }
+      } catch {
+        // Fall back to localized dataset when backend endpoint is restricted or unavailable
+      }
     }
     await delay();
     let list = getLocal('hcms_crises', INITIAL_CRISES);
@@ -84,7 +91,12 @@ export const publicApi = {
    */
   async getCrisisById(crisisId) {
     if (!USE_MOCK) {
-      return httpClient.get(`/public/crises/${crisisId}`);
+      try {
+        const res = await httpClient.get(`/CrisisEvents/${crisisId}`);
+        if (res && res.crisisId) return { data: res };
+      } catch {
+        // Fallback to local
+      }
     }
     await delay();
     const list = getLocal('hcms_crises', INITIAL_CRISES);

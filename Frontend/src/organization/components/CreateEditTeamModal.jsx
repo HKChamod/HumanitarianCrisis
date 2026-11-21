@@ -8,8 +8,6 @@ export const CreateEditTeamModal = ({
   onClose = () => {},
   onSave = () => {}
 }) => {
-  if (!isOpen) return null;
-
   const isEditing = Boolean(teamToEdit);
 
   const [formData, setFormData] = useState({
@@ -109,6 +107,8 @@ export const CreateEditTeamModal = ({
       setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="org-modal-backdrop" onClick={onClose}>

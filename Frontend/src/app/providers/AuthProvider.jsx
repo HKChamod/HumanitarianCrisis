@@ -144,17 +144,6 @@ const DEMO_PROFILES = {
       'Notifications.View',
     ],
   },
-  citizen: {
-    id: 'USR-CIT-01',
-    fullName: 'Example Citizen',
-    email: 'citizen@relieflink.lk',
-    role: 'Citizen',
-    roles: ['Citizen'],
-    department: 'Public Portal',
-    avatarInitials: 'EC',
-    isDemoSession: true,
-    permissions: ['CrisisEvents.View', 'Areas.View'],
-  },
 };
 
 const STORAGE_KEY = 'hcms_admin_session_user';
@@ -326,7 +315,7 @@ export function ProtectedAdminRoute({ children, requiredPermission }) {
 }
 
 export function ProtectedCitizenRoute({ children }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {

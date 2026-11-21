@@ -40,7 +40,9 @@ public class PermissionAuthorizationHandler
             .AsNoTracking()
             .AnyAsync(rp =>
                 userRoles.Contains(rp.Role.RoleName) &&
-                rp.Permission.PermissionName == requirement.PermissionName);
+                (rp.Permission.PermissionName == requirement.PermissionName ||
+                 (requirement.PermissionName == "Inventory.View" && (rp.Permission.PermissionName == "Warehouses.View" || rp.Permission.PermissionName == "Resources.View")) ||
+                 (requirement.PermissionName == "Inventory.Manage" && (rp.Permission.PermissionName == "Warehouses.Manage" || rp.Permission.PermissionName == "Resources.Manage"))));
 
         if (hasPermission)
         {

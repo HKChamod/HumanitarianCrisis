@@ -1,11 +1,14 @@
-﻿using System;
+using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using HumanitarianCrisisManagement.Infrastructure.Data;
 
 #nullable disable
 
 namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20261106070804_AddOrganizationAndPermissionEntities")]
     public partial class AddOrganizationAndPermissionEntities : Migration
     {
         /// <inheritdoc />

@@ -11,10 +11,11 @@
  */
 
 import { initialAssignedAreas } from '../data/mockAssignedAreas';
+import { getAuthHeaders, API_BASE_URL as SHARED_BASE_URL } from '../../services/api/apiConfig';
 
 let inMemoryAreas = [...initialAssignedAreas];
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7104/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || SHARED_BASE_URL || 'http://localhost:5107/api';
 
 export const assignedAreasService = {
   /**
@@ -32,7 +33,10 @@ export const assignedAreasService = {
     try {
       const response = await fetch(`${API_BASE_URL}/areas`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        }
       });
 
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
