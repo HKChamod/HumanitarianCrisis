@@ -55,11 +55,13 @@ var permissionNames = new[]
 
     "CitizenRequests.View",
     "CitizenRequests.Manage",
+"Areas.View",
+"Areas.Manage",
 
-    "Areas.View",
-    "Areas.Manage",
+"Warehouses.View",
+"Warehouses.Manage",
 
-    "Resources.View",
+"Resources.View",
     "Resources.Manage",
     "Resources.Allocate",
 
