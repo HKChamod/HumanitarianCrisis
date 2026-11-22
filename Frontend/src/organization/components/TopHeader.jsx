@@ -19,7 +19,6 @@ import { mockAidRequests } from '../data/mockAidRequests';
 import { initialResponseTeams } from '../data/mockResponseTeams';
 import { initialAssignedAreas } from '../data/mockAssignedAreas';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { useAuth } from '../../app/providers/AuthProvider';
 import { useOrganization } from '../../app/providers/OrganizationProvider';
 
 const NOTIFICATIONS_STORAGE_KEY = 'relieflink_org_notifications';
