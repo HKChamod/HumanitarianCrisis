@@ -20,6 +20,7 @@ import { initialResponseTeams } from '../data/mockResponseTeams';
 import { initialAssignedAreas } from '../data/mockAssignedAreas';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
 
 const NOTIFICATIONS_STORAGE_KEY = 'relieflink_org_notifications';
 
@@ -29,6 +30,7 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
   const authContext = useAuth();
   const user = authContext?.user;
   const logout = authContext?.logout;
+  const { activeOrganization, activeOrganizationAccess, orgRoles } = useOrganization();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -181,20 +183,68 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
     }
   };
 
-  // Derive profile info from settings or auth
-  const settings = organizationSettingsService.getSettings();
-  const adminProfile = settings.admin || {};
-  const orgProfile = settings.organization || {};
+  // Derive profile info from authenticated user and validated active organization context
+  const settings = USE_MOCK_API ? organizationSettingsService.getSettings() : {};
+  const adminProfile = USE_MOCK_API ? settings.admin || {} : {};
+  const orgProfile = USE_MOCK_API ? settings.organization || {} : {};
 
-  const displayName = user?.fullName || adminProfile.fullName || mockOrganizationProfile.currentCoordinator.name;
-  const displayEmail = user?.email || adminProfile.email || mockOrganizationProfile.currentCoordinator.email;
-  const displayRole = user?.role || adminProfile.role || mockOrganizationProfile.currentCoordinator.role;
-  const displayDesignation = adminProfile.designation || mockOrganizationProfile.currentCoordinator.role;
-  const displayInitials = user?.avatarInitials || adminProfile.avatarInitials || mockOrganizationProfile.currentCoordinator.avatar;
-  const displayPhone = user?.phoneNumber || adminProfile.phone || '+94 77 123 4567';
-  const displayOrgName = orgProfile.name || mockOrganizationProfile.name;
-  const displayChapter = orgProfile.chapter || mockOrganizationProfile.chapter;
-  const displayRegNumber = orgProfile.registrationNumber || mockOrganizationProfile.registrationNumber;
+  const primaryOrgRole =
+    orgRoles.length > 0
+      ? orgRoles[0]
+      : t('header.memberBadge', { defaultValue: 'Organization Member' });
+  const allOrgRoles =
+    orgRoles.length > 0
+      ? orgRoles.join(', ')
+      : t('header.memberBadge', { defaultValue: 'Approved Member' });
+
+  const displayName =
+    user?.fullName ||
+    user?.email ||
+    (USE_MOCK_API
+      ? adminProfile.fullName || mockOrganizationProfile.currentCoordinator.name
+      : 'Authenticated User');
+  const displayEmail =
+    user?.email ||
+    (USE_MOCK_API
+      ? adminProfile.email || mockOrganizationProfile.currentCoordinator.email
+      : '—');
+  const displayRole =
+    orgRoles.length > 0
+      ? primaryOrgRole
+      : USE_MOCK_API
+        ? adminProfile.role || mockOrganizationProfile.currentCoordinator.role
+        : primaryOrgRole;
+  const displayDesignation =
+    orgRoles.length > 0
+      ? allOrgRoles
+      : USE_MOCK_API
+        ? adminProfile.designation || mockOrganizationProfile.currentCoordinator.role
+        : primaryOrgRole;
+  const displayInitials =
+    user?.avatarInitials ||
+    (USE_MOCK_API
+      ? adminProfile.avatarInitials || mockOrganizationProfile.currentCoordinator.avatar
+      : 'US');
+  const displayPhone =
+    user?.phoneNumber ||
+    (USE_MOCK_API ? adminProfile.phone || '+94 77 123 4567' : 'Not provided');
+  const displayOrgName =
+    activeOrganizationAccess?.organizationName ||
+    activeOrganization?.organizationName ||
+    (USE_MOCK_API ? orgProfile.name || mockOrganizationProfile.name : 'Organization Workspace');
+  const displayChapter =
+    activeOrganizationAccess?.membershipStatus
+      ? `${activeOrganizationAccess.membershipStatus} Membership`
+      : USE_MOCK_API
+        ? orgProfile.chapter || mockOrganizationProfile.chapter
+        : 'Active Organization';
+  const displayRegNumber =
+    activeOrganization?.registrationNumber ||
+    (USE_MOCK_API
+      ? orgProfile.registrationNumber || mockOrganizationProfile.registrationNumber
+      : activeOrganizationAccess?.organizationId
+        ? `ORG-${activeOrganizationAccess.organizationId}`
+        : 'Verified');
 
   return (
     <>
@@ -785,7 +835,7 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
               <div className="org-user-meta">
                 <span className="org-user-name">{displayName}</span>
                 <span className="org-user-role">
-                  {t('header.adminBadge', { defaultValue: displayRole })}
+                  {displayRole}
                 </span>
               </div>
             </button>

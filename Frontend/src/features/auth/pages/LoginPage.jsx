@@ -8,6 +8,12 @@ import { isEligibleMembership } from '../../../app/providers/OrganizationProvide
 import { organizationService } from '../../../services/api/adminServices';
 import { USE_MOCK_API } from '../../../services/api/apiConfig';
 
+function isAllowedInternalPath(path, prefix) {
+  if (typeof path !== 'string') return false;
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return false;
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,14 +46,18 @@ export function LoginPage() {
       let target = '/citizen';
 
       if (adminEligible) {
-        if (requestedPath && (requestedPath.startsWith('/admin') || requestedPath.startsWith('/organization') || requestedPath.startsWith('/citizen'))) {
+        if (
+          isAllowedInternalPath(requestedPath, '/admin') ||
+          isAllowedInternalPath(requestedPath, '/organization') ||
+          isAllowedInternalPath(requestedPath, '/citizen')
+        ) {
           target = requestedPath;
         } else {
           target = '/admin';
         }
-      } else if (requestedPath && requestedPath.startsWith('/organization')) {
+      } else if (isAllowedInternalPath(requestedPath, '/organization')) {
         target = requestedPath;
-      } else if (requestedPath && requestedPath.startsWith('/citizen')) {
+      } else if (isAllowedInternalPath(requestedPath, '/citizen')) {
         target = requestedPath;
       } else {
         try {
