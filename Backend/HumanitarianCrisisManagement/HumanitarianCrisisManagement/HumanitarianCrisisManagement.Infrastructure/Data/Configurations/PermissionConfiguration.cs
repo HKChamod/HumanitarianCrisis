@@ -67,11 +67,11 @@ new Permission
     Description = "Manage citizen request status and processing"
 },
        new Permission
-{
-    PermissionId = 26,
-    PermissionName = "Warehouses.View",
-    Description = "View warehouse information"
-},
+       {
+           PermissionId = 26,
+           PermissionName = "Warehouses.View",
+           Description = "View warehouse information"
+       },
 
 new Permission
 {
@@ -91,6 +91,20 @@ new Permission
     PermissionId = 29,
     PermissionName = "Inventory.Manage",
     Description = "Manage warehouse inventory records and reorder levels"
-} );
+},
+
+new Permission
+{
+    PermissionId = 30,
+    PermissionName = "ResourceAllocations.View",
+    Description = "View resource allocation requests and details"
+},
+
+new Permission
+{
+    PermissionId = 31,
+    PermissionName = "ResourceAllocations.Manage",
+    Description = "Approve, reject, dispatch, deliver and cancel resource allocations"
+});
     }
 }

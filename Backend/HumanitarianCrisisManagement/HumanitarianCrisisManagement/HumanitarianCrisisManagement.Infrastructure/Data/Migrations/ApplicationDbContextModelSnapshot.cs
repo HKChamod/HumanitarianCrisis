@@ -195,6 +195,71 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("CrisisEvents");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.InventoryTransaction", b =>
+                {
+                    b.Property<int>("InventoryTransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryTransactionId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InventoryId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("NewQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("PerformedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PreviousQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid?>("TransferGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("InventoryTransactionId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("InventoryId");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("TransferGroupId");
+
+                    b.ToTable("InventoryTransactions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryTransactions_NewQuantity", "[NewQuantity] >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_PreviousQuantity", "[PreviousQuantity] >= 0");
+
+                            t.HasCheckConstraint("CK_InventoryTransactions_Quantity", "[Quantity] <> 0");
+                        });
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
                 {
                     b.Property<int>("OrganizationId")
@@ -533,6 +598,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 29,
                             Description = "Manage warehouse inventory records and reorder levels",
                             PermissionName = "Inventory.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 30,
+                            Description = "View resource allocation requests and details",
+                            PermissionName = "ResourceAllocations.View"
+                        },
+                        new
+                        {
+                            PermissionId = 31,
+                            Description = "Approve, reject, dispatch, deliver and cancel resource allocations",
+                            PermissionName = "ResourceAllocations.Manage"
                         });
                 });
 
@@ -585,6 +662,79 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasIndex("ResourceName");
 
                     b.ToTable("Resources", (string)null);
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.ResourceAllocation", b =>
+                {
+                    b.Property<int>("AllocationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AllocationId"));
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CrisisId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InventoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("QuantityAllocated")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("QuantityRequested")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("RequestedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("AllocationId");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CrisisId");
+
+                    b.HasIndex("InventoryId");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ResourceAllocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ResourceAllocations_QuantityAllocated", "[QuantityAllocated] >= 0");
+
+                            t.HasCheckConstraint("CK_ResourceAllocations_QuantityRequested", "[QuantityRequested] > 0");
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
@@ -1073,6 +1223,36 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 63,
                             PermissionId = 28,
                             RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 64,
+                            PermissionId = 30,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 65,
+                            PermissionId = 31,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 66,
+                            PermissionId = 30,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 67,
+                            PermissionId = 31,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 68,
+                            PermissionId = 30,
+                            RoleId = 4
                         });
                 });
 
@@ -1281,6 +1461,25 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.InventoryTransaction", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", "Inventory")
+                        .WithMany()
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Inventory");
+
+                    b.Navigation("PerformedByUser");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ApprovedByUser")
@@ -1332,6 +1531,40 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Membership");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.ResourceAllocation", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "Crisis")
+                        .WithMany()
+                        .HasForeignKey("CrisisId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", "Inventory")
+                        .WithMany()
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Crisis");
+
+                    b.Navigation("Inventory");
+
+                    b.Navigation("RequestedByUser");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Role", b =>
