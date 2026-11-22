@@ -94,6 +94,7 @@ export const OrganizationPortal = () => {
           {/* Top Header */}
           <TopHeader
             onToggleMobile={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            onNavigateTab={handleSelectTab}
           />
 
           {/* Main Body */}
