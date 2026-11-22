@@ -68,12 +68,6 @@ public class OrganizationsController : ControllerBase
         int userId,
         string permissionPolicy)
     {
-        var headerError = ValidateOptionalOrganizationHeader(organizationId);
-        if (headerError != null)
-        {
-            return headerError;
-        }
-
         var globalAuth = await _authorizationService.AuthorizeAsync(
             User,
             permissionPolicy);
@@ -81,6 +75,12 @@ public class OrganizationsController : ControllerBase
         if (globalAuth.Succeeded)
         {
             return null;
+        }
+
+        var headerError = ValidateOptionalOrganizationHeader(organizationId);
+        if (headerError != null)
+        {
+            return headerError;
         }
 
         var hasOrgPermission = await _organizationAuthorizationService

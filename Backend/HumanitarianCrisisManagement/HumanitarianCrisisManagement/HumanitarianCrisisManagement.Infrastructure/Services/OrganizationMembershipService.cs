@@ -110,6 +110,7 @@ public class OrganizationMembershipService : IOrganizationMembershipService
     {
         var membership = await _context.OrganizationMemberships
             .Include(m => m.Organization)
+            .Include(m => m.User)
             .FirstOrDefaultAsync(m =>
                 m.MembershipId == membershipId &&
                 m.OrganizationId == organizationId);
@@ -120,6 +121,10 @@ public class OrganizationMembershipService : IOrganizationMembershipService
         if (!membership.Organization.IsActive)
             throw new InvalidOperationException(
                 "Cannot approve membership for an inactive organization.");
+
+        if (!membership.User.IsActive)
+            throw new InvalidOperationException(
+                "Cannot approve membership for an inactive user.");
 
         if (membership.MembershipStatus != "Pending")
             throw new InvalidOperationException(
@@ -280,7 +285,7 @@ public class OrganizationMembershipService : IOrganizationMembershipService
     {
         var memberships = await _context.OrganizationMemberships
             .AsNoTracking()
-            .Where(m => m.UserId == userId)
+            .Where(m => m.UserId == userId && m.User.IsActive)
             .OrderByDescending(m => m.JoinedAt)
             .Select(m => new
             {
