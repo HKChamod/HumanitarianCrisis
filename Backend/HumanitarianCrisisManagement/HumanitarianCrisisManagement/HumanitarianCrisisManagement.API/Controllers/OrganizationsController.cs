@@ -13,13 +13,86 @@ public class OrganizationsController : ControllerBase
 {
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationMembershipService _membershipService;
+    private readonly IOrganizationAuthorizationService _organizationAuthorizationService;
+    private readonly IAuthorizationService _authorizationService;
 
     public OrganizationsController(
-    IOrganizationService organizationService,
-    IOrganizationMembershipService membershipService)
+        IOrganizationService organizationService,
+        IOrganizationMembershipService membershipService,
+        IOrganizationAuthorizationService organizationAuthorizationService,
+        IAuthorizationService authorizationService)
     {
         _organizationService = organizationService;
         _membershipService = membershipService;
+        _organizationAuthorizationService = organizationAuthorizationService;
+        _authorizationService = authorizationService;
+    }
+
+    private bool TryGetCurrentUserId(out int userId)
+    {
+        return int.TryParse(
+            User.FindFirstValue(ClaimTypes.NameIdentifier),
+            out userId);
+    }
+
+    private IActionResult ForbiddenProblem(string detail)
+    {
+        return StatusCode(
+            StatusCodes.Status403Forbidden,
+            new ProblemDetails
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = "Forbidden",
+                Detail = detail
+            });
+    }
+
+    private IActionResult? ValidateOptionalOrganizationHeader(int organizationId)
+    {
+        if (Request.Headers.TryGetValue("X-Organization-Id", out var headerValues))
+        {
+            var rawValue = headerValues.ToString().Trim();
+            if (!string.IsNullOrEmpty(rawValue) &&
+                (!int.TryParse(rawValue, out var headerOrgId) || headerOrgId != organizationId))
+            {
+                return ForbiddenProblem(
+                    "The X-Organization-Id header does not match the requested organization.");
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<IActionResult?> AuthorizeOrganizationActionAsync(
+        int organizationId,
+        int userId,
+        string permissionPolicy)
+    {
+        var headerError = ValidateOptionalOrganizationHeader(organizationId);
+        if (headerError != null)
+        {
+            return headerError;
+        }
+
+        var globalAuth = await _authorizationService.AuthorizeAsync(
+            User,
+            permissionPolicy);
+
+        if (globalAuth.Succeeded)
+        {
+            return null;
+        }
+
+        var hasOrgPermission = await _organizationAuthorizationService
+            .HasOrganizationPermissionAsync(userId, organizationId, permissionPolicy);
+
+        if (hasOrgPermission)
+        {
+            return null;
+        }
+
+        return ForbiddenProblem(
+            $"You do not have '{permissionPolicy}' permission for this organization.");
     }
 
     [HttpPost]
@@ -69,13 +142,50 @@ public class OrganizationsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("my-memberships")]
+    [Authorize]
+    public async Task<IActionResult> GetMyMemberships()
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _membershipService.GetMyMembershipsAsync(userId);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/my-access")]
+    [Authorize]
+    public async Task<IActionResult> GetMyOrganizationAccess(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var headerError = ValidateOptionalOrganizationHeader(id);
+        if (headerError != null)
+        {
+            return headerError;
+        }
+
+        var result = await _membershipService.GetMyOrganizationAccessAsync(id, userId);
+
+        if (result == null)
+        {
+            return ForbiddenProblem(
+                "You do not have an approved membership in this active organization.");
+        }
+
+        return Ok(result);
+    }
+
     [HttpPost("{id:int}/members")]
     [Authorize]
     public async Task<IActionResult> RequestMembership(int id)
     {
-        if (!int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var userId))
+        if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized();
         }
@@ -88,25 +198,48 @@ public class OrganizationsController : ControllerBase
     }
 
     [HttpGet("{id:int}/members")]
-    [Authorize(Policy = "Organizations.View")]
+    [Authorize]
     public async Task<IActionResult> GetMembers(int id)
     {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.View");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
         var result = await _membershipService.GetMembersAsync(id);
 
         return Ok(result);
     }
 
     [HttpPatch("{id:int}/members/{membershipId:int}/approve")]
-    [Authorize(Policy = "Organizations.ApproveMembers")]
+    [Authorize]
     public async Task<IActionResult> ApproveMembership(
-    int id,
-    int membershipId)
+        int id,
+        int membershipId)
     {
-        if (!int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var approvedByUserId))
+        if (!TryGetCurrentUserId(out var approvedByUserId))
         {
             return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            approvedByUserId,
+            "Organizations.ApproveMembers");
+
+        if (authFailure != null)
+        {
+            return authFailure;
         }
 
         var result = await _membershipService.ApproveMembershipAsync(
@@ -118,11 +251,26 @@ public class OrganizationsController : ControllerBase
     }
 
     [HttpPatch("{id:int}/members/{membershipId:int}/reject")]
-    [Authorize(Policy = "Organizations.ApproveMembers")]
+    [Authorize]
     public async Task<IActionResult> RejectMembership(
-    int id,
-    int membershipId)
+        int id,
+        int membershipId)
     {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.ApproveMembers");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
         var result = await _membershipService.RejectMembershipAsync(
             id,
             membershipId);
@@ -131,17 +279,25 @@ public class OrganizationsController : ControllerBase
     }
 
     [HttpPut("{id:int}/members/{membershipId:int}/roles")]
-    [Authorize(Policy = "Organizations.Manage")]
+    [Authorize]
     public async Task<IActionResult> AssignRoles(
-    int id,
-    int membershipId,
-    [FromBody] AssignOrganizationRolesRequest request)
+        int id,
+        int membershipId,
+        [FromBody] AssignOrganizationRolesRequest request)
     {
-        if (!int.TryParse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier),
-            out var assignedByUserId))
+        if (!TryGetCurrentUserId(out var assignedByUserId))
         {
             return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            assignedByUserId,
+            "Organizations.Manage");
+
+        if (authFailure != null)
+        {
+            return authFailure;
         }
 
         var result = await _membershipService.AssignRolesAsync(

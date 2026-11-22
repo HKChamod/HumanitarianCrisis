@@ -92,7 +92,13 @@ public class OrganizationMembershipService : IOrganizationMembershipService
             ApprovedAt = m.ApprovedAt,
             ApprovedByUserId = m.ApprovedByUserId,
             Roles = m.MembershipRoles
+                .Where(mr =>
+                    mr.OrganizationId == organizationId &&
+                    mr.Role.OrganizationId == organizationId &&
+                    !mr.Role.IsSystemDefined)
                 .Select(mr => mr.Role.RoleName)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => r, StringComparer.Ordinal)
                 .ToList()
         }).ToList();
     }
@@ -110,6 +116,10 @@ public class OrganizationMembershipService : IOrganizationMembershipService
 
         if (membership == null)
             throw new KeyNotFoundException("Membership not found.");
+
+        if (!membership.Organization.IsActive)
+            throw new InvalidOperationException(
+                "Cannot approve membership for an inactive organization.");
 
         if (membership.MembershipStatus != "Pending")
             throw new InvalidOperationException(
@@ -146,6 +156,10 @@ public class OrganizationMembershipService : IOrganizationMembershipService
         if (membership == null)
             throw new KeyNotFoundException("Membership not found.");
 
+        if (!membership.Organization.IsActive)
+            throw new InvalidOperationException(
+                "Cannot reject membership for an inactive organization.");
+
         if (membership.MembershipStatus != "Pending")
             throw new InvalidOperationException(
                 "Only pending membership requests can be rejected.");
@@ -174,6 +188,7 @@ public class OrganizationMembershipService : IOrganizationMembershipService
     int assignedByUserId)
     {
         var membership = await _context.OrganizationMemberships
+            .Include(m => m.Organization)
             .Include(m => m.User)
             .Include(m => m.MembershipRoles)
                 .ThenInclude(mr => mr.Role)
@@ -183,6 +198,14 @@ public class OrganizationMembershipService : IOrganizationMembershipService
 
         if (membership == null)
             throw new KeyNotFoundException("Membership not found.");
+
+        if (!membership.Organization.IsActive)
+            throw new InvalidOperationException(
+                "Cannot assign roles in an inactive organization.");
+
+        if (!membership.User.IsActive)
+            throw new InvalidOperationException(
+                "Cannot assign roles to an inactive user.");
 
         if (membership.MembershipStatus != "Approved")
             throw new InvalidOperationException(
@@ -241,7 +264,118 @@ public class OrganizationMembershipService : IOrganizationMembershipService
             ApprovedAt = membership.ApprovedAt,
             ApprovedByUserId = membership.ApprovedByUserId,
             Roles = membership.MembershipRoles
+                .Where(mr =>
+                    mr.OrganizationId == organizationId &&
+                    mr.Role.OrganizationId == organizationId &&
+                    !mr.Role.IsSystemDefined)
                 .Select(mr => mr.Role.RoleName)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => r, StringComparer.Ordinal)
+                .ToList()
+        };
+    }
+
+    public async Task<IReadOnlyList<MyOrganizationMembershipResponse>> GetMyMembershipsAsync(
+        int userId)
+    {
+        var memberships = await _context.OrganizationMemberships
+            .AsNoTracking()
+            .Where(m => m.UserId == userId)
+            .OrderByDescending(m => m.JoinedAt)
+            .Select(m => new
+            {
+                m.MembershipId,
+                m.OrganizationId,
+                OrganizationName = m.Organization.OrganizationName,
+                RegistrationNumber = m.Organization.RegistrationNumber,
+                IsOrganizationActive = m.Organization.IsActive,
+                m.MembershipStatus,
+                m.JoinedAt,
+                m.ApprovedAt,
+                Roles = m.MembershipRoles
+                    .Where(mr =>
+                        mr.OrganizationId == m.OrganizationId &&
+                        mr.Role.OrganizationId == m.OrganizationId &&
+                        !mr.Role.IsSystemDefined)
+                    .Select(mr => mr.Role.RoleName)
+                    .ToList()
+            })
+            .ToListAsync();
+
+        return memberships.Select(m => new MyOrganizationMembershipResponse
+        {
+            MembershipId = m.MembershipId,
+            OrganizationId = m.OrganizationId,
+            OrganizationName = m.OrganizationName,
+            RegistrationNumber = m.RegistrationNumber,
+            IsOrganizationActive = m.IsOrganizationActive,
+            MembershipStatus = m.MembershipStatus,
+            JoinedAt = m.JoinedAt,
+            ApprovedAt = m.ApprovedAt,
+            Roles = m.Roles
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => r, StringComparer.Ordinal)
+                .ToList()
+        }).ToList();
+    }
+
+    public async Task<MyOrganizationAccessResponse?> GetMyOrganizationAccessAsync(
+        int organizationId,
+        int userId)
+    {
+        var access = await _context.OrganizationMemberships
+            .AsNoTracking()
+            .Where(m =>
+                m.OrganizationId == organizationId &&
+                m.UserId == userId &&
+                m.MembershipStatus == "Approved" &&
+                m.User.IsActive &&
+                m.Organization.IsActive)
+            .Select(m => new
+            {
+                m.OrganizationId,
+                OrganizationName = m.Organization.OrganizationName,
+                m.MembershipId,
+                m.MembershipStatus,
+                Roles = m.MembershipRoles
+                    .Where(mr =>
+                        mr.OrganizationId == organizationId &&
+                        mr.Role.OrganizationId == organizationId &&
+                        !mr.Role.IsSystemDefined)
+                    .Select(mr => mr.Role.RoleName)
+                    .ToList(),
+                Permissions = m.MembershipRoles
+                    .Where(mr =>
+                        mr.OrganizationId == organizationId &&
+                        mr.Role.OrganizationId == organizationId &&
+                        !mr.Role.IsSystemDefined)
+                    .SelectMany(mr => mr.Role.RolePermissions)
+                    .Select(rp => rp.Permission.PermissionName)
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        if (access == null)
+        {
+            return null;
+        }
+
+        return new MyOrganizationAccessResponse
+        {
+            OrganizationId = access.OrganizationId,
+            OrganizationName = access.OrganizationName,
+            MembershipId = access.MembershipId,
+            MembershipStatus = access.MembershipStatus,
+            Roles = access.Roles
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(r => r, StringComparer.Ordinal)
+                .ToList(),
+            Permissions = access.Permissions
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(p => p, StringComparer.Ordinal)
                 .ToList()
         };
     }

@@ -25,4 +25,11 @@ public interface IOrganizationMembershipService
         int membershipId,
         AssignOrganizationRolesRequest request,
         int assignedByUserId);
+
+    Task<IReadOnlyList<MyOrganizationMembershipResponse>> GetMyMembershipsAsync(
+        int userId);
+
+    Task<MyOrganizationAccessResponse?> GetMyOrganizationAccessAsync(
+        int organizationId,
+        int userId);
 }
