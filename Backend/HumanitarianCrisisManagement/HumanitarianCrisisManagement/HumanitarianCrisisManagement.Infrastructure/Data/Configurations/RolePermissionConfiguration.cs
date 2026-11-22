@@ -126,7 +126,20 @@ new RolePermission { RolePermissionId = 61, RoleId = 3, PermissionId = 28 },
 new RolePermission { RolePermissionId = 62, RoleId = 3, PermissionId = 29 },
 
 // Responder
-new RolePermission { RolePermissionId = 63, RoleId = 4, PermissionId = 28 }
+new RolePermission { RolePermissionId = 63, RoleId = 4, PermissionId = 28 },
+
+// Resource Allocation Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 64, RoleId = 2, PermissionId = 30 },
+new RolePermission { RolePermissionId = 65, RoleId = 2, PermissionId = 31 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 66, RoleId = 3, PermissionId = 30 },
+new RolePermission { RolePermissionId = 67, RoleId = 3, PermissionId = 31 },
+
+// Responder
+new RolePermission { RolePermissionId = 68, RoleId = 4, PermissionId = 30 }
         );
     }
 }
