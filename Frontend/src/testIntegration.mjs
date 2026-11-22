@@ -125,59 +125,70 @@ async function runTests() {
   assert(isAdminUser(adminUser), 'Administrator user with administrative permissions is granted access (isAdminUser === true)');
 
   // --- TEST 4: BACKEND LIVE ENDPOINTS INTEGRATION ---
+  // Requires HCMS_TEST_ADMIN_EMAIL and HCMS_TEST_ADMIN_PASSWORD in the environment.
   console.log('\n--- TEST GROUP 4: Backend Live API Integration (http://localhost:5107) ---');
-  try {
-    // 4.1 Login
-    const loginRes = await fetch(`${API_BASE_URL}/Auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'admin.test+20261116@example.com',
-        password: 'Admin@4554',
-      }),
-    });
-    assert(loginRes.status === 200, `POST /api/Auth/login returns HTTP 200 OK`);
-    const loginData = await loginRes.json();
-    assert(Boolean(loginData.accessToken), 'Login response contains valid JWT accessToken');
+  const testAdminEmail = process.env.HCMS_TEST_ADMIN_EMAIL?.trim();
+  const testAdminPassword = process.env.HCMS_TEST_ADMIN_PASSWORD;
 
-    const authHeaders = {
-      Authorization: `Bearer ${loginData.accessToken}`,
-      'Content-Type': 'application/json',
-    };
-
-    // 4.2 /api/Auth/me
-    const meRes = await fetch(`${API_BASE_URL}/Auth/me`, { headers: authHeaders });
-    assert(meRes.status === 200, 'GET /api/Auth/me returns HTTP 200 OK');
-    const meData = await meRes.json();
-    assert(meData.roles.includes('Administrator'), 'Current user contains Administrator role');
-    assert(meData.permissions.length > 20, `Current user has all permissions populated (${meData.permissions.length} permissions)`);
-
-    // 4.3 CrisisEvents
-    const crisesRes = await fetch(`${API_BASE_URL}/CrisisEvents`, { headers: authHeaders });
-    assert(crisesRes.status === 200, 'GET /api/CrisisEvents returns HTTP 200 OK');
-
-    // 4.4 CitizenRequests
-    const reqRes = await fetch(`${API_BASE_URL}/CitizenRequests`, { headers: authHeaders });
-    assert(reqRes.status === 200, 'GET /api/CitizenRequests returns HTTP 200 OK');
-
-    // 4.5 Organizations
-    const orgRes = await fetch(`${API_BASE_URL}/Organizations`, { headers: authHeaders });
-    assert(orgRes.status === 200, 'GET /api/Organizations returns HTTP 200 OK');
-
-    // 4.6 Resources
-    const resRes = await fetch(`${API_BASE_URL}/Resources`, { headers: authHeaders });
-    assert(resRes.status === 200, 'GET /api/Resources returns HTTP 200 OK');
-
-    // 4.7 Warehouses
-    const whRes = await fetch(`${API_BASE_URL}/Warehouses`, { headers: authHeaders });
-    assert(whRes.status === 200, 'GET /api/Warehouses returns HTTP 200 OK');
-
-    // 4.8 Warehouse Inventories
-    const invRes = await fetch(`${API_BASE_URL}/WarehouseInventories`, { headers: authHeaders });
-    assert(invRes.status === 200, 'GET /api/WarehouseInventories returns HTTP 200 OK');
-  } catch (err) {
-    console.error('Error during backend API integration test:', err);
+  if (!testAdminEmail || !testAdminPassword) {
+    console.error(
+      '❌ Missing required environment variables: HCMS_TEST_ADMIN_EMAIL and HCMS_TEST_ADMIN_PASSWORD must be set to run live backend integration tests.'
+    );
     failed++;
+  } else {
+    try {
+      // 4.1 Login
+      const loginRes = await fetch(`${API_BASE_URL}/Auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: testAdminEmail,
+          password: testAdminPassword,
+        }),
+      });
+      assert(loginRes.status === 200, `POST /api/Auth/login returns HTTP 200 OK`);
+      const loginData = await loginRes.json();
+      assert(Boolean(loginData.accessToken), 'Login response contains valid JWT accessToken');
+
+      const authHeaders = {
+        Authorization: `Bearer ${loginData.accessToken}`,
+        'Content-Type': 'application/json',
+      };
+
+      // 4.2 /api/Auth/me
+      const meRes = await fetch(`${API_BASE_URL}/Auth/me`, { headers: authHeaders });
+      assert(meRes.status === 200, 'GET /api/Auth/me returns HTTP 200 OK');
+      const meData = await meRes.json();
+      assert(meData.roles.includes('Administrator'), 'Current user contains Administrator role');
+      assert(meData.permissions.length > 20, `Current user has all permissions populated (${meData.permissions.length} permissions)`);
+
+      // 4.3 CrisisEvents
+      const crisesRes = await fetch(`${API_BASE_URL}/CrisisEvents`, { headers: authHeaders });
+      assert(crisesRes.status === 200, 'GET /api/CrisisEvents returns HTTP 200 OK');
+
+      // 4.4 CitizenRequests
+      const reqRes = await fetch(`${API_BASE_URL}/CitizenRequests`, { headers: authHeaders });
+      assert(reqRes.status === 200, 'GET /api/CitizenRequests returns HTTP 200 OK');
+
+      // 4.5 Organizations
+      const orgRes = await fetch(`${API_BASE_URL}/Organizations`, { headers: authHeaders });
+      assert(orgRes.status === 200, 'GET /api/Organizations returns HTTP 200 OK');
+
+      // 4.6 Resources
+      const resRes = await fetch(`${API_BASE_URL}/Resources`, { headers: authHeaders });
+      assert(resRes.status === 200, 'GET /api/Resources returns HTTP 200 OK');
+
+      // 4.7 Warehouses
+      const whRes = await fetch(`${API_BASE_URL}/Warehouses`, { headers: authHeaders });
+      assert(whRes.status === 200, 'GET /api/Warehouses returns HTTP 200 OK');
+
+      // 4.8 Warehouse Inventories
+      const invRes = await fetch(`${API_BASE_URL}/WarehouseInventories`, { headers: authHeaders });
+      assert(invRes.status === 200, 'GET /api/WarehouseInventories returns HTTP 200 OK');
+    } catch (err) {
+      console.error('Error during backend API integration test:', err);
+      failed++;
+    }
   }
 
   console.log('\n=====================================================');

@@ -66,6 +66,9 @@ var permissionNames = new[]
 "Inventory.View",
 "Inventory.Manage",
 
+    "ResourceAllocations.View",
+    "ResourceAllocations.Manage",
+
 "Resources.View",
     "Resources.Manage",
     "Resources.Allocate",

@@ -4,6 +4,7 @@ import { Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
 import { isAdminUser, useAuth } from '../../../app/providers/AuthProvider';
+import { USE_MOCK_API } from '../../../services/api/apiConfig';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -119,26 +120,28 @@ export function LoginPage() {
           </Button>
         </form>
 
-        {/* Demo Fast Fill for Reviewers */}
-        <div className="demo-credentials-box">
-          <p>{t('quickTestCredentials')}</p>
-          <div className="demo-buttons-row">
-            <button
-              type="button"
-              className="tag-pill"
-              onClick={() => fillDemo('citizen@relieflink.lk', 'CitizenPass2026!')}
-            >
-              {t('citizenAccount')}
-            </button>
-            <button
-              type="button"
-              className="tag-pill"
-              onClick={() => fillDemo('officer@dmc.gov.lk', 'OfficerPass2026!')}
-            >
-              {t('dmcOfficer')}
-            </button>
+        {/* Demo Fast Fill for Reviewers (mock mode only) */}
+        {USE_MOCK_API && (
+          <div className="demo-credentials-box">
+            <p>{t('quickTestCredentials')}</p>
+            <div className="demo-buttons-row">
+              <button
+                type="button"
+                className="tag-pill"
+                onClick={() => fillDemo('citizen@relieflink.lk', 'CitizenPass2026!')}
+              >
+                {t('citizenAccount')}
+              </button>
+              <button
+                type="button"
+                className="tag-pill"
+                onClick={() => fillDemo('officer@dmc.gov.lk', 'OfficerPass2026!')}
+              >
+                {t('dmcOfficer')}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.875rem', color: 'var(--color-slate-600)' }}>
           {t('noAccount')}{' '}

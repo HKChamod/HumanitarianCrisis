@@ -32,6 +32,7 @@ public class ResourceAllocationsController : ControllerBase
 
     // Create allocation request
     [HttpPost]
+    [Authorize(Policy = "Resources.Allocate")]
     public async Task<IActionResult> Create(
         [FromBody] CreateResourceAllocationRequest request)
     {
@@ -48,6 +49,7 @@ public class ResourceAllocationsController : ControllerBase
 
     // Get my allocations
     [HttpGet("my")]
+    [Authorize(Policy = "Resources.Allocate")]
     public async Task<IActionResult> GetMyAllocations()
     {
         var userId = GetCurrentUserId();
