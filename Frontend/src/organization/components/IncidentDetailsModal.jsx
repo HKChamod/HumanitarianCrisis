@@ -51,8 +51,12 @@ const IncidentDetailsModalContent = ({
         clearTimeout(feedbackTimerRef.current);
       }
       feedbackTimerRef.current = setTimeout(() => setUpdateFeedback(''), 3000);
-    } catch {
-      setUpdateFeedback(t('incidents.details.updateFailed', { defaultValue: 'Failed to update status.' }));
+    } catch (err) {
+      setUpdateFeedback(
+        err?.detail ||
+          err?.message ||
+          t('incidents.details.updateFailed', { defaultValue: 'Failed to update status.' })
+      );
     } finally {
       setIsUpdating(false);
     }

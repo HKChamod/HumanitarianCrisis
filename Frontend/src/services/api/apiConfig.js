@@ -30,23 +30,31 @@ export function handleUnauthorizedResponse() {
 }
 
 export function normalizeApiError(status, data, fallbackMessage) {
+  const normalizedStatus = status ?? 0;
+  const title =
+    data?.title ||
+    (normalizedStatus === 0
+      ? 'Network Unavailable'
+      : normalizedStatus === 401
+        ? 'Unauthorized'
+        : normalizedStatus === 403
+          ? 'Access Denied'
+          : 'Request Failed');
+
+  const detail =
+    data?.detail ||
+    data?.message ||
+    (normalizedStatus === 0
+      ? 'Unable to reach the HCMS backend API. Verify the API server is running or enable mock mode.'
+      : normalizedStatus === 403
+        ? 'You do not have permission to perform this action.'
+        : fallbackMessage || 'An unexpected error occurred.');
+
   return {
-    status: status ?? 0,
-    title:
-      data?.title ||
-      (status === 0
-        ? 'Network Unavailable'
-        : status === 401
-          ? 'Unauthorized'
-          : status === 403
-            ? 'Access Denied'
-            : 'Request Failed'),
-    detail:
-      data?.detail ||
-      data?.message ||
-      (status === 0
-        ? 'Unable to reach the HCMS backend API. Verify the API server is running or enable mock mode.'
-        : fallbackMessage || 'An unexpected error occurred.'),
+    status: normalizedStatus,
+    title,
+    detail,
+    message: detail || title,
     errors: data?.errors,
     traceId: data?.traceId,
   };
