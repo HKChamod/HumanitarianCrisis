@@ -44,7 +44,7 @@ export const CrisisIncidentsPage = () => {
       });
       setIncidents(data);
     } catch (err) {
-      setError(err.message || 'Failed to fetch crisis events.');
+      setError(err?.detail || err?.message || 'Failed to fetch crisis events.');
       setIncidents([]);
     } finally {
       if (stateMode !== 'loading') {

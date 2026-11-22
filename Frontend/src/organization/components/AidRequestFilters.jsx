@@ -2,6 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconSearch } from './Icons';
 import { getLocalizedDistrict } from '../utils/localizationUtils';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
+import { BACKEND_REQUEST_STATUSES } from '../services/aidRequestsService';
 
 export const AidRequestFilters = ({
   searchQuery,
@@ -89,10 +91,20 @@ export const AidRequestFilters = ({
             aria-label={t('aidRequests.filters.allStatuses')}
           >
             <option value="all">{t('aidRequests.filters.allStatuses')}</option>
-            <option value="Pending Review">{t('status.pendingReview', { defaultValue: 'Pending Review' })}</option>
-            <option value="In Progress">{t('status.inProgress', { defaultValue: 'In Progress' })}</option>
-            <option value="Fulfilled">{t('status.fulfilled', { defaultValue: 'Fulfilled' })}</option>
-            <option value="Cancelled">{t('status.cancelled', { defaultValue: 'Cancelled' })}</option>
+            {USE_MOCK_API ? (
+              <>
+                <option value="Pending Review">{t('status.pendingReview', { defaultValue: 'Pending Review' })}</option>
+                <option value="In Progress">{t('status.inProgress', { defaultValue: 'In Progress' })}</option>
+                <option value="Fulfilled">{t('status.fulfilled', { defaultValue: 'Fulfilled' })}</option>
+                <option value="Cancelled">{t('status.cancelled', { defaultValue: 'Cancelled' })}</option>
+              </>
+            ) : (
+              BACKEND_REQUEST_STATUSES.map((statusOption) => (
+                <option key={statusOption} value={statusOption}>
+                  {t(`status.${statusOption.toLowerCase()}`, { defaultValue: statusOption })}
+                </option>
+              ))
+            )}
           </select>
 
           {/* District Filter */}

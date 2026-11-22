@@ -8,13 +8,17 @@ import {
   IconTrendingUp
 } from './Icons';
 import { mockDashboardMetrics } from '../data/mockDashboardData';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
 
 export const StatCards = ({
+  metrics = null,
   onNavigateToIncidents = () => {},
   onNavigateToRequests = () => {},
-  onNavigateToTeams = () => {}
+  onNavigateToTeams = () => {},
+  onNavigateToAreas = () => {}
 }) => {
   const { t } = useTranslation();
+  const displayMetrics = USE_MOCK_API ? mockDashboardMetrics : (Array.isArray(metrics) ? metrics : []);
 
   const getIcon = (iconName, color) => {
     switch (iconName) {
@@ -32,6 +36,14 @@ export const StatCards = ({
   };
 
   const getTranslatedMetric = (stat) => {
+    if (!USE_MOCK_API) {
+      return {
+        title: stat.title,
+        badge: stat.badge,
+        change: stat.change
+      };
+    }
+
     switch (stat.id) {
       case 'active-incidents':
         return {
@@ -68,19 +80,25 @@ export const StatCards = ({
 
   return (
     <section className="org-stats-grid" aria-label={t('dashboard.kpi.title', { defaultValue: 'Key Performance Indicators' })}>
-      {mockDashboardMetrics.map((stat) => {
+      {displayMetrics.map((stat) => {
         const isUrgent = stat.changeType === 'urgent' || stat.changeType === 'increase';
         const localized = getTranslatedMetric(stat);
+        const isClickable =
+          stat.id === 'active-incidents' ||
+          stat.id === 'aid-requests' ||
+          stat.id === 'dispatched-teams' ||
+          stat.id === 'geographic-areas';
 
         return (
           <div
             key={stat.id}
             className="org-stat-card"
-            style={{ cursor: stat.id === 'active-incidents' || stat.id === 'aid-requests' || stat.id === 'dispatched-teams' ? 'pointer' : 'default' }}
+            style={{ cursor: isClickable ? 'pointer' : 'default' }}
             onClick={() => {
               if (stat.id === 'active-incidents') onNavigateToIncidents();
               if (stat.id === 'aid-requests') onNavigateToRequests();
               if (stat.id === 'dispatched-teams') onNavigateToTeams();
+              if (stat.id === 'geographic-areas') onNavigateToAreas();
             }}
           >
             <div className="org-stat-top">

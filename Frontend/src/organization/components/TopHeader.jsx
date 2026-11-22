@@ -40,8 +40,11 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
   const profileRef = useRef(null);
   const searchContainerRef = useRef(null);
 
-  // Load persistent notification state from localStorage or fallback to mock data
+  // Load persistent notification state from localStorage in mock mode only
   const [notifications, setNotifications] = useState(() => {
+    if (!USE_MOCK_API) {
+      return [];
+    }
     try {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       if (stored) {
@@ -53,8 +56,9 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
     return mockNotifications;
   });
 
-  // Persist updated notification states (e.g. read status)
+  // Persist updated notification states (e.g. read status) in mock mode only
   useEffect(() => {
+    if (!USE_MOCK_API) return;
     try {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
     } catch (err) {
@@ -96,64 +100,69 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
     );
   };
 
-  // Live Search Matching Logic across Incidents, Requests, Teams, Areas
+  // Live Search Matching Logic across Incidents, Requests, Teams, Areas (mock mode only)
   const trimmedQuery = searchQuery.trim().toLowerCase();
 
-  const matchingActivities = trimmedQuery
-    ? mockRecentActivities.filter(act =>
-      act.incidentCode?.toLowerCase().includes(trimmedQuery) ||
-      act.type?.toLowerCase().includes(trimmedQuery) ||
-      act.location?.toLowerCase().includes(trimmedQuery) ||
-      act.assignedTeam?.toLowerCase().includes(trimmedQuery) ||
-      act.status?.toLowerCase().includes(trimmedQuery) ||
-      act.priority?.toLowerCase().includes(trimmedQuery)
-    )
-    : [];
+  const matchingActivities =
+    USE_MOCK_API && trimmedQuery
+      ? mockRecentActivities.filter(act =>
+        act.incidentCode?.toLowerCase().includes(trimmedQuery) ||
+        act.type?.toLowerCase().includes(trimmedQuery) ||
+        act.location?.toLowerCase().includes(trimmedQuery) ||
+        act.assignedTeam?.toLowerCase().includes(trimmedQuery) ||
+        act.status?.toLowerCase().includes(trimmedQuery) ||
+        act.priority?.toLowerCase().includes(trimmedQuery)
+      )
+      : [];
 
-  const matchingCrises = trimmedQuery
-    ? mockCrisisEvents.filter(cr =>
-      cr.crisisName?.toLowerCase().includes(trimmedQuery) ||
-      cr.crisisType?.toLowerCase().includes(trimmedQuery) ||
-      cr.district?.toLowerCase().includes(trimmedQuery) ||
-      cr.location?.toLowerCase().includes(trimmedQuery) ||
-      `cr-${cr.crisisId}`.toLowerCase().includes(trimmedQuery) ||
-      String(cr.crisisId).includes(trimmedQuery)
-    )
-    : [];
+  const matchingCrises =
+    USE_MOCK_API && trimmedQuery
+      ? mockCrisisEvents.filter(cr =>
+        cr.crisisName?.toLowerCase().includes(trimmedQuery) ||
+        cr.crisisType?.toLowerCase().includes(trimmedQuery) ||
+        cr.district?.toLowerCase().includes(trimmedQuery) ||
+        cr.location?.toLowerCase().includes(trimmedQuery) ||
+        `cr-${cr.crisisId}`.toLowerCase().includes(trimmedQuery) ||
+        String(cr.crisisId).includes(trimmedQuery)
+      )
+      : [];
 
-  const matchingRequests = trimmedQuery
-    ? mockAidRequests.filter(req =>
-      req.requestId?.toLowerCase().includes(trimmedQuery) ||
-      req.requester?.toLowerCase().includes(trimmedQuery) ||
-      req.aidCategory?.toLowerCase().includes(trimmedQuery) ||
-      req.location?.toLowerCase().includes(trimmedQuery) ||
-      req.district?.toLowerCase().includes(trimmedQuery) ||
-      req.status?.toLowerCase().includes(trimmedQuery) ||
-      req.priority?.toLowerCase().includes(trimmedQuery)
-    )
-    : [];
+  const matchingRequests =
+    USE_MOCK_API && trimmedQuery
+      ? mockAidRequests.filter(req =>
+        req.requestId?.toLowerCase().includes(trimmedQuery) ||
+        req.requester?.toLowerCase().includes(trimmedQuery) ||
+        req.aidCategory?.toLowerCase().includes(trimmedQuery) ||
+        req.location?.toLowerCase().includes(trimmedQuery) ||
+        req.district?.toLowerCase().includes(trimmedQuery) ||
+        req.status?.toLowerCase().includes(trimmedQuery) ||
+        req.priority?.toLowerCase().includes(trimmedQuery)
+      )
+      : [];
 
-  const matchingTeams = trimmedQuery
-    ? initialResponseTeams.filter(team =>
-      team.teamId?.toLowerCase().includes(trimmedQuery) ||
-      team.teamName?.toLowerCase().includes(trimmedQuery) ||
-      team.teamType?.toLowerCase().includes(trimmedQuery) ||
-      team.teamLeader?.toLowerCase().includes(trimmedQuery) ||
-      team.assignedArea?.toLowerCase().includes(trimmedQuery) ||
-      team.district?.toLowerCase().includes(trimmedQuery)
-    )
-    : [];
+  const matchingTeams =
+    USE_MOCK_API && trimmedQuery
+      ? initialResponseTeams.filter(team =>
+        team.teamId?.toLowerCase().includes(trimmedQuery) ||
+        team.teamName?.toLowerCase().includes(trimmedQuery) ||
+        team.teamType?.toLowerCase().includes(trimmedQuery) ||
+        team.teamLeader?.toLowerCase().includes(trimmedQuery) ||
+        team.assignedArea?.toLowerCase().includes(trimmedQuery) ||
+        team.district?.toLowerCase().includes(trimmedQuery)
+      )
+      : [];
 
-  const matchingAreas = trimmedQuery
-    ? initialAssignedAreas.filter(area =>
-      area.areaId?.toLowerCase().includes(trimmedQuery) ||
-      area.areaName?.toLowerCase().includes(trimmedQuery) ||
-      area.district?.toLowerCase().includes(trimmedQuery) ||
-      area.province?.toLowerCase().includes(trimmedQuery) ||
-      area.crisisType?.toLowerCase().includes(trimmedQuery) ||
-      area.riskLevel?.toLowerCase().includes(trimmedQuery)
-    )
-    : [];
+  const matchingAreas =
+    USE_MOCK_API && trimmedQuery
+      ? initialAssignedAreas.filter(area =>
+        area.areaId?.toLowerCase().includes(trimmedQuery) ||
+        area.areaName?.toLowerCase().includes(trimmedQuery) ||
+        area.district?.toLowerCase().includes(trimmedQuery) ||
+        area.province?.toLowerCase().includes(trimmedQuery) ||
+        area.crisisType?.toLowerCase().includes(trimmedQuery) ||
+        area.riskLevel?.toLowerCase().includes(trimmedQuery)
+      )
+      : [];
 
   const totalResultsCount =
     matchingActivities.length +
@@ -387,10 +396,12 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
                   <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
                     <div style={{ fontSize: '22px', marginBottom: '6px' }}>🔍</div>
                     <div style={{ fontWeight: 600, color: '#1E293B', marginBottom: '4px' }}>
-                      No matching records found
+                      {USE_MOCK_API ? 'No matching records found' : 'Global header search unavailable in live mode'}
                     </div>
                     <div style={{ fontSize: '12px' }}>
-                      Try searching by incident code (e.g. CR-COL-042), request ID (AR-1042), team, or area.
+                      {USE_MOCK_API
+                        ? 'Try searching by incident code (e.g. CR-COL-042), request ID (AR-1042), team, or area.'
+                        : 'Use the search and filter controls inside Crisis Incidents, Aid Requests, or Geographic Areas.'}
                     </div>
                   </div>
                 ) : (
@@ -753,7 +764,9 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '16px 0', fontSize: '12px', color: '#64748B' }}>
-                      No notifications
+                      {USE_MOCK_API
+                        ? 'No notifications'
+                        : 'Live notifications are not available from the backend API yet.'}
                     </div>
                   ) : (
                     notifications.map(item => (

@@ -1,18 +1,202 @@
 /**
  * Organization Settings Service
- * 
- * Manages organization profile, admin profile, operational preferences, and notifications.
- * Persists non-sensitive settings to browser localStorage for demo durability, with
- * fallback to the default Sri Lanka Red Cross Society mock state.
+ *
+ * Live Mode (USE_MOCK_API === false):
+ *  - Organization Profile uses centralized axiosClient:
+ *      GET /api/organizations/{id}
+ *      PUT /api/organizations/{id}
+ *  - Browser UI preferences are explicitly scoped to local-only localStorage per organization
+ *    and are never presented as server-synchronized settings.
+ *
+ * Mock Mode (USE_MOCK_API === true):
+ *  - Preserves localStorage-backed mock settings for local UI development.
  */
 
-import { defaultOrganizationSettings, PROVINCE_DISTRICT_MAP } from '../data/mockOrganizationSettings';
+import { defaultOrganizationSettings } from '../data/mockOrganizationSettings';
+import { axiosClient, USE_MOCK_API } from '../../services/api/axiosClient';
 
 const STORAGE_KEY = 'relieflink_org_settings';
+const LOCAL_PREFS_PREFIX = 'relieflink_local_ui_prefs_';
+
+const DEFAULT_LOCAL_PREFERENCES = {
+  emailAlerts: true,
+  criticalBannerSound: false,
+  compactTables: false,
+};
+
+function mapOrganizationProfileFromApi(item) {
+  return {
+    organizationId: item?.organizationId ?? null,
+    organizationName: item?.organizationName ?? '',
+    organizationType: item?.organizationType ?? '',
+    registrationNumber: item?.registrationNumber ?? '',
+    description: item?.description ?? '',
+    email: item?.email ?? '',
+    phoneNumber: item?.phoneNumber ?? '',
+    address: item?.address ?? '',
+    isActive: typeof item?.isActive === 'boolean' ? item.isActive : true,
+    createdAt: item?.createdAt ?? null,
+    memberCount: typeof item?.memberCount === 'number' ? item.memberCount : 0,
+  };
+}
+
+function normalizeOptionalString(value) {
+  const trimmed = (value ?? '').trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 export const organizationSettingsService = {
   /**
-   * Retrieve current settings from localStorage or fallback to defaults
+   * Fetch live organization profile from GET /api/organizations/{id}
+   */
+  async getOrganizationProfile(organizationId) {
+    if (!organizationId) {
+      throw {
+        status: 400,
+        title: 'No Active Organization',
+        detail: 'Select an active organization before loading organization profile settings.',
+        message: 'Select an active organization before loading organization profile settings.',
+      };
+    }
+
+    if (USE_MOCK_API) {
+      const mock = organizationSettingsService.getSettings().organization;
+      return {
+        organizationId: Number(organizationId),
+        organizationName: mock.name,
+        organizationType: mock.type,
+        registrationNumber: mock.registrationNumber,
+        description: mock.description || '',
+        email: mock.email,
+        phoneNumber: mock.phone,
+        address: mock.address,
+        isActive: true,
+        createdAt: null,
+        memberCount: 0,
+      };
+    }
+
+    const response = await axiosClient.get(`/organizations/${Number(organizationId)}`);
+    return mapOrganizationProfileFromApi(response.data);
+  },
+
+  /**
+   * Update live organization profile via PUT /api/organizations/{id}
+   * Sends only fields explicitly supported by backend UpdateOrganizationRequest.
+   */
+  async updateOrganizationProfile(organizationId, profile) {
+    if (!organizationId) {
+      throw {
+        status: 400,
+        title: 'No Active Organization',
+        detail: 'Select an active organization before saving organization profile settings.',
+        message: 'Select an active organization before saving organization profile settings.',
+      };
+    }
+
+    const payload = {
+      organizationName: (profile.organizationName ?? '').trim(),
+      organizationType: (profile.organizationType ?? '').trim(),
+      registrationNumber: normalizeOptionalString(profile.registrationNumber),
+      description: normalizeOptionalString(profile.description),
+      email: normalizeOptionalString(profile.email),
+      phoneNumber: normalizeOptionalString(profile.phoneNumber),
+      address: normalizeOptionalString(profile.address),
+      isActive: typeof profile.isActive === 'boolean' ? profile.isActive : true,
+    };
+
+    if (USE_MOCK_API) {
+      return {
+        ...profile,
+        ...payload,
+        organizationId: Number(organizationId),
+      };
+    }
+
+    const response = await axiosClient.put(
+      `/organizations/${Number(organizationId)}`,
+      payload
+    );
+    return mapOrganizationProfileFromApi(response.data);
+  },
+
+  /**
+   * Validate live organization profile against backend UpdateOrganizationRequest constraints
+   */
+  validateOrganizationProfile: (profile) => {
+    const errors = {};
+    const name = (profile?.organizationName ?? '').trim();
+    const type = (profile?.organizationType ?? '').trim();
+    const regNo = (profile?.registrationNumber ?? '').trim();
+    const desc = (profile?.description ?? '').trim();
+    const email = (profile?.email ?? '').trim();
+    const phone = (profile?.phoneNumber ?? '').trim();
+    const address = (profile?.address ?? '').trim();
+
+    if (name.length < 2 || name.length > 200) {
+      errors.organizationName = 'Organization name must be between 2 and 200 characters.';
+    }
+    if (type.length < 2 || type.length > 50) {
+      errors.organizationType = 'Organization type must be between 2 and 50 characters.';
+    }
+    if (regNo.length > 100) {
+      errors.registrationNumber = 'Registration number cannot exceed 100 characters.';
+    }
+    if (desc.length > 2000) {
+      errors.description = 'Description cannot exceed 2000 characters.';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && (!emailRegex.test(email) || email.length > 256)) {
+      errors.email = 'Enter a valid email address (max 256 characters).';
+    }
+    if (phone.length > 20) {
+      errors.phoneNumber = 'Phone number cannot exceed 20 characters.';
+    }
+    if (address.length > 500) {
+      errors.address = 'Address cannot exceed 500 characters.';
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+    };
+  },
+
+  /**
+   * Retrieve local-only browser UI preferences scoped to the active organization
+   */
+  getLocalPreferences: (organizationId) => {
+    if (!organizationId) return { ...DEFAULT_LOCAL_PREFERENCES };
+    try {
+      const stored = localStorage.getItem(`${LOCAL_PREFS_PREFIX}${organizationId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return { ...DEFAULT_LOCAL_PREFERENCES, ...parsed };
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return { ...DEFAULT_LOCAL_PREFERENCES };
+  },
+
+  /**
+   * Save local-only browser UI preferences scoped to the active organization
+   */
+  saveLocalPreferences: (organizationId, prefs) => {
+    if (!organizationId) {
+      return { success: false, error: 'No active organization selected.' };
+    }
+    try {
+      const merged = { ...DEFAULT_LOCAL_PREFERENCES, ...prefs };
+      localStorage.setItem(`${LOCAL_PREFS_PREFIX}${organizationId}`, JSON.stringify(merged));
+      return { success: true, preferences: merged };
+    } catch {
+      return { success: false, error: 'Could not save browser preferences to local storage.' };
+    }
+  },
+
+  /**
+   * Mock-only: Retrieve settings from localStorage or fallback to defaults
    */
   getSettings: () => {
     try {

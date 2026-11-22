@@ -170,19 +170,28 @@ async function runTests() {
       const reqRes = await fetch(`${API_BASE_URL}/CitizenRequests`, { headers: authHeaders });
       assert(reqRes.status === 200, 'GET /api/CitizenRequests returns HTTP 200 OK');
 
-      // 4.5 Organizations
+      // 4.5 Organizations & Memberships
       const orgRes = await fetch(`${API_BASE_URL}/Organizations`, { headers: authHeaders });
       assert(orgRes.status === 200, 'GET /api/Organizations returns HTTP 200 OK');
 
-      // 4.6 Resources
+      const membershipsRes = await fetch(`${API_BASE_URL}/Organizations/my-memberships`, { headers: authHeaders });
+      assert(membershipsRes.status === 200, 'GET /api/Organizations/my-memberships returns HTTP 200 OK');
+      const membershipsData = await membershipsRes.json();
+      assert(Array.isArray(membershipsData), 'GET /api/Organizations/my-memberships returns an array');
+
+      // 4.6 Areas
+      const areasRes = await fetch(`${API_BASE_URL}/Areas`, { headers: authHeaders });
+      assert(areasRes.status === 200, 'GET /api/Areas returns HTTP 200 OK');
+
+      // 4.7 Resources
       const resRes = await fetch(`${API_BASE_URL}/Resources`, { headers: authHeaders });
       assert(resRes.status === 200, 'GET /api/Resources returns HTTP 200 OK');
 
-      // 4.7 Warehouses
+      // 4.8 Warehouses
       const whRes = await fetch(`${API_BASE_URL}/Warehouses`, { headers: authHeaders });
       assert(whRes.status === 200, 'GET /api/Warehouses returns HTTP 200 OK');
 
-      // 4.8 Warehouse Inventories
+      // 4.9 Warehouse Inventories
       const invRes = await fetch(`${API_BASE_URL}/WarehouseInventories`, { headers: authHeaders });
       assert(invRes.status === 200, 'GET /api/WarehouseInventories returns HTTP 200 OK');
     } catch (err) {

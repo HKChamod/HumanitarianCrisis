@@ -3,9 +3,58 @@ import { useTranslation } from 'react-i18next';
 import { IconAlertTriangle, IconClock, IconShieldCheck } from './Icons';
 import { mockUrgentAlerts } from '../data/mockDashboardData';
 import { getLocalizedRelativeTime } from '../utils/localizationUtils';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
 
 export const QuickAlerts = () => {
   const { t } = useTranslation();
+
+  if (!USE_MOCK_API) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="org-section-card">
+          <div className="org-section-header">
+            <div className="org-section-title-wrap">
+              <h2 className="org-section-title">
+                {t('dashboard.criticalNotices.title', { defaultValue: 'Critical Field Notices' })}
+              </h2>
+              <p className="org-section-subtitle">
+                Live operational advisories
+              </p>
+            </div>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '2px 8px',
+              backgroundColor: '#F1F5F9',
+              color: '#475569',
+              borderRadius: '9999px'
+            }}>
+              Not Connected
+            </span>
+          </div>
+          <div style={{ padding: '16px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+            Live DMC advisories and organization-scoped field notices are not exposed by the current backend API.
+          </div>
+        </div>
+
+        <div className="org-section-card">
+          <div className="org-section-header">
+            <div className="org-section-title-wrap">
+              <h2 className="org-section-title">
+                {t('dashboard.resourceReadiness.title', { defaultValue: 'Resource Readiness' })}
+              </h2>
+              <p className="org-section-subtitle">
+                Hub inventory &amp; standby capacity
+              </p>
+            </div>
+          </div>
+          <div style={{ padding: '16px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+            Organization hub readiness percentages and field team standby metrics are not available from the backend API yet.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getAlertTitle = (alert) => {
     if (alert.id === 'ALT-01') return t('dashboard.alerts.alt1Title', { defaultValue: alert.title });
