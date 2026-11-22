@@ -27,16 +27,17 @@ public class ApplicationDbContext : DbContext
         => Set<OrganizationMembershipRole>();
 
     // Crisis Management
-public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
-public DbSet<Area> Areas => Set<Area>();
-public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
+    public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
+    public DbSet<Area> Areas => Set<Area>();
+    public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
 
     public DbSet<Resource> Resources => Set<Resource>();
 
     public DbSet<WarehouseInventory> WarehouseInventories => Set<WarehouseInventory>();
 
-    
+    public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
 
+    public DbSet<ResourceAllocation> ResourceAllocations => Set<ResourceAllocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
