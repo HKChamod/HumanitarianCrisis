@@ -156,15 +156,18 @@ export function OrganizationProvider({ children }) {
     return { stale: false, access };
   }, []);
 
-  const refreshMemberships = useCallback(async () => {
-    if (!isAuthenticated || !userId) {
-      resetState();
-      return [];
-    }
+  const refreshMemberships = useCallback(
+    async ({ preserveError = false } = {}) => {
+      if (!isAuthenticated || !userId) {
+        resetState();
+        return [];
+      }
 
-    const seq = ++requestSeqRef.current;
-    setOrgLoading(true);
-    setOrgError(null);
+      const seq = ++requestSeqRef.current;
+      setOrgLoading(true);
+      if (!preserveError) {
+        setOrgError(null);
+      }
 
     try {
       const data = await organizationService.getMyMemberships();
@@ -241,9 +244,12 @@ export function OrganizationProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated || !userId) {
       resetState();
-      return;
+      return undefined;
     }
     refreshMemberships();
+    return () => {
+      requestSeqRef.current += 1;
+    };
   }, [isAuthenticated, userId, resetState, refreshMemberships]);
 
   const selectOrganization = useCallback(
@@ -286,7 +292,7 @@ export function OrganizationProvider({ children }) {
               'Access to this organization was denied or revoked.'
             )
           );
-          await refreshMemberships();
+          await refreshMemberships({ preserveError: true });
           return false;
         }
         if (err?.status !== 401) {
