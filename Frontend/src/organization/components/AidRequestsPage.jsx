@@ -45,7 +45,7 @@ export const AidRequestsPage = () => {
       });
       setRequests(data);
     } catch (err) {
-      setError(err.message || 'Failed to fetch aid requests.');
+      setError(err?.detail || err?.message || 'Failed to fetch aid requests.');
       setRequests([]);
     } finally {
       if (stateMode !== 'loading') {
@@ -73,7 +73,7 @@ export const AidRequestsPage = () => {
       // Search matching request ID, requester, location, or aid category
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchesId = item.requestId?.toLowerCase().includes(q);
+        const matchesId = String(item.requestId ?? '').toLowerCase().includes(q);
         const matchesRequester = item.requester?.toLowerCase().includes(q);
         const matchesLoc = item.location?.toLowerCase().includes(q);
         const matchesDist = item.district?.toLowerCase().includes(q);
@@ -142,14 +142,15 @@ export const AidRequestsPage = () => {
 
   // Functional Status Update
   const handleUpdateStatus = async (requestId, newStatus) => {
-    await aidRequestsService.updateStatus(requestId, newStatus);
+    const updated = await aidRequestsService.updateStatus(requestId, newStatus);
+    const nextStatus = updated?.status || newStatus;
     setRequests(prev =>
       prev.map(item =>
-        item.requestId === requestId ? { ...item, status: newStatus } : item
+        item.requestId === requestId ? { ...item, status: nextStatus } : item
       )
     );
     if (selectedRequest && selectedRequest.requestId === requestId) {
-      setSelectedRequest(prev => ({ ...prev, status: newStatus }));
+      setSelectedRequest(prev => ({ ...prev, status: nextStatus }));
     }
   };
 

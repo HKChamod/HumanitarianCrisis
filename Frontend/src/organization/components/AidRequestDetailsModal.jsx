@@ -9,6 +9,8 @@ import {
   IconCheckCircle
 } from './Icons';
 import { availableResponseTeams } from '../data/mockAidRequests';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
+import { ALLOWED_STATUS_TRANSITIONS } from '../services/aidRequestsService';
 import {
   formatLocalizedDate,
   getLocalizedDistrict,
@@ -28,7 +30,13 @@ const AidRequestDetailsModalContent = ({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isAssigningTeam, setIsAssigningTeam] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [isFeedbackError, setIsFeedbackError] = useState(false);
   const feedbackTimerRef = useRef(null);
+
+  const liveStatusOptions = [
+    request.status,
+    ...(ALLOWED_STATUS_TRANSITIONS[request.status] || []),
+  ];
 
   useEffect(() => {
     return () => {
@@ -42,19 +50,24 @@ const AidRequestDetailsModalContent = ({
     if (feedbackTimerRef.current) {
       clearTimeout(feedbackTimerRef.current);
     }
-    feedbackTimerRef.current = setTimeout(() => setFeedback(''), 3000);
+    feedbackTimerRef.current = setTimeout(() => {
+      setFeedback('');
+      setIsFeedbackError(false);
+    }, 3000);
   };
 
   const handleStatusApply = async () => {
     if (selectedStatus === request.status) return;
     setIsUpdatingStatus(true);
     setFeedback('');
+    setIsFeedbackError(false);
     try {
       await onUpdateStatus(request.requestId, selectedStatus);
       setFeedback(t('aidRequests.details.statusUpdated', { status: selectedStatus }));
       scheduleFeedbackClear();
-    } catch {
-      setFeedback(t('aidRequests.details.statusFailed'));
+    } catch (err) {
+      setIsFeedbackError(true);
+      setFeedback(err?.detail || err?.message || t('aidRequests.details.statusFailed'));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -64,12 +77,14 @@ const AidRequestDetailsModalContent = ({
     if (selectedTeam === request.assignedTeam) return;
     setIsAssigningTeam(true);
     setFeedback('');
+    setIsFeedbackError(false);
     try {
       await onAssignTeam(request.requestId, selectedTeam);
       setFeedback(t('aidRequests.details.teamAssigned', { team: selectedTeam }));
       scheduleFeedbackClear();
-    } catch {
-      setFeedback(t('aidRequests.details.assignFailed'));
+    } catch (err) {
+      setIsFeedbackError(true);
+      setFeedback(err?.detail || err?.message || t('aidRequests.details.assignFailed'));
     } finally {
       setIsAssigningTeam(false);
     }
@@ -156,11 +171,22 @@ const AidRequestDetailsModalContent = ({
                   className="org-team-select"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
+                  disabled={!USE_MOCK_API && liveStatusOptions.length <= 1}
                 >
-                  <option value="Pending Review">{t('status.pendingReview', { defaultValue: 'Pending Review' })}</option>
-                  <option value="In Progress">{t('status.inProgress', { defaultValue: 'In Progress' })}</option>
-                  <option value="Fulfilled">{t('status.fulfilled', { defaultValue: 'Fulfilled' })}</option>
-                  <option value="Cancelled">{t('status.cancelled', { defaultValue: 'Cancelled' })}</option>
+                  {USE_MOCK_API ? (
+                    <>
+                      <option value="Pending Review">{t('status.pendingReview', { defaultValue: 'Pending Review' })}</option>
+                      <option value="In Progress">{t('status.inProgress', { defaultValue: 'In Progress' })}</option>
+                      <option value="Fulfilled">{t('status.fulfilled', { defaultValue: 'Fulfilled' })}</option>
+                      <option value="Cancelled">{t('status.cancelled', { defaultValue: 'Cancelled' })}</option>
+                    </>
+                  ) : (
+                    liveStatusOptions.map((statusOption) => (
+                      <option key={statusOption} value={statusOption}>
+                        {getLocalizedStatus(statusOption, t)}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <button
                   className="org-btn-primary"
@@ -185,39 +211,45 @@ const AidRequestDetailsModalContent = ({
               <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>
                 {t('aidRequests.details.assignTeamPrompt')}
               </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  className="org-team-select"
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                >
-                  {availableResponseTeams.map((team) => (
-                    <option key={team} value={team}>{team}</option>
-                  ))}
-                </select>
-                <button
-                  className="org-btn-secondary"
-                  onClick={handleTeamAssign}
-                  disabled={isAssigningTeam || selectedTeam === request.assignedTeam}
-                  style={{
-                    height: '38px',
-                    padding: '0 16px',
-                    fontSize: '12px',
-                    borderColor: '#10756F',
-                    color: '#10756F',
-                    opacity: selectedTeam === request.assignedTeam ? 0.6 : 1,
-                    cursor: selectedTeam === request.assignedTeam ? 'default' : 'pointer'
-                  }}
-                  type="button"
-                >
-                  {isAssigningTeam ? t('aidRequests.details.assigningTeam') : t('aidRequests.details.assignTeam')}
-                </button>
-              </div>
+              {USE_MOCK_API ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    className="org-team-select"
+                    value={selectedTeam}
+                    onChange={(e) => setSelectedTeam(e.target.value)}
+                  >
+                    {availableResponseTeams.map((team) => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="org-btn-secondary"
+                    onClick={handleTeamAssign}
+                    disabled={isAssigningTeam || selectedTeam === request.assignedTeam}
+                    style={{
+                      height: '38px',
+                      padding: '0 16px',
+                      fontSize: '12px',
+                      borderColor: '#10756F',
+                      color: '#10756F',
+                      opacity: selectedTeam === request.assignedTeam ? 0.6 : 1,
+                      cursor: selectedTeam === request.assignedTeam ? 'default' : 'pointer'
+                    }}
+                    type="button"
+                  >
+                    {isAssigningTeam ? t('aidRequests.details.assigningTeam') : t('aidRequests.details.assignTeam')}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#64748B', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '8px 10px' }}>
+                  Response team assignment is not yet supported by the backend CitizenRequests API.
+                </div>
+              )}
             </div>
 
             {feedback && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#047857', fontWeight: 600, marginTop: '4px' }}>
-                <IconCheckCircle size={14} color="#047857" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isFeedbackError ? '#DC2626' : '#047857', fontWeight: 600, marginTop: '4px' }}>
+                <IconCheckCircle size={14} color={isFeedbackError ? '#DC2626' : '#047857'} />
                 <span>{feedback}</span>
               </div>
             )}
@@ -236,14 +268,18 @@ const AidRequestDetailsModalContent = ({
               </div>
               <div className="org-detail-item">
                 <span className="org-detail-label">{t('aidRequests.details.phoneHotline')}</span>
-                <a
-                  href={`tel:${request.phone}`}
-                  className="org-detail-value"
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10756F', textDecoration: 'none' }}
-                >
-                  <IconPhone size={12} color="#10756F" />
-                  {request.phone}
-                </a>
+                {request.phone ? (
+                  <a
+                    href={`tel:${request.phone}`}
+                    className="org-detail-value"
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10756F', textDecoration: 'none' }}
+                  >
+                    <IconPhone size={12} color="#10756F" />
+                    {request.phone}
+                  </a>
+                ) : (
+                  <span className="org-detail-value">{t('aidRequests.details.notProvided')}</span>
+                )}
               </div>
               <div className="org-detail-item">
                 <span className="org-detail-label">{t('aidRequests.details.nic')}</span>

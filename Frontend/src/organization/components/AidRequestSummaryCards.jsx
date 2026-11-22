@@ -12,8 +12,12 @@ export const AidRequestSummaryCards = ({ requests = [] }) => {
   const { t } = useTranslation();
 
   const total = requests.length;
-  const pendingCount = requests.filter(r => r.status === 'Pending Review').length;
-  const inProgressCount = requests.filter(r => r.status === 'In Progress').length;
+  const pendingCount = requests.filter(
+    r => r.status === 'Pending' || r.status === 'Pending Review'
+  ).length;
+  const inProgressCount = requests.filter(
+    r => r.status === 'Verified' || r.status === 'Assigned' || r.status === 'In Progress'
+  ).length;
   const fulfilledCount = requests.filter(r => r.status === 'Fulfilled').length;
 
   const cards = [

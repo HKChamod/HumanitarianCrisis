@@ -95,6 +95,7 @@ export const AidRequestTable = ({
   const getStatusPill = (status) => {
     const label = getLocalizedStatus(status, t);
     switch (status) {
+      case 'Pending':
       case 'Pending Review':
         return (
           <span className="org-aid-status-pill pending">
@@ -102,6 +103,8 @@ export const AidRequestTable = ({
             {label}
           </span>
         );
+      case 'Verified':
+      case 'Assigned':
       case 'In Progress':
         return (
           <span className="org-aid-status-pill in-progress">
@@ -116,6 +119,7 @@ export const AidRequestTable = ({
             {label}
           </span>
         );
+      case 'Rejected':
       case 'Cancelled':
         return (
           <span className="org-aid-status-pill cancelled">
@@ -238,10 +242,12 @@ export const AidRequestTable = ({
                     <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '13px' }}>
                       {req.requester}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                      <IconPhone size={11} color="#10756F" />
-                      <span>{req.phone}</span>
-                    </div>
+                    {req.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                        <IconPhone size={11} color="#10756F" />
+                        <span>{req.phone}</span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Aid Category */}
