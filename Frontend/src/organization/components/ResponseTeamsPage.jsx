@@ -9,7 +9,8 @@ import { ResponseTeamsTable } from './ResponseTeamsTable';
 import { TeamDetailsModal } from './TeamDetailsModal';
 import { CreateEditTeamModal } from './CreateEditTeamModal';
 import { responseTeamsService } from '../services/responseTeamsService';
-import { IconUsers, IconPlus } from './Icons';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
+import { IconUsers, IconPlus, IconAlertTriangle } from './Icons';
 
 export const ResponseTeamsPage = () => {
   const { t } = useTranslation();
@@ -36,6 +37,13 @@ export const ResponseTeamsPage = () => {
 
   // Load Teams Data
   const loadData = useCallback(async (stateMode = simState) => {
+    if (!USE_MOCK_API) {
+      setTeams([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -50,7 +58,7 @@ export const ResponseTeamsPage = () => {
       });
       setTeams(data);
     } catch (err) {
-      setError(err.message || 'Failed to fetch response teams.');
+      setError(err?.detail || err?.message || 'Failed to fetch response teams.');
       setTeams([]);
     } finally {
       if (stateMode !== 'loading') {
@@ -195,6 +203,55 @@ export const ResponseTeamsPage = () => {
       setSelectedTeamForDetails(updated);
     }
   };
+
+  if (!USE_MOCK_API) {
+    return (
+      <div className="org-teams-page">
+        <div className="org-page-header">
+          <div className="org-page-title-wrap">
+            <h1 className="org-page-title">
+              <IconUsers size={24} color="#10756F" />
+              <span>
+                {t('responseTeamPage.title', {
+                  defaultValue: 'Response Teams Management'
+                })}
+              </span>
+            </h1>
+            <p className="org-page-subtitle">
+              {t('responseTeamPage.description', {
+                defaultValue: 'Manage emergency response teams, monitor availability, and coordinate field deployments.'
+              })}
+            </p>
+          </div>
+        </div>
+
+        <div className="org-incidents-table-card">
+          <div className="org-state-box" style={{ padding: '48px 24px' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: '#FFFBEB',
+                color: '#B45309',
+                border: '1px solid #FDE68A',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '8px',
+              }}
+            >
+              <IconAlertTriangle size={26} color="#B45309" />
+            </div>
+            <h3 className="org-state-title">Response Teams API Not Yet Available</h3>
+            <p className="org-state-desc" style={{ maxWidth: '520px' }}>
+              Response Teams management (creating teams, updating team status, and recording field deployments) is not currently supported by the HCMS backend API. No fabricated or local-only team records are displayed in live mode.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="org-teams-page">

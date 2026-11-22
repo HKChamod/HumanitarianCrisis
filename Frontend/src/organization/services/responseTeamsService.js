@@ -1,27 +1,47 @@
 /**
- * Response Teams API Service for ReliefLink Organization Portal
- * 
- * Future Backend Alignment:
- *  - GET /api/organizations/{orgId}/teams
- *  - POST /api/organizations/{orgId}/teams
- *  - PUT /api/organizations/{orgId}/teams/{id}
- *  - PATCH /api/organizations/{orgId}/teams/{id}/status
- *  - POST /api/organizations/{orgId}/teams/{id}/deploy
- * 
- * Manages reactive in-memory state with realistic mock data.
+ * Response Teams Service for ReliefLink Organization Portal
+ *
+ * Backend Reality:
+ * The current .NET 10 backend does not provide a Response Teams API.
+ * In live mode (USE_MOCK_API === false), all operations reject with a normalized 501 error
+ * without calling nonexistent endpoints or mutating mock data.
+ * Mock behavior is strictly isolated to USE_MOCK_API === true.
  */
 
 import { initialResponseTeams } from '../data/mockResponseTeams';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
 
-let inMemoryTeams = [...initialResponseTeams];
+function cloneMockTeams() {
+  return initialResponseTeams.map((team) => ({
+    ...team,
+    specializedEquipment: Array.isArray(team.specializedEquipment)
+      ? [...team.specializedEquipment]
+      : [],
+  }));
+}
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7104/api';
+let inMemoryTeams = cloneMockTeams();
+
+function createUnsupportedError(detail) {
+  return {
+    status: 501,
+    title: 'Not Supported',
+    detail,
+    message: detail,
+  };
+}
 
 export const responseTeamsService = {
   /**
-   * Fetch all response teams with simulation support
+   * Fetch all response teams (mock-only; unsupported in live mode)
    */
-  async getAllTeams({ simulateLoading = false, simulateError = false, simulateEmpty = false } = {}) {
+  async getAllTeams({ simulateLoading: _simulateLoading = false, simulateError = false, simulateEmpty = false } = {}) {
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Response Teams management is not currently supported by the HCMS backend API.'
+      );
+    }
+
     if (simulateError) {
       throw new Error('Network error: Unable to connect to Response Teams Registry Service.');
     }
@@ -30,33 +50,44 @@ export const responseTeamsService = {
       return [];
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/ResponseTeams`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-      return await response.json();
-    } catch {
-      // Return copy of current in-memory teams
-      return inMemoryTeams.map(t => ({ ...t }));
-    }
+    return inMemoryTeams.map((t) => ({
+      ...t,
+      specializedEquipment: Array.isArray(t.specializedEquipment)
+        ? [...t.specializedEquipment]
+        : [],
+    }));
   },
 
   /**
-   * Get single team by ID
+   * Get single team by ID (mock-only; unsupported in live mode)
    */
   async getTeamById(id) {
-    const found = inMemoryTeams.find(t => t.teamId === id);
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Response Teams lookup is not currently supported by the HCMS backend API.'
+      );
+    }
+
+    const found = inMemoryTeams.find((t) => t.teamId === id);
     if (!found) throw new Error(`Response Team ${id} not found.`);
-    return { ...found };
+    return {
+      ...found,
+      specializedEquipment: Array.isArray(found.specializedEquipment)
+        ? [...found.specializedEquipment]
+        : [],
+    };
   },
 
   /**
-   * Create a new team
+   * Create a new team (mock-only; unsupported in live mode)
    */
   async createTeam(teamData) {
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Creating response teams is not currently supported by the HCMS backend API.'
+      );
+    }
+
     const nextNum = 110 + inMemoryTeams.length;
     const newTeam = {
       teamId: `TM-${nextNum}`,
@@ -68,10 +99,10 @@ export const responseTeamsService = {
       membersCount: Number(teamData.membersCount) || 10,
       assignedArea: teamData.assignedArea.trim(),
       district: teamData.district,
-      status: teamData.status || "Available",
-      deployedIncident: teamData.status === "Deployed" ? (teamData.deployedIncident || "Active Field Mission") : null,
-      specializedEquipment: teamData.specializedEquipment?.length ? teamData.specializedEquipment : ["Standard Field Aid Gear", "First Responder Kits", "VHF Radios"],
-      baseStation: teamData.baseStation?.trim() || "Western Province Command Hub",
+      status: teamData.status || 'Available',
+      deployedIncident: teamData.status === 'Deployed' ? (teamData.deployedIncident || 'Active Field Mission') : null,
+      specializedEquipment: teamData.specializedEquipment?.length ? [...teamData.specializedEquipment] : ['Standard Field Aid Gear', 'First Responder Kits', 'VHF Radios'],
+      baseStation: teamData.baseStation?.trim() || 'Western Province Command Hub',
       lastDeploymentDate: new Date().toISOString()
     };
 
@@ -80,10 +111,16 @@ export const responseTeamsService = {
   },
 
   /**
-   * Update team details
+   * Update team details (mock-only; unsupported in live mode)
    */
   async updateTeam(id, updateData) {
-    const idx = inMemoryTeams.findIndex(t => t.teamId === id);
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Updating response teams is not currently supported by the HCMS backend API.'
+      );
+    }
+
+    const idx = inMemoryTeams.findIndex((t) => t.teamId === id);
     if (idx === -1) throw new Error(`Response Team ${id} not found.`);
 
     const updated = {
@@ -97,16 +134,22 @@ export const responseTeamsService = {
   },
 
   /**
-   * Quick Deploy Team to an incident or area
+   * Quick Deploy Team to an incident or area (mock-only; unsupported in live mode)
    */
   async deployTeam(id, deploymentTarget) {
-    const idx = inMemoryTeams.findIndex(t => t.teamId === id);
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Deploying response teams is not currently supported by the HCMS backend API.'
+      );
+    }
+
+    const idx = inMemoryTeams.findIndex((t) => t.teamId === id);
     if (idx === -1) throw new Error(`Response Team ${id} not found.`);
 
     inMemoryTeams[idx] = {
       ...inMemoryTeams[idx],
-      status: "Deployed",
-      deployedIncident: deploymentTarget || inMemoryTeams[idx].deployedIncident || "Emergency Field Operations",
+      status: 'Deployed',
+      deployedIncident: deploymentTarget || inMemoryTeams[idx].deployedIncident || 'Emergency Field Operations',
       lastDeploymentDate: new Date().toISOString()
     };
 
@@ -114,26 +157,38 @@ export const responseTeamsService = {
   },
 
   /**
-   * Update team availability status
+   * Update team availability status (mock-only; unsupported in live mode)
    */
   async updateStatus(id, newStatus) {
-    const idx = inMemoryTeams.findIndex(t => t.teamId === id);
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Updating response team status is not currently supported by the HCMS backend API.'
+      );
+    }
+
+    const idx = inMemoryTeams.findIndex((t) => t.teamId === id);
     if (idx === -1) throw new Error(`Response Team ${id} not found.`);
 
     inMemoryTeams[idx] = {
       ...inMemoryTeams[idx],
       status: newStatus,
-      deployedIncident: newStatus === "Deployed" ? (inMemoryTeams[idx].deployedIncident || "Emergency Field Deployment") : null
+      deployedIncident: newStatus === 'Deployed' ? (inMemoryTeams[idx].deployedIncident || 'Emergency Field Deployment') : null
     };
 
     return { ...inMemoryTeams[idx] };
   },
 
   /**
-   * Reset to initial state
+   * Reset to initial state (mock-only; unsupported in live mode)
    */
   resetToDefaults() {
-    inMemoryTeams = [...initialResponseTeams];
-    return inMemoryTeams;
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Resetting default mock response teams is only available in mock mode.'
+      );
+    }
+
+    inMemoryTeams = cloneMockTeams();
+    return inMemoryTeams.map((t) => ({ ...t }));
   }
 };
