@@ -22,7 +22,13 @@ axiosClient.interceptors.request.use((config) => {
   const authHeaders = getAuthHeaders();
   if (config.headers) {
     Object.entries(authHeaders).forEach(([key, value]) => {
-      config.headers[key] = value;
+      const hasExplicitHeader =
+        typeof config.headers.has === 'function'
+          ? config.headers.has(key)
+          : config.headers[key] !== undefined;
+      if (!hasExplicitHeader) {
+        config.headers[key] = value;
+      }
     });
   }
   return config;

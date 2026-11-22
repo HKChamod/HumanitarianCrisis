@@ -25,6 +25,7 @@ export function getAuthHeaders() {
 
 export function handleUnauthorizedResponse() {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(ORG_STORAGE_KEY);
   window.dispatchEvent(new CustomEvent('hcms:unauthorized'));
 }
 

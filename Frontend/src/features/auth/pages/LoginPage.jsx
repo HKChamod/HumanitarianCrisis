@@ -4,6 +4,8 @@ import { Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
 import { isAdminUser, useAuth } from '../../../app/providers/AuthProvider';
+import { isEligibleMembership } from '../../../app/providers/OrganizationProvider';
+import { organizationService } from '../../../services/api/adminServices';
 import { USE_MOCK_API } from '../../../services/api/apiConfig';
 
 export function LoginPage() {
@@ -34,13 +36,27 @@ export function LoginPage() {
       const loggedInUser = await loginWithCredentials(email.trim(), password);
       setSuccess(t('loginSuccess'));
       const requestedPath = location.state?.from;
-      let target = '/';
-      if (isAdminUser(loggedInUser)) {
-        target = requestedPath && requestedPath.startsWith('/admin') ? requestedPath : '/admin';
-      } else if (loggedInUser?.roles?.some((r) => ['CrisisManager', 'OrganizationCoordinator', 'Responder'].includes(r))) {
-        target = requestedPath && requestedPath.startsWith('/organization') ? requestedPath : '/organization';
+      const adminEligible = isAdminUser(loggedInUser);
+      let target = '/citizen';
+
+      if (adminEligible) {
+        if (requestedPath && (requestedPath.startsWith('/admin') || requestedPath.startsWith('/organization') || requestedPath.startsWith('/citizen'))) {
+          target = requestedPath;
+        } else {
+          target = '/admin';
+        }
+      } else if (requestedPath && requestedPath.startsWith('/organization')) {
+        target = requestedPath;
+      } else if (requestedPath && requestedPath.startsWith('/citizen')) {
+        target = requestedPath;
       } else {
-        target = requestedPath && requestedPath.startsWith('/citizen') ? requestedPath : '/citizen';
+        try {
+          const memberships = await organizationService.getMyMemberships();
+          const hasApprovedOrg = Array.isArray(memberships) && memberships.some(isEligibleMembership);
+          target = hasApprovedOrg ? '/organization' : '/citizen';
+        } catch {
+          target = '/citizen';
+        }
       }
       setTimeout(() => navigate(target, { replace: true }), 600);
     } catch (err) {

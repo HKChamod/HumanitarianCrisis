@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { TOKEN_STORAGE_KEY, USE_MOCK_API } from '../../services/api/apiConfig';
+import { ORG_STORAGE_KEY, TOKEN_STORAGE_KEY, USE_MOCK_API } from '../../services/api/apiConfig';
 import { authService } from '../../services/api/adminServices';
 
 /**
@@ -187,6 +187,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handleUnauthorized = () => {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ORG_STORAGE_KEY);
       localStorage.removeItem('hcms_user');
       setUser(null);
     };
@@ -250,6 +251,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ORG_STORAGE_KEY);
       setUser(null);
       throw err;
     }
@@ -258,6 +260,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ORG_STORAGE_KEY);
     localStorage.removeItem('hcms_user');
     setUser(null);
   };

@@ -1,18 +1,36 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { LogOut } from 'lucide-react';
 import {
   IconBell,
   IconSearch,
-  IconPhone,
-  IconShieldCheck
+  IconPhone
 } from './Icons';
-import { mockOrganizationProfile, mockNotifications } from '../data/mockDashboardData';
+import { mockNotifications } from '../data/mockDashboardData';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
 
 export const TopHeader = ({ onToggleMobile = () => {} }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { orgRoles } = useOrganization();
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = mockNotifications.filter(n => n.unread).length;
+
+  const displayName = user?.fullName || user?.email || 'Authenticated User';
+  const displayInitials = user?.avatarInitials || 'US';
+  const displayRole =
+    orgRoles.length > 0
+      ? orgRoles[0]
+      : t('header.memberBadge', { defaultValue: 'Organization Member' });
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <>
@@ -123,18 +141,41 @@ export const TopHeader = ({ onToggleMobile = () => {} }) => {
             )}
           </div>
 
-          {/* Organization Coordinator Profile Widget */}
-          <div className="org-profile-widget" title="Organization Coordinator Profile">
+          {/* Organization Member Profile Widget */}
+          <div className="org-profile-widget" title={displayName}>
             <div className="org-user-avatar">
-              {mockOrganizationProfile.currentCoordinator.avatar}
+              {displayInitials}
             </div>
             <div className="org-user-meta">
-              <span className="org-user-name">{mockOrganizationProfile.currentCoordinator.name}</span>
+              <span className="org-user-name">{displayName}</span>
               <span className="org-user-role">
-                {t('header.adminBadge', { defaultValue: mockOrganizationProfile.currentCoordinator.role })}
+                {displayRole}
               </span>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={t('header.signOut', { defaultValue: 'Sign Out' })}
+            aria-label={t('header.signOut', { defaultValue: 'Sign Out' })}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              backgroundColor: '#FFFFFF',
+              color: '#475569',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <LogOut size={14} />
+            <span>{t('header.signOut', { defaultValue: 'Sign Out' })}</span>
+          </button>
         </div>
       </header>
     </>
