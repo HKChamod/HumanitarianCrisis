@@ -351,6 +351,50 @@ export const organizationService = {
     await delay();
     return [...membershipStore];
   },
+  async getMyMemberships() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/organizations/my-memberships');
+      return Array.isArray(res.data) ? res.data : [];
+    }
+    await delay();
+    return [
+      {
+        membershipId: 1,
+        organizationId: 1,
+        organizationName: 'Sri Lanka Red Cross Society (Demo)',
+        registrationNumber: 'NGO-SL-1936-001',
+        isOrganizationActive: true,
+        membershipStatus: 'Approved',
+        joinedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        roles: ['Demo Organization Coordinator'],
+      },
+    ];
+  },
+  async getMyOrganizationAccess(orgId) {
+    const normalizedOrgId = Number(orgId);
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/organizations/${normalizedOrgId}/my-access`, {
+        headers: {
+          'X-Organization-Id': String(normalizedOrgId),
+        },
+      });
+      return res.data;
+    }
+    await delay();
+    return {
+      organizationId: normalizedOrgId,
+      organizationName: 'Sri Lanka Red Cross Society (Demo)',
+      membershipId: 1,
+      membershipStatus: 'Approved',
+      roles: ['Demo Organization Coordinator'],
+      permissions: [
+        'Organizations.View',
+        'Organizations.Manage',
+        'Organizations.ApproveMembers',
+      ],
+    };
+  },
 };
 
 export const userService = {

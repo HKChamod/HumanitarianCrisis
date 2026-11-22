@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   IconMapPin,
   IconClock,
@@ -12,21 +12,34 @@ import {
 import { AREA_RESPONSE_STATUSES, AREA_RISK_LEVELS } from '../data/mockAssignedAreas';
 import { availableResponseTeams } from '../data/mockAidRequests';
 
-export const AreaDetailsModal = ({
+const AreaDetailsModalContent = ({
   area,
-  isOpen = false,
-  onClose = () => {},
-  onUpdateStatusAndRisk = () => {},
-  onUpdateTeams = () => {},
-  onEdit = () => {}
+  onClose,
+  onUpdateStatusAndRisk,
+  onUpdateTeams,
+  onEdit
 }) => {
-  if (!isOpen || !area) return null;
-
   const [selectedStatus, setSelectedStatus] = useState(area.responseStatus);
   const [selectedRisk, setSelectedRisk] = useState(area.riskLevel);
   const [selectedTeamToAdd, setSelectedTeamToAdd] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const feedbackTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleFeedbackClear = () => {
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => setFeedback(''), 3000);
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not recorded';
@@ -50,7 +63,7 @@ export const AreaDetailsModal = ({
     try {
       await onUpdateStatusAndRisk(area.areaId, selectedStatus, selectedRisk);
       setFeedback('Status & Risk parameters updated.');
-      setTimeout(() => setFeedback(''), 3000);
+      scheduleFeedbackClear();
     } catch {
       setFeedback('Failed to update area.');
     } finally {
@@ -67,7 +80,7 @@ export const AreaDetailsModal = ({
       await onUpdateTeams(area.areaId, updatedTeams);
       setSelectedTeamToAdd('');
       setFeedback(`Assigned ${selectedTeamToAdd} to area.`);
-      setTimeout(() => setFeedback(''), 3000);
+      scheduleFeedbackClear();
     } catch {
       setFeedback('Failed to assign team.');
     } finally {
@@ -82,7 +95,7 @@ export const AreaDetailsModal = ({
       const updatedTeams = area.assignedTeams.filter(t => t !== teamToRemove);
       await onUpdateTeams(area.areaId, updatedTeams);
       setFeedback(`Removed ${teamToRemove}.`);
-      setTimeout(() => setFeedback(''), 3000);
+      scheduleFeedbackClear();
     } catch {
       setFeedback('Failed to update team.');
     } finally {
@@ -351,5 +364,27 @@ export const AreaDetailsModal = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const AreaDetailsModal = ({
+  area,
+  isOpen = false,
+  onClose = () => {},
+  onUpdateStatusAndRisk = () => {},
+  onUpdateTeams = () => {},
+  onEdit = () => {}
+}) => {
+  if (!isOpen || !area) return null;
+
+  return (
+    <AreaDetailsModalContent
+      key={area.areaId}
+      area={area}
+      onClose={onClose}
+      onUpdateStatusAndRisk={onUpdateStatusAndRisk}
+      onUpdateTeams={onUpdateTeams}
+      onEdit={onEdit}
+    />
   );
 };

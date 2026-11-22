@@ -19,10 +19,11 @@ import { mockAidRequests } from '../data/mockAidRequests';
 import { initialResponseTeams } from '../data/mockResponseTeams';
 import { initialAssignedAreas } from '../data/mockAssignedAreas';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
 
 const NOTIFICATIONS_STORAGE_KEY = 'relieflink_org_notifications';
 
-export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} }) => {
+export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { } }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const authContext = useAuth();
@@ -98,58 +99,58 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
 
   const matchingActivities = trimmedQuery
     ? mockRecentActivities.filter(act =>
-        act.incidentCode?.toLowerCase().includes(trimmedQuery) ||
-        act.type?.toLowerCase().includes(trimmedQuery) ||
-        act.location?.toLowerCase().includes(trimmedQuery) ||
-        act.assignedTeam?.toLowerCase().includes(trimmedQuery) ||
-        act.status?.toLowerCase().includes(trimmedQuery) ||
-        act.priority?.toLowerCase().includes(trimmedQuery)
-      )
+      act.incidentCode?.toLowerCase().includes(trimmedQuery) ||
+      act.type?.toLowerCase().includes(trimmedQuery) ||
+      act.location?.toLowerCase().includes(trimmedQuery) ||
+      act.assignedTeam?.toLowerCase().includes(trimmedQuery) ||
+      act.status?.toLowerCase().includes(trimmedQuery) ||
+      act.priority?.toLowerCase().includes(trimmedQuery)
+    )
     : [];
 
   const matchingCrises = trimmedQuery
     ? mockCrisisEvents.filter(cr =>
-        cr.crisisName?.toLowerCase().includes(trimmedQuery) ||
-        cr.crisisType?.toLowerCase().includes(trimmedQuery) ||
-        cr.district?.toLowerCase().includes(trimmedQuery) ||
-        cr.location?.toLowerCase().includes(trimmedQuery) ||
-        `cr-${cr.crisisId}`.toLowerCase().includes(trimmedQuery) ||
-        String(cr.crisisId).includes(trimmedQuery)
-      )
+      cr.crisisName?.toLowerCase().includes(trimmedQuery) ||
+      cr.crisisType?.toLowerCase().includes(trimmedQuery) ||
+      cr.district?.toLowerCase().includes(trimmedQuery) ||
+      cr.location?.toLowerCase().includes(trimmedQuery) ||
+      `cr-${cr.crisisId}`.toLowerCase().includes(trimmedQuery) ||
+      String(cr.crisisId).includes(trimmedQuery)
+    )
     : [];
 
   const matchingRequests = trimmedQuery
     ? mockAidRequests.filter(req =>
-        req.requestId?.toLowerCase().includes(trimmedQuery) ||
-        req.requester?.toLowerCase().includes(trimmedQuery) ||
-        req.aidCategory?.toLowerCase().includes(trimmedQuery) ||
-        req.location?.toLowerCase().includes(trimmedQuery) ||
-        req.district?.toLowerCase().includes(trimmedQuery) ||
-        req.status?.toLowerCase().includes(trimmedQuery) ||
-        req.priority?.toLowerCase().includes(trimmedQuery)
-      )
+      req.requestId?.toLowerCase().includes(trimmedQuery) ||
+      req.requester?.toLowerCase().includes(trimmedQuery) ||
+      req.aidCategory?.toLowerCase().includes(trimmedQuery) ||
+      req.location?.toLowerCase().includes(trimmedQuery) ||
+      req.district?.toLowerCase().includes(trimmedQuery) ||
+      req.status?.toLowerCase().includes(trimmedQuery) ||
+      req.priority?.toLowerCase().includes(trimmedQuery)
+    )
     : [];
 
   const matchingTeams = trimmedQuery
     ? initialResponseTeams.filter(team =>
-        team.teamId?.toLowerCase().includes(trimmedQuery) ||
-        team.teamName?.toLowerCase().includes(trimmedQuery) ||
-        team.teamType?.toLowerCase().includes(trimmedQuery) ||
-        team.teamLeader?.toLowerCase().includes(trimmedQuery) ||
-        team.assignedArea?.toLowerCase().includes(trimmedQuery) ||
-        team.district?.toLowerCase().includes(trimmedQuery)
-      )
+      team.teamId?.toLowerCase().includes(trimmedQuery) ||
+      team.teamName?.toLowerCase().includes(trimmedQuery) ||
+      team.teamType?.toLowerCase().includes(trimmedQuery) ||
+      team.teamLeader?.toLowerCase().includes(trimmedQuery) ||
+      team.assignedArea?.toLowerCase().includes(trimmedQuery) ||
+      team.district?.toLowerCase().includes(trimmedQuery)
+    )
     : [];
 
   const matchingAreas = trimmedQuery
     ? initialAssignedAreas.filter(area =>
-        area.areaId?.toLowerCase().includes(trimmedQuery) ||
-        area.areaName?.toLowerCase().includes(trimmedQuery) ||
-        area.district?.toLowerCase().includes(trimmedQuery) ||
-        area.province?.toLowerCase().includes(trimmedQuery) ||
-        area.crisisType?.toLowerCase().includes(trimmedQuery) ||
-        area.riskLevel?.toLowerCase().includes(trimmedQuery)
-      )
+      area.areaId?.toLowerCase().includes(trimmedQuery) ||
+      area.areaName?.toLowerCase().includes(trimmedQuery) ||
+      area.district?.toLowerCase().includes(trimmedQuery) ||
+      area.province?.toLowerCase().includes(trimmedQuery) ||
+      area.crisisType?.toLowerCase().includes(trimmedQuery) ||
+      area.riskLevel?.toLowerCase().includes(trimmedQuery)
+    )
     : [];
 
   const totalResultsCount =
@@ -197,31 +198,46 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
 
   return (
     <>
-      {/* Emergency Hotline Header Banner (Consistent with Citizen Portal) */}
+      {/* Emergency Hotline Header Banner */}
       <div className="org-hotline-banner">
         <IconPhone size={14} color="#92400E" />
+
         <span>
           {t('hotline.banner', {
             number: '117',
-            defaultValue: 'Emergency Operations Hotline: 117 • Sri Lanka Disaster Management Command'
+            defaultValue:
+              'Emergency Operations Hotline: 117 • Sri Lanka Disaster Management Command'
           })}
         </span>
+
         <span className="org-hotline-badge">
-          {t('hotline.badge', { defaultValue: '24/7 Verified' })}
+          {t('hotline.badge', {
+            defaultValue: '24/7 Verified'
+          })}
         </span>
       </div>
 
       {/* Main Top Header */}
       <header className="org-top-header">
+
         <div className="org-header-left">
-          {/* Mobile hamburger button */}
+
+          {/* Mobile Menu Button */}
           <button
             className="org-mobile-menu-btn"
             onClick={onToggleMobile}
             aria-label="Toggle navigation menu"
             type="button"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth="2" strokeLinecap="round">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#0F172A"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="18" x2="21" y2="18" />
@@ -235,6 +251,7 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
             style={{ position: 'relative' }}
           >
             <IconSearch size={16} color="#64748B" />
+
             <input
               type="text"
               value={searchQuery}
@@ -599,10 +616,13 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
               </div>
             )}
           </div>
+
         </div>
 
+        {/* Header Right */}
         <div className="org-header-right">
-          {/* Segmented Language Selector (before notification bell) */}
+
+          {/* Language Selector */}
           <LanguageSwitcher />
 
           {/* Notifications Trigger */}
@@ -615,11 +635,16 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
               }}
               title={t('header.notifications', { defaultValue: 'Recent Notifications' })}
               type="button"
-              aria-label={t('header.notifications', { defaultValue: 'Notifications' })}
+              aria-label={t('header.notifications', {
+                defaultValue: 'Notifications'
+              })}
             >
               <IconBell size={18} />
+
               {unreadCount > 0 && (
-                <span className="org-notif-badge">{unreadCount}</span>
+                <span className="org-notif-badge">
+                  {unreadCount}
+                </span>
               )}
             </button>
 
@@ -633,7 +658,8 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
                   width: '320px',
                   backgroundColor: '#FFFFFF',
                   borderRadius: '12px',
-                  boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15)',
+                  boxShadow:
+                    '0 10px 25px -5px rgba(15, 23, 42, 0.15)',
                   border: '1px solid #E2E8F0',
                   padding: '16px',
                   zIndex: 50,
@@ -732,6 +758,7 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
                 </div>
               </div>
             )}
+
           </div>
 
           {/* Organization Coordinator Profile Widget */}
@@ -939,7 +966,10 @@ export const TopHeader = ({ onToggleMobile = () => {}, onNavigateTab = () => {} 
             )}
           </div>
         </div>
+
       </header>
     </>
   );
 };
+
+export default TopHeader;

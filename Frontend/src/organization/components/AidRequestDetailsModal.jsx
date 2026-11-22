@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   IconMapPin,
@@ -16,22 +16,34 @@ import {
   getLocalizedStatus
 } from '../utils/localizationUtils';
 
-export const AidRequestDetailsModal = ({
+const AidRequestDetailsModalContent = ({
   request,
-  isOpen = false,
-  onClose = () => {},
-  onUpdateStatus = () => {},
-  onAssignTeam = () => {}
+  onClose,
+  onUpdateStatus,
+  onAssignTeam
 }) => {
   const { t, i18n } = useTranslation();
-
-  if (!isOpen || !request) return null;
-
   const [selectedStatus, setSelectedStatus] = useState(request.status);
   const [selectedTeam, setSelectedTeam] = useState(request.assignedTeam || 'Unassigned');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isAssigningTeam, setIsAssigningTeam] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const feedbackTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleFeedbackClear = () => {
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = setTimeout(() => setFeedback(''), 3000);
+  };
 
   const handleStatusApply = async () => {
     if (selectedStatus === request.status) return;
@@ -40,7 +52,7 @@ export const AidRequestDetailsModal = ({
     try {
       await onUpdateStatus(request.requestId, selectedStatus);
       setFeedback(t('aidRequests.details.statusUpdated', { status: selectedStatus }));
-      setTimeout(() => setFeedback(''), 3000);
+      scheduleFeedbackClear();
     } catch {
       setFeedback(t('aidRequests.details.statusFailed'));
     } finally {
@@ -55,7 +67,7 @@ export const AidRequestDetailsModal = ({
     try {
       await onAssignTeam(request.requestId, selectedTeam);
       setFeedback(t('aidRequests.details.teamAssigned', { team: selectedTeam }));
-      setTimeout(() => setFeedback(''), 3000);
+      scheduleFeedbackClear();
     } catch {
       setFeedback(t('aidRequests.details.assignFailed'));
     } finally {
@@ -301,5 +313,25 @@ export const AidRequestDetailsModal = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const AidRequestDetailsModal = ({
+  request,
+  isOpen = false,
+  onClose = () => {},
+  onUpdateStatus = () => {},
+  onAssignTeam = () => {}
+}) => {
+  if (!isOpen || !request) return null;
+
+  return (
+    <AidRequestDetailsModalContent
+      key={request.requestId}
+      request={request}
+      onClose={onClose}
+      onUpdateStatus={onUpdateStatus}
+      onAssignTeam={onAssignTeam}
+    />
   );
 };

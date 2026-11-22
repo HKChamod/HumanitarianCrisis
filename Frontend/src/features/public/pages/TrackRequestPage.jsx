@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Search,
@@ -36,20 +36,7 @@ export function TrackRequestPage() {
   const [requestData, setRequestData] = useState(null);
   const [error, setError] = useState('');
 
-  // Auto-search if both parameters are provided in URL
-  useEffect(() => {
-    const r = searchParams.get('ref');
-    const p = searchParams.get('phone');
-    if (r) {
-      setRefInput(r);
-      if (p) {
-        setPhoneInput(p);
-        handleSearch(r, p);
-      }
-    }
-  }, [searchParams]);
-
-  const handleSearch = async (ref = refInput, phone = phoneInput) => {
+  const executeSearch = useCallback(async (ref, phone) => {
     if (!ref.trim()) {
       setError(t('errorRefRequired'));
       return;
@@ -72,7 +59,24 @@ export function TrackRequestPage() {
     } finally {
       setLoading(false);
     }
+  }, [t]);
+
+  const handleSearch = (ref = refInput, phone = phoneInput) => {
+    return executeSearch(ref, phone);
   };
+
+  // Auto-search if both parameters are provided in URL
+  useEffect(() => {
+    const r = searchParams.get('ref');
+    const p = searchParams.get('phone');
+    if (r) {
+      setRefInput(r);
+      if (p) {
+        setPhoneInput(p);
+        executeSearch(r, p);
+      }
+    }
+  }, [searchParams, executeSearch]);
 
   const loadSample = (sampleRef, samplePhone) => {
     setRefInput(sampleRef);

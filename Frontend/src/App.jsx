@@ -6,6 +6,10 @@ import {
   AuthProvider,
   ProtectedCitizenRoute,
 } from './app/providers/AuthProvider';
+import {
+  OrganizationProvider,
+  ProtectedOrganizationRoute,
+} from './app/providers/OrganizationProvider';
 
 import { PublicLayout } from './components/layout/PublicLayout';
 import { renderAdminRoutes } from './app/adminRoutes';
@@ -89,16 +93,21 @@ export function App() {
     <LanguageProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
+          <OrganizationProvider>
+            <Routes>
 
-            {/* Central Administration Portal */}
-            {renderAdminRoutes()}
+              {/* Central Administration Portal */}
+              {renderAdminRoutes()}
 
-            {/* Organization Management Portal */}
-            <Route
-              path="/organization/*"
-              element={<OrganizationPortal />}
-            />
+              {/* Organization Management Portal */}
+              <Route
+                path="/organization/*"
+                element={
+                  <ProtectedOrganizationRoute>
+                    <OrganizationPortal />
+                  </ProtectedOrganizationRoute>
+                }
+              />
 
             {/* Citizen Portal */}
             <Route
@@ -163,7 +172,8 @@ export function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Route>
 
-          </Routes>
+            </Routes>
+          </OrganizationProvider>
         </BrowserRouter>
       </AuthProvider>
     </LanguageProvider>
