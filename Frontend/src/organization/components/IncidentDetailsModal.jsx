@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   IconMapPin,
@@ -16,18 +16,24 @@ import {
   getLocalizedStatus
 } from '../utils/localizationUtils';
 
-export const IncidentDetailsModal = ({
+const IncidentDetailsModalContent = ({
   incident,
-  isOpen = false,
-  onClose = () => {},
-  onUpdateStatus = () => {}
+  onClose,
+  onUpdateStatus
 }) => {
-  if (!isOpen || !incident) return null;
-
   const { t, i18n } = useTranslation();
   const [selectedStatus, setSelectedStatus] = useState(incident.status);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateFeedback, setUpdateFeedback] = useState('');
+  const feedbackTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleStatusApply = async () => {
     if (selectedStatus === incident.status) return;
@@ -41,7 +47,10 @@ export const IncidentDetailsModal = ({
           defaultValue: `Status successfully updated to ${selectedStatus}`
         })
       );
-      setTimeout(() => setUpdateFeedback(''), 3000);
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+      feedbackTimerRef.current = setTimeout(() => setUpdateFeedback(''), 3000);
     } catch {
       setUpdateFeedback(t('incidents.details.updateFailed', { defaultValue: 'Failed to update status.' }));
     } finally {
@@ -251,5 +260,23 @@ export const IncidentDetailsModal = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const IncidentDetailsModal = ({
+  incident,
+  isOpen = false,
+  onClose = () => {},
+  onUpdateStatus = () => {}
+}) => {
+  if (!isOpen || !incident) return null;
+
+  return (
+    <IncidentDetailsModalContent
+      key={incident.crisisId}
+      incident={incident}
+      onClose={onClose}
+      onUpdateStatus={onUpdateStatus}
+    />
   );
 };
