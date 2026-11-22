@@ -109,6 +109,7 @@ export const OrganizationPortal = () => {
                 onNavigateToIncidents={() => handleSelectTab('incidents')}
                 onNavigateToRequests={() => handleSelectTab('requests')}
                 onNavigateToTeams={() => handleSelectTab('teams')}
+                onNavigateToAreas={() => handleSelectTab('areas')}
               />
             )}
           </main>

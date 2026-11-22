@@ -155,7 +155,14 @@ const AidRequestDetailsModalContent = ({
               <span style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                color: request.status === 'Fulfilled' ? '#047857' : (request.status === 'Pending Review' ? '#B45309' : '#1D4ED8')
+                color:
+                  request.status === 'Fulfilled'
+                    ? '#047857'
+                    : request.status === 'Pending' || request.status === 'Pending Review'
+                      ? '#B45309'
+                      : request.status === 'Rejected' || request.status === 'Cancelled'
+                        ? '#64748B'
+                        : '#1D4ED8'
               }}>
                 ● {currentStatusLabel}
               </span>

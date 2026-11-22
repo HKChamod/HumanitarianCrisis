@@ -12,6 +12,8 @@
 import { mockCrisisEvents } from '../data/mockCrisisEvents';
 import { axiosClient, USE_MOCK_API } from '../../services/api/axiosClient';
 
+let mockEventsStore = mockCrisisEvents.map((event) => ({ ...event }));
+
 function mapCrisisEventFromApi(item) {
   return {
     crisisId: item?.crisisId,
@@ -49,7 +51,7 @@ export const crisisEventsService = {
     }
 
     if (USE_MOCK_API) {
-      return mockCrisisEvents.map((event) => ({ ...event }));
+      return mockEventsStore.map((event) => ({ ...event }));
     }
 
     const response = await axiosClient.get('/CrisisEvents');
@@ -62,7 +64,7 @@ export const crisisEventsService = {
    */
   async getCrisisEventById(id) {
     if (USE_MOCK_API) {
-      const found = mockCrisisEvents.find((c) => c.crisisId === Number(id));
+      const found = mockEventsStore.find((c) => c.crisisId === Number(id));
       if (!found) throw new Error(`Crisis event #${id} not found.`);
       return { ...found };
     }
@@ -76,7 +78,7 @@ export const crisisEventsService = {
    */
   async updateCrisisStatus(id, newStatus) {
     if (USE_MOCK_API) {
-      const event = mockCrisisEvents.find((c) => c.crisisId === Number(id));
+      const event = mockEventsStore.find((c) => c.crisisId === Number(id));
       if (event) {
         event.status = newStatus;
         event.lastUpdated = new Date().toISOString();

@@ -22,7 +22,12 @@ import { useOrganization } from '../../app/providers/OrganizationProvider';
 import { useAuth } from '../../app/providers/AuthProvider';
 
 export const OrganizationSettingsPage = () => {
-  const { activeOrganizationId, activeOrganizationAccess, orgRoles } = useOrganization();
+  const {
+    activeOrganizationId,
+    activeOrganizationAccess,
+    orgRoles,
+    refreshMemberships,
+  } = useOrganization();
   const { user } = useAuth();
 
   // Active settings subtab
@@ -46,6 +51,7 @@ export const OrganizationSettingsPage = () => {
     organizationSettingsService.getLocalPreferences(activeOrganizationId)
   );
   const requestSeqRef = useRef(0);
+  const activeOrgIdRef = useRef(activeOrganizationId);
 
   // Validation errors & feedback alerts
   const [errors, setErrors] = useState({});
@@ -54,6 +60,8 @@ export const OrganizationSettingsPage = () => {
   const loadLiveProfile = useCallback(async () => {
     if (USE_MOCK_API) return;
     const seq = ++requestSeqRef.current;
+
+    setLiveSaving(false);
 
     if (!activeOrganizationId) {
       setLiveProfile(null);
@@ -72,18 +80,19 @@ export const OrganizationSettingsPage = () => {
 
     try {
       const profile = await organizationSettingsService.getOrganizationProfile(activeOrganizationId);
-      if (requestSeqRef.current !== seq) return;
+      if (requestSeqRef.current !== seq || activeOrgIdRef.current !== activeOrganizationId) return;
       setLiveProfile(profile);
       setSavedLiveProfile(profile);
       setLiveLoading(false);
     } catch (err) {
-      if (requestSeqRef.current !== seq) return;
+      if (requestSeqRef.current !== seq || activeOrgIdRef.current !== activeOrganizationId) return;
       setLiveLoadError(err?.detail || err?.message || 'Failed to load organization profile.');
       setLiveLoading(false);
     }
   }, [activeOrganizationId]);
 
   useEffect(() => {
+    activeOrgIdRef.current = activeOrganizationId;
     if (USE_MOCK_API) return undefined;
     setLocalPrefs(organizationSettingsService.getLocalPreferences(activeOrganizationId));
     loadLiveProfile();
@@ -129,13 +138,21 @@ export const OrganizationSettingsPage = () => {
       return;
     }
 
+    const targetOrgId = activeOrganizationId;
+    const previousOrgName = savedLiveProfile?.organizationName ?? '';
+    const seq = ++requestSeqRef.current;
+    const isStale = () =>
+      requestSeqRef.current !== seq || activeOrgIdRef.current !== targetOrgId;
+
     setLiveSaving(true);
     setFeedback(null);
     try {
       const updated = await organizationSettingsService.updateOrganizationProfile(
-        activeOrganizationId,
+        targetOrgId,
         liveProfile
       );
+      if (isStale()) return;
+
       setLiveProfile(updated);
       setSavedLiveProfile(updated);
       setErrors({});
@@ -144,14 +161,25 @@ export const OrganizationSettingsPage = () => {
         title: 'Organization Profile Updated',
         message: 'Organization profile changes were saved to the HCMS backend.',
       });
+
+      if (updated.organizationName !== previousOrgName) {
+        try {
+          await refreshMemberships({ preserveError: true });
+        } catch {
+          // Profile PUT succeeded; do not report a membership refresh failure as a save failure
+        }
+      }
     } catch (err) {
+      if (isStale()) return;
       setFeedback({
         type: 'error',
         title: err?.title || 'Save Failed',
         message: err?.detail || err?.message || 'Unable to update organization profile.',
       });
     } finally {
-      setLiveSaving(false);
+      if (!isStale()) {
+        setLiveSaving(false);
+      }
     }
   };
 

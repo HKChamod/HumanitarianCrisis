@@ -25,6 +25,7 @@ const IncidentDetailsModalContent = ({
   const [selectedStatus, setSelectedStatus] = useState(incident.status);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateFeedback, setUpdateFeedback] = useState('');
+  const [isFeedbackError, setIsFeedbackError] = useState(false);
   const feedbackTimerRef = useRef(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const IncidentDetailsModalContent = ({
     if (selectedStatus === incident.status) return;
     setIsUpdating(true);
     setUpdateFeedback('');
+    setIsFeedbackError(false);
     try {
       await onUpdateStatus(incident.crisisId, selectedStatus);
       setUpdateFeedback(
@@ -50,8 +52,12 @@ const IncidentDetailsModalContent = ({
       if (feedbackTimerRef.current) {
         clearTimeout(feedbackTimerRef.current);
       }
-      feedbackTimerRef.current = setTimeout(() => setUpdateFeedback(''), 3000);
+      feedbackTimerRef.current = setTimeout(() => {
+        setUpdateFeedback('');
+        setIsFeedbackError(false);
+      }, 3000);
     } catch (err) {
+      setIsFeedbackError(true);
       setUpdateFeedback(
         err?.detail ||
           err?.message ||
@@ -163,7 +169,7 @@ const IncidentDetailsModalContent = ({
               </button>
             </div>
             {updateFeedback && (
-              <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>
+              <span style={{ fontSize: '11px', color: isFeedbackError ? '#DC2626' : '#047857', fontWeight: 600 }}>
                 {updateFeedback}
               </span>
             )}

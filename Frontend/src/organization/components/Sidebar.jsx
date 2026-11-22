@@ -11,6 +11,7 @@ import {
   IconShieldCheck
 } from './Icons';
 import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
 
 export const Sidebar = ({ activeTab = 'dashboard', onSelectTab = () => {}, mobileOpen = false, onCloseMobile = () => {} }) => {
   const { t } = useTranslation();
@@ -34,9 +35,9 @@ export const Sidebar = ({ activeTab = 'dashboard', onSelectTab = () => {}, mobil
 
   const navItems = [
     { id: 'dashboard', label: t('sidebar.dashboard', { defaultValue: 'Dashboard' }), icon: IconDashboard, badge: null },
-    { id: 'incidents', label: t('sidebar.crisisIncidents', { defaultValue: 'Crisis Incidents' }), icon: IconAlertTriangle, badge: '14' },
-    { id: 'requests', label: t('sidebar.aidRequests', { defaultValue: 'Aid Requests' }), icon: IconHandHeart, badge: '38' },
-    { id: 'teams', label: t('sidebar.responseTeams', { defaultValue: 'Response Teams' }), icon: IconUsers, badge: '12' },
+    { id: 'incidents', label: t('sidebar.crisisIncidents', { defaultValue: 'Crisis Incidents' }), icon: IconAlertTriangle, badge: USE_MOCK_API ? '14' : null },
+    { id: 'requests', label: t('sidebar.aidRequests', { defaultValue: 'Aid Requests' }), icon: IconHandHeart, badge: USE_MOCK_API ? '38' : null },
+    { id: 'teams', label: t('sidebar.responseTeams', { defaultValue: 'Response Teams' }), icon: IconUsers, badge: USE_MOCK_API ? '12' : null },
     { id: 'areas', label: t('sidebar.assignedAreas', { defaultValue: 'Assigned Areas' }), icon: IconMapPin, badge: null },
     { id: 'settings', label: t('sidebar.orgSettings', { defaultValue: 'Org Settings' }), icon: IconSettings, badge: null },
   ];

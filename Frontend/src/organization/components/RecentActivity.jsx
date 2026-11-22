@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconMapPin, IconChevronRight } from './Icons';
 import { mockRecentActivities } from '../data/mockDashboardData';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
 import {
   getLocalizedRelativeTime,
   getLocalizedDistrict,
@@ -9,7 +10,12 @@ import {
   getLocalizedSeverity
 } from '../utils/localizationUtils';
 
-export const RecentActivity = ({ onViewAll = () => {} }) => {
+export const RecentActivity = ({
+  onViewAll = () => { },
+  liveIncidents = [],
+  isLoading = false,
+  error = null
+}) => {
   const { t } = useTranslation();
 
   const getStatusClass = (status) => {
@@ -60,6 +66,101 @@ export const RecentActivity = ({ onViewAll = () => {} }) => {
     }
     return locStr;
   };
+
+  if (!USE_MOCK_API) {
+    const recentLiveEvents = Array.isArray(liveIncidents) ? liveIncidents.slice(0, 5) : [];
+
+    return (
+      <div className="org-section-card">
+        <div className="org-section-header">
+          <div className="org-section-title-wrap">
+            <h2 className="org-section-title">
+              {t('dashboard.recentActivity.liveTitle', { defaultValue: 'Recent Crisis Events' })}
+            </h2>
+            <p className="org-section-subtitle">
+              {t('dashboard.recentActivity.liveSubtitle', {
+                defaultValue: 'Live crisis events returned by the backend CrisisEvents directory'
+              })}
+            </p>
+          </div>
+          <button className="org-section-action-link" onClick={onViewAll} type="button">
+            <span>{t('dashboard.recentActivity.viewAllLog', { defaultValue: 'View All Log' })}</span>
+            <IconChevronRight size={14} />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+            Loading live crisis events...
+          </div>
+        ) : error ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#B91C1C', fontSize: '13px' }}>
+            {error}
+          </div>
+        ) : recentLiveEvents.length === 0 ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+            No crisis events returned from the backend API.
+          </div>
+        ) : (
+          <div className="org-table-responsive">
+            <table className="org-activity-table">
+              <thead>
+                <tr>
+                  <th>Event Ref</th>
+                  <th>Crisis Name</th>
+                  <th>Type</th>
+                  <th>Severity</th>
+                  <th>Start Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentLiveEvents.map((event) => {
+                  const sevLower = String(event.severityLevel || '').toLowerCase();
+                  const priorityClass =
+                    sevLower === 'critical' || sevLower === 'high'
+                      ? 'high'
+                      : sevLower === 'medium'
+                        ? 'medium'
+                        : 'low';
+                  const startDateLabel = event.startDate
+                    ? new Date(event.startDate).toLocaleDateString()
+                    : '—';
+
+                  return (
+                    <tr key={event.crisisId}>
+                      <td>
+                        <span className="org-incident-code">CR-{event.crisisId}</span>
+                      </td>
+                      <td style={{ fontWeight: 600, color: '#0F172A' }}>
+                        {event.crisisName || 'Untitled Event'}
+                      </td>
+                      <td>
+                        <span className="org-activity-type">{event.crisisType || '—'}</span>
+                      </td>
+                      <td>
+                        <span className={`org-pill-priority ${priorityClass}`}>
+                          {event.severityLevel || '—'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#475569' }}>
+                        {startDateLabel}
+                      </td>
+                      <td>
+                        <span className="org-pill-status operational">
+                          {event.status || '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="org-section-card">
