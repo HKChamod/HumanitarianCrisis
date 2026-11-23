@@ -45,6 +45,7 @@ async function runTests() {
 
   let passed = 0;
   let failed = 0;
+  let skipped = 0;
 
   function assert(condition, message) {
     if (condition) {
@@ -53,6 +54,48 @@ async function runTests() {
     } else {
       console.error(`  ❌ FAIL: ${message}`);
       failed++;
+    }
+  }
+
+  function skip(message) {
+    console.warn(`  ⏭️ SKIPPED (BLOCKED): ${message}`);
+    skipped++;
+  }
+
+  async function readResponseSafely(res) {
+    let rawText = '';
+    try {
+      rawText = await res.text();
+    } catch {
+      return { rawText: '', json: null, safeSummary: '(unable to read response body)' };
+    }
+
+    const trimmed = rawText.trim();
+    if (!trimmed) {
+      return { rawText: '', json: null, safeSummary: '(empty response body)' };
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      const safeParts = [];
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.title) safeParts.push(String(parsed.title));
+        if (parsed.detail) safeParts.push(String(parsed.detail));
+        if (parsed.message) safeParts.push(String(parsed.message));
+        if (parsed.errors && typeof parsed.errors === 'object') {
+          safeParts.push(`Validation errors: ${JSON.stringify(parsed.errors)}`);
+        }
+      }
+      return {
+        rawText,
+        json: parsed,
+        safeSummary: safeParts.length > 0 ? safeParts.join(' — ') : '(JSON response without error details)',
+      };
+    } catch {
+      const sanitized = trimmed
+        .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]')
+        .slice(0, 300);
+      return { rawText, json: null, safeSummary: sanitized };
     }
   }
 
@@ -129,15 +172,34 @@ async function runTests() {
   console.log('\n--- TEST GROUP 4: Backend Live API Integration (http://localhost:5107) ---');
   const testAdminEmail = process.env.HCMS_TEST_ADMIN_EMAIL?.trim();
   const testAdminPassword = process.env.HCMS_TEST_ADMIN_PASSWORD;
+  const hasAdminEmail = Boolean(testAdminEmail);
+  const hasAdminPassword = Boolean(testAdminPassword);
 
-  if (!testAdminEmail || !testAdminPassword) {
+  const dependentAuthenticatedEndpoints = [
+    'GET /api/Auth/me',
+    'GET /api/CrisisEvents',
+    'GET /api/CitizenRequests',
+    'GET /api/Organizations',
+    'GET /api/Organizations/my-memberships',
+    'GET /api/Areas',
+    'GET /api/Resources',
+    'GET /api/Warehouses',
+    'GET /api/WarehouseInventories',
+  ];
+
+  if (!hasAdminEmail || !hasAdminPassword) {
     console.error(
-      '❌ Missing required environment variables: HCMS_TEST_ADMIN_EMAIL and HCMS_TEST_ADMIN_PASSWORD must be set to run live backend integration tests.'
+      `❌ Missing required environment variables (HCMS_TEST_ADMIN_EMAIL set: ${hasAdminEmail}, HCMS_TEST_ADMIN_PASSWORD set: ${hasAdminPassword}).`
     );
     failed++;
+    dependentAuthenticatedEndpoints.forEach((ep) =>
+      skip(`${ep} — blocked because required login environment variables are missing`)
+    );
   } else {
+    let authHeaders = null;
+
+    // 4.1 Login (payload matches backend LoginRequest: { Email, Password })
     try {
-      // 4.1 Login
       const loginRes = await fetch(`${API_BASE_URL}/Auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,62 +208,85 @@ async function runTests() {
           password: testAdminPassword,
         }),
       });
-      assert(loginRes.status === 200, `POST /api/Auth/login returns HTTP 200 OK`);
-      const loginData = await loginRes.json();
-      assert(Boolean(loginData.accessToken), 'Login response contains valid JWT accessToken');
+      const loginBody = await readResponseSafely(loginRes);
+      const loginSucceeded = loginRes.status === 200;
+      assert(loginSucceeded, `POST /api/Auth/login returns HTTP 200 OK (actual: HTTP ${loginRes.status})`);
 
-      const authHeaders = {
-        Authorization: `Bearer ${loginData.accessToken}`,
-        'Content-Type': 'application/json',
-      };
+      const hasAccessToken = Boolean(loginSucceeded && loginBody.json?.accessToken);
+      assert(hasAccessToken, 'Login response contains valid JWT accessToken');
 
-      // 4.2 /api/Auth/me
-      const meRes = await fetch(`${API_BASE_URL}/Auth/me`, { headers: authHeaders });
-      assert(meRes.status === 200, 'GET /api/Auth/me returns HTTP 200 OK');
-      const meData = await meRes.json();
-      assert(meData.roles.includes('Administrator'), 'Current user contains Administrator role');
-      assert(meData.permissions.length > 20, `Current user has all permissions populated (${meData.permissions.length} permissions)`);
-
-      // 4.3 CrisisEvents
-      const crisesRes = await fetch(`${API_BASE_URL}/CrisisEvents`, { headers: authHeaders });
-      assert(crisesRes.status === 200, 'GET /api/CrisisEvents returns HTTP 200 OK');
-
-      // 4.4 CitizenRequests
-      const reqRes = await fetch(`${API_BASE_URL}/CitizenRequests`, { headers: authHeaders });
-      assert(reqRes.status === 200, 'GET /api/CitizenRequests returns HTTP 200 OK');
-
-      // 4.5 Organizations & Memberships
-      const orgRes = await fetch(`${API_BASE_URL}/Organizations`, { headers: authHeaders });
-      assert(orgRes.status === 200, 'GET /api/Organizations returns HTTP 200 OK');
-
-      const membershipsRes = await fetch(`${API_BASE_URL}/Organizations/my-memberships`, { headers: authHeaders });
-      assert(membershipsRes.status === 200, 'GET /api/Organizations/my-memberships returns HTTP 200 OK');
-      const membershipsData = await membershipsRes.json();
-      assert(Array.isArray(membershipsData), 'GET /api/Organizations/my-memberships returns an array');
-
-      // 4.6 Areas
-      const areasRes = await fetch(`${API_BASE_URL}/Areas`, { headers: authHeaders });
-      assert(areasRes.status === 200, 'GET /api/Areas returns HTTP 200 OK');
-
-      // 4.7 Resources
-      const resRes = await fetch(`${API_BASE_URL}/Resources`, { headers: authHeaders });
-      assert(resRes.status === 200, 'GET /api/Resources returns HTTP 200 OK');
-
-      // 4.8 Warehouses
-      const whRes = await fetch(`${API_BASE_URL}/Warehouses`, { headers: authHeaders });
-      assert(whRes.status === 200, 'GET /api/Warehouses returns HTTP 200 OK');
-
-      // 4.9 Warehouse Inventories
-      const invRes = await fetch(`${API_BASE_URL}/WarehouseInventories`, { headers: authHeaders });
-      assert(invRes.status === 200, 'GET /api/WarehouseInventories returns HTTP 200 OK');
+      if (!loginSucceeded || !hasAccessToken) {
+        console.error(
+          `  ℹ️ Login diagnostics -> HTTP ${loginRes.status} | Response: ${loginBody.safeSummary} | Env vars present -> HCMS_TEST_ADMIN_EMAIL: ${hasAdminEmail}, HCMS_TEST_ADMIN_PASSWORD: ${hasAdminPassword}`
+        );
+        dependentAuthenticatedEndpoints.forEach((ep) =>
+          skip(`${ep} — blocked because POST /api/Auth/login failed (HTTP ${loginRes.status})`)
+        );
+      } else {
+        authHeaders = {
+          Authorization: `Bearer ${loginBody.json.accessToken}`,
+          'Content-Type': 'application/json',
+        };
+      }
     } catch (err) {
-      console.error('Error during backend API integration test:', err);
+      console.error(`  ❌ FAIL: POST /api/Auth/login network/request error: ${err?.message || err}`);
       failed++;
+      dependentAuthenticatedEndpoints.forEach((ep) =>
+        skip(`${ep} — blocked because POST /api/Auth/login could not complete`)
+      );
+    }
+
+    if (authHeaders) {
+      // 4.2 /api/Auth/me
+      try {
+        const meRes = await fetch(`${API_BASE_URL}/Auth/me`, { headers: authHeaders });
+        const meBody = await readResponseSafely(meRes);
+        assert(meRes.status === 200, `GET /api/Auth/me returns HTTP 200 OK (actual: HTTP ${meRes.status})`);
+        if (meRes.status === 200 && meBody.json) {
+          const roles = Array.isArray(meBody.json.roles) ? meBody.json.roles : [];
+          const permissions = Array.isArray(meBody.json.permissions) ? meBody.json.permissions : [];
+          assert(roles.includes('Administrator'), 'Current user contains Administrator role');
+          assert(permissions.length > 20, `Current user has all permissions populated (${permissions.length} permissions)`);
+        } else {
+          console.error(`  ℹ️ /api/Auth/me diagnostics -> HTTP ${meRes.status} | Response: ${meBody.safeSummary}`);
+        }
+      } catch (err) {
+        console.error(`  ❌ FAIL: GET /api/Auth/me error: ${err?.message || err}`);
+        failed++;
+      }
+
+      // 4.3–4.9 Authenticated read-only endpoint checks (isolated so one failure does not abort the rest)
+      const readOnlyChecks = [
+        { path: '/CrisisEvents', label: 'GET /api/CrisisEvents' },
+        { path: '/CitizenRequests', label: 'GET /api/CitizenRequests' },
+        { path: '/Organizations', label: 'GET /api/Organizations' },
+        { path: '/Organizations/my-memberships', label: 'GET /api/Organizations/my-memberships', expectArray: true },
+        { path: '/Areas', label: 'GET /api/Areas', expectArray: true },
+        { path: '/Resources', label: 'GET /api/Resources' },
+        { path: '/Warehouses', label: 'GET /api/Warehouses' },
+        { path: '/WarehouseInventories', label: 'GET /api/WarehouseInventories' },
+      ];
+
+      for (const check of readOnlyChecks) {
+        try {
+          const res = await fetch(`${API_BASE_URL}${check.path}`, { headers: authHeaders });
+          const body = await readResponseSafely(res);
+          assert(res.status === 200, `${check.label} returns HTTP 200 OK (actual: HTTP ${res.status})`);
+          if (check.expectArray && res.status === 200) {
+            assert(Array.isArray(body.json), `${check.label} returns a JSON array`);
+          } else if (res.status !== 200) {
+            console.error(`  ℹ️ ${check.label} diagnostics -> HTTP ${res.status} | Response: ${body.safeSummary}`);
+          }
+        } catch (err) {
+          console.error(`  ❌ FAIL: ${check.label} error: ${err?.message || err}`);
+          failed++;
+        }
+      }
     }
   }
 
   console.log('\n=====================================================');
-  console.log(`📊 TEST SUITE SUMMARY: ${passed} PASSED, ${failed} FAILED`);
+  console.log(`📊 TEST SUITE SUMMARY: ${passed} PASSED, ${failed} FAILED, ${skipped} SKIPPED`);
   console.log('=====================================================');
 
   if (failed > 0) {
