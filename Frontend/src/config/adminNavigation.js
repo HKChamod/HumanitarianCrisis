@@ -61,9 +61,9 @@ export const ADMIN_NAV_GROUPS = [
     label: 'User & Access Management',
     icon: Shield,
     items: [
-      { label: 'Users', path: '/admin/users', permission: 'Users.Manage' },
-      { label: 'Roles', path: '/admin/roles', ...(USE_MOCK_API ? { permission: 'Roles.Manage' } : { requiredRole: 'Administrator' }) },
-      { label: 'Permissions', path: '/admin/permissions', ...(USE_MOCK_API ? { permission: 'Permissions.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'Users', path: '/admin/users', permission: 'Users.View' },
+      { label: 'Roles', path: '/admin/roles', permission: 'Roles.Manage' },
+      { label: 'Permissions', path: '/admin/permissions', permission: 'Permissions.View' },
     ],
   },
   {
@@ -81,8 +81,8 @@ export const ADMIN_NAV_GROUPS = [
     label: 'Shelter Management',
     icon: Home,
     items: [
-      { label: 'Shelters', path: '/admin/shelters', ...(USE_MOCK_API ? { permission: 'Shelters.View' } : { requiredRole: 'Administrator' }) },
-      { label: 'Shelter Occupancy', path: '/admin/shelters/occupancy', ...(USE_MOCK_API ? { permission: 'Shelters.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'Shelters', path: '/admin/shelters', permission: 'Shelters.View' },
+      { label: 'Shelter Occupancy', path: '/admin/shelters/occupancy', permission: 'Shelters.View' },
     ],
   },
   {
@@ -127,8 +127,8 @@ export const ADMIN_NAV_GROUPS = [
     label: 'System Management',
     icon: Settings,
     items: [
-      { label: 'Notifications', path: '/admin/notifications', ...(USE_MOCK_API ? { permission: 'Notifications.View' } : { requiredRole: 'Administrator' }) },
-      { label: 'Audit Logs', path: '/admin/audit-logs', ...(USE_MOCK_API ? { permission: 'AuditLogs.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'Notifications', path: '/admin/notifications', permission: 'Notifications.View' },
+      { label: 'Audit Logs', path: '/admin/audit-logs', permission: 'AuditLogs.View' },
       { label: 'System Settings', path: '/admin/settings', ...(USE_MOCK_API ? { permission: 'Settings.Manage' } : { requiredRole: 'Administrator' }) },
     ],
   },

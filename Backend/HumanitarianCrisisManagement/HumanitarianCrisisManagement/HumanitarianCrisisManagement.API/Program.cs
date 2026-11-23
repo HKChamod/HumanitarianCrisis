@@ -5,6 +5,7 @@ using HumanitarianCrisisManagement.Infrastructure.Data;
 using HumanitarianCrisisManagement.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using HumanitarianCrisisManagement.API.Exceptions;
 using System.Security.Claims;
@@ -95,7 +96,16 @@ var permissionNames = new[]
     "Reports.Generate",
 
     "AI.View",
-    "AI.Review"
+    "AI.Review",
+
+    "Shelters.View",
+    "Shelters.Manage",
+
+    "Notifications.View",
+    "AuditLogs.View",
+
+    "Roles.Manage",
+    "Permissions.View"
 };
 
 builder.Services.AddAuthorization(options =>
@@ -180,6 +190,11 @@ builder.Services.AddCors(options =>
 // API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -236,6 +251,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 app.UseCors(FrontendCorsPolicy);
@@ -248,6 +264,7 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();

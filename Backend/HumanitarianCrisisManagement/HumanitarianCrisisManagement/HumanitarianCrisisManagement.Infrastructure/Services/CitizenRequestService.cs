@@ -9,10 +9,17 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 public class CitizenRequestService : ICitizenRequestService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService? _auditLogService;
+    private readonly INotificationService? _notificationService;
 
-    public CitizenRequestService(ApplicationDbContext context)
+    public CitizenRequestService(
+        ApplicationDbContext context,
+        IAuditLogService? auditLogService = null,
+        INotificationService? notificationService = null)
     {
         _context = context;
+        _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     public async Task<CitizenRequestResponse> CreateAsync(

@@ -13,6 +13,8 @@ public class ResourceAllocationResponse
     public int CrisisId { get; set; }
     public string CrisisName { get; set; } = string.Empty;
 
+    public int? CitizenRequestId { get; set; }
+
     public decimal QuantityRequested { get; set; }
     public decimal QuantityAllocated { get; set; }
 

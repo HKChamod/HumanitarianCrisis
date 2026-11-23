@@ -451,3 +451,214 @@ export function mapAiReviewDecisionToApi(payload = {}) {
     overriddenUrgencyLevel: null,
   };
 }
+
+// --- Operational Modules DTO Mappers (Shelters, Volunteers, Donations, Users/Roles, Notifications, Audit, Dashboard) ---
+
+export function mapShelterFromApi(dto) {
+  const capacity = Number(dto?.capacity ?? 0);
+  const currentOccupancy = Number(dto?.currentOccupancy ?? 0);
+  return {
+    id: String(dto?.shelterId ?? dto?.id ?? ''),
+    shelterId: Number(dto?.shelterId ?? dto?.id ?? 0),
+    name: dto?.shelterName ?? dto?.name ?? '',
+    shelterName: dto?.shelterName ?? dto?.name ?? '',
+    areaId: Number(dto?.areaId ?? 0),
+    areaName: dto?.areaName ?? '',
+    district: dto?.areaName ?? '',
+    address: dto?.address ?? '',
+    capacity,
+    currentOccupancy,
+    availableCapacity: Number(dto?.availableCapacity ?? Math.max(0, capacity - currentOccupancy)),
+    status: dto?.status ?? 'Open',
+    contactName: dto?.contactName ?? '',
+    contactPhone: dto?.contactPhone ?? '',
+    facilities: typeof dto?.facilities === 'string'
+      ? dto.facilities.split(',').map((f) => f.trim()).filter(Boolean)
+      : Array.isArray(dto?.facilities) ? dto.facilities : [],
+    facilitiesText: dto?.facilities ?? '',
+    isActive: dto?.isActive ?? true,
+    createdAt: dto?.createdAt ?? null,
+    updatedAt: dto?.updatedAt ?? null,
+  };
+}
+
+export function mapShelterPlacementFromApi(dto) {
+  return {
+    id: String(dto?.placementId ?? dto?.id ?? ''),
+    placementId: Number(dto?.placementId ?? dto?.id ?? 0),
+    shelterId: Number(dto?.shelterId ?? 0),
+    shelterName: dto?.shelterName ?? '',
+    citizenRequestId: dto?.citizenRequestId ?? null,
+    residentName: dto?.residentName ?? '',
+    peopleCount: Number(dto?.peopleCount ?? 1),
+    status: dto?.status ?? 'Active',
+    notes: dto?.notes ?? '',
+    assignedByUserId: dto?.assignedByUserId ?? null,
+    assignedByUserName: dto?.assignedByUserName ?? '',
+    checkedInAt: dto?.checkedInAt ?? null,
+    checkedOutAt: dto?.checkedOutAt ?? null,
+  };
+}
+
+export function mapVolunteerFromApi(dto) {
+  const skillsList = typeof dto?.skills === 'string'
+    ? dto.skills.split(',').map((s) => s.trim()).filter(Boolean)
+    : Array.isArray(dto?.skills) ? dto.skills : [];
+  return {
+    id: String(dto?.volunteerId ?? dto?.id ?? ''),
+    volunteerId: Number(dto?.volunteerId ?? dto?.id ?? 0),
+    userId: dto?.userId ?? null,
+    fullName: dto?.fullName ?? '',
+    name: dto?.fullName ?? '',
+    email: dto?.email ?? '',
+    phone: dto?.phoneNumber ?? '',
+    phoneNumber: dto?.phoneNumber ?? '',
+    areaId: dto?.areaId ?? null,
+    district: dto?.areaName ?? '',
+    areaName: dto?.areaName ?? '',
+    skills: skillsList,
+    skillsText: dto?.skills ?? '',
+    availability: dto?.availabilityStatus ?? 'Available',
+    availabilityStatus: dto?.availabilityStatus ?? 'Available',
+    approvalStatus: dto?.approvalStatus ?? 'Pending',
+    status: dto?.approvalStatus ?? 'Pending',
+    isActive: dto?.isActive ?? true,
+    activeAssignmentsCount: Number(dto?.activeAssignmentsCount ?? 0),
+    createdAt: dto?.createdAt ?? null,
+    updatedAt: dto?.updatedAt ?? null,
+  };
+}
+
+export function mapVolunteerAssignmentFromApi(dto) {
+  return {
+    id: String(dto?.assignmentId ?? dto?.id ?? ''),
+    assignmentId: Number(dto?.assignmentId ?? dto?.id ?? 0),
+    volunteerId: String(dto?.volunteerId ?? ''),
+    volunteerName: dto?.volunteerName ?? '',
+    crisisId: String(dto?.crisisId ?? ''),
+    crisisName: dto?.crisisName ?? '',
+    roleTitle: dto?.roleTitle ?? '',
+    taskTitle: dto?.roleTitle ?? '',
+    taskDescription: dto?.taskDescription ?? '',
+    status: dto?.status ?? 'Assigned',
+    assignedByUserId: dto?.assignedByUserId ?? null,
+    assignedByUserName: dto?.assignedByUserName ?? '',
+    assignedAt: dto?.assignedAt ?? null,
+    completedAt: dto?.completedAt ?? null,
+    notes: dto?.notes ?? '',
+  };
+}
+
+export function mapDonationFromApi(dto) {
+  return {
+    id: String(dto?.donationId ?? dto?.id ?? ''),
+    donationId: Number(dto?.donationId ?? dto?.id ?? 0),
+    donorName: dto?.donorName ?? '',
+    donorEmail: dto?.donorEmail ?? '',
+    donorPhone: dto?.donorPhone ?? '',
+    donationType: dto?.donationType ?? 'Monetary',
+    type: dto?.donationType ?? 'Monetary',
+    amount: dto?.amount !== null && dto?.amount !== undefined ? Number(dto.amount) : null,
+    currency: dto?.currency ?? 'LKR',
+    resourceId: dto?.resourceId ?? null,
+    resourceName: dto?.resourceName ?? null,
+    warehouseId: dto?.warehouseId ?? null,
+    warehouseName: dto?.warehouseName ?? null,
+    quantity: dto?.quantity !== null && dto?.quantity !== undefined ? Number(dto.quantity) : null,
+    inventoryTransactionId: dto?.inventoryTransactionId ?? null,
+    crisisId: dto?.crisisId ?? null,
+    crisisName: dto?.crisisName ?? null,
+    referenceNumber: dto?.referenceNumber ?? '',
+    status: dto?.status ?? 'Pending',
+    verifiedByUserName: dto?.verifiedByUserName ?? null,
+    verifiedAt: dto?.verifiedAt ?? null,
+    notes: dto?.notes ?? '',
+    date: dto?.createdAt ?? null,
+    createdAt: dto?.createdAt ?? null,
+  };
+}
+
+export function mapUserFromApi(dto) {
+  const roles = Array.isArray(dto?.roles) ? dto.roles : [];
+  return {
+    id: String(dto?.userId ?? dto?.id ?? ''),
+    userId: Number(dto?.userId ?? dto?.id ?? 0),
+    fullName: dto?.fullName ?? '',
+    email: dto?.email ?? '',
+    phone: dto?.phoneNumber ?? '',
+    phoneNumber: dto?.phoneNumber ?? '',
+    isActive: dto?.isActive ?? true,
+    status: dto?.isActive ? 'Active' : 'Inactive',
+    roles,
+    role: roles[0] ?? 'Citizen',
+    createdAt: dto?.createdAt ?? null,
+  };
+}
+
+export function mapRoleFromApi(dto) {
+  const perms = Array.isArray(dto?.permissions) ? dto.permissions : [];
+  return {
+    id: String(dto?.roleId ?? dto?.id ?? ''),
+    roleId: Number(dto?.roleId ?? dto?.id ?? 0),
+    name: dto?.roleName ?? dto?.name ?? '',
+    roleName: dto?.roleName ?? dto?.name ?? '',
+    description: dto?.description ?? '',
+    userCount: Number(dto?.userCount ?? 0),
+    permissions: perms.map((p) => (typeof p === 'string' ? p : p.permissionName)),
+    permissionItems: perms,
+    isSystemRole: ['Administrator', 'Citizen', 'CrisisManager', 'Responder', 'Donor', 'Volunteer'].includes(dto?.roleName ?? ''),
+  };
+}
+
+export function mapPermissionFromApi(dto) {
+  const name = dto?.permissionName ?? dto?.name ?? '';
+  const modulePart = name.includes('.') ? name.split('.')[0] : 'General';
+  return {
+    id: String(dto?.permissionId ?? dto?.id ?? ''),
+    permissionId: Number(dto?.permissionId ?? dto?.id ?? 0),
+    key: name,
+    name,
+    permissionName: name,
+    module: modulePart,
+    description: dto?.description ?? '',
+  };
+}
+
+export function mapNotificationFromApi(dto) {
+  return {
+    id: String(dto?.notificationId ?? dto?.id ?? ''),
+    notificationId: Number(dto?.notificationId ?? dto?.id ?? 0),
+    userId: Number(dto?.userId ?? 0),
+    title: dto?.title ?? '',
+    message: dto?.message ?? '',
+    category: dto?.category ?? 'System',
+    severity: dto?.severity ?? 'Info',
+    relatedEntityType: dto?.relatedEntityType ?? null,
+    relatedEntityId: dto?.relatedEntityId ?? null,
+    isRead: Boolean(dto?.isRead),
+    readAt: dto?.readAt ?? null,
+    timestamp: dto?.createdAt ?? null,
+    createdAt: dto?.createdAt ?? null,
+  };
+}
+
+export function mapAuditLogFromApi(dto) {
+  return {
+    id: String(dto?.auditLogId ?? dto?.id ?? ''),
+    auditLogId: Number(dto?.auditLogId ?? dto?.id ?? 0),
+    actorUserId: dto?.actorUserId ?? null,
+    actorName: dto?.actorName ?? dto?.actorEmail ?? 'System',
+    actorEmail: dto?.actorEmail ?? '',
+    actorRole: dto?.actorUserId ? 'Authenticated User' : 'System',
+    action: dto?.action ?? '',
+    module: dto?.entityType ?? '',
+    entityType: dto?.entityType ?? '',
+    recordRef: dto?.entityId ?? '-',
+    entityId: dto?.entityId ?? null,
+    details: dto?.summary ?? '',
+    summary: dto?.summary ?? '',
+    status: dto?.status ?? 'Success',
+    timestamp: dto?.createdAt ?? null,
+    createdAt: dto?.createdAt ?? null,
+  };
+}

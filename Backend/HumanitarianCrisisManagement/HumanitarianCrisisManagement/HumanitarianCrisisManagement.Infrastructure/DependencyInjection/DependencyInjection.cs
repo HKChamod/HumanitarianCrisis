@@ -35,6 +35,14 @@ public static class DependencyInjection
         services.AddScoped<ICitizenRequestService, CitizenRequestService>();
         services.AddScoped<IInventoryTransactionService, InventoryTransactionService>();
         services.AddScoped<IResourceAllocationService, ResourceAllocationService>();
+        services.AddScoped<IShelterService, ShelterService>();
+        services.AddScoped<IVolunteerService, VolunteerService>();
+        services.AddScoped<IDonationService, DonationService>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IRoleManagementService, RoleManagementService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
 
         services.AddAiAnalysisProviderSelection();
         services.AddScoped<IAiDecisionSupportService, AiDecisionSupportService>();
