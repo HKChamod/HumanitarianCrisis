@@ -27,16 +27,28 @@ export function CitizenHeader({
       <header className="citizen-navbar">
         <div className="citizen-navbar-container">
           {/* Brand */}
-          <Link to="/citizen" className="citizen-brand" onClick={() => setActiveTab('dashboard')}>
-            <div className="citizen-brand-badge">
-              <Shield size={20} strokeWidth={2.4} />
-            </div>
-            <div>
-              <span style={{ color: '#0F766E' }}>Relief</span>Link
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', lineHeight: 1 }}>
-                Citizen Portal
-              </span>
-            </div>
+          <Link to="/citizen" className="citizen-brand" onClick={() => setActiveTab('dashboard')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
+            <img
+              src="/athwala-logo-full.png"
+              alt="Athwala"
+              style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+            />
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                color: '#0F766E',
+                background: '#E6FFFA',
+                border: '1px solid #99F6E4',
+                padding: '0.22rem 0.6rem',
+                borderRadius: '12px',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Citizen Portal
+            </span>
           </Link>
 
           {/* Nav Links */}

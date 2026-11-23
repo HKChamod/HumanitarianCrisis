@@ -86,10 +86,13 @@ export function LoginPage() {
       <div className="auth-card">
         <div className="auth-header">
           <div
-            className="brand-icon-wrapper"
-            style={{ margin: '0 auto 1rem', width: '3rem', height: '3rem' }}
+            style={{ margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Shield size={26} strokeWidth={2.5} />
+            <img
+              src="/athwala-logo-full.png"
+              alt="Athwala"
+              style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+            />
           </div>
           <h2>{t('welcomeBack')}</h2>
           <p>{t('loginSubtitle')}</p>
