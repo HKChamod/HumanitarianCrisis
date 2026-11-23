@@ -643,6 +643,210 @@ public class GroqAiAnalysisProviderTests
         Assert.Contains("choices", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_EmptyHttpBody_ThrowsInvalidOperationException()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(string.Empty, Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_MissingMandatoryIsPotentialDuplicate_ThrowsInvalidOperationException()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(BuildGroqOkEnvelope(new
+            {
+                suggestedCategory = "Medical",
+                suggestedUrgencyLevel = "High",
+                confidenceScore = 0.85,
+                explanation = "Missing duplicate boolean."
+            })));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Contains("isPotentialDuplicate", ex.Message);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_OversizedCategoryOrExplanationOrNumericCategory_RejectedSafely()
+    {
+        var oversizedCategory = new string('A', 101);
+        var oversizedExplanation = new string('B', 2001);
+
+        object[] invalidPayloads =
+        [
+            new { suggestedCategory = oversizedCategory, suggestedUrgencyLevel = "High", isPotentialDuplicate = false, confidenceScore = 0.8, explanation = "Valid." },
+            new { suggestedCategory = "Medical", suggestedUrgencyLevel = "High", isPotentialDuplicate = false, confidenceScore = 0.8, explanation = oversizedExplanation },
+            new { suggestedCategory = "12345", suggestedUrgencyLevel = "High", isPotentialDuplicate = false, confidenceScore = 0.8, explanation = "Numeric-only category." }
+        ];
+
+        foreach (var payload in invalidPayloads)
+        {
+            var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(BuildGroqOkEnvelope(payload)));
+            using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+            var sut = new GroqAiAnalysisProvider(
+                httpClient,
+                Options.Create(CreateGroqOptions()),
+                NullLogger<GroqAiAnalysisProvider>.Instance);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+        }
+    }
+
+    [Theory]
+    [InlineData(501, 0.0)]
+    [InlineData(501, -5.0)]
+    [InlineData(null, 10.0)]
+    [InlineData(0, 5.0)]
+    [InlineData(-3, 5.0)]
+    public async Task AnalyzeCitizenRequestAsync_InvalidOrOrphanedInventoryQuantityOrId_RejectedSafely(
+        int? inventoryId,
+        double quantity)
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(BuildGroqOkEnvelope(new
+            {
+                suggestedCategory = "Medical",
+                suggestedUrgencyLevel = "High",
+                isPotentialDuplicate = false,
+                suggestedInventoryId = inventoryId,
+                suggestedResourceQuantity = quantity,
+                confidenceScore = 0.85,
+                explanation = "Invalid inventory quantity test."
+            })));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-10)]
+    public async Task AnalyzeCitizenRequestAsync_NonPositiveDuplicateId_RejectedSafely(int badDuplicateId)
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(BuildGroqOkEnvelope(new
+            {
+                suggestedCategory = "Medical",
+                suggestedUrgencyLevel = "High",
+                isPotentialDuplicate = true,
+                duplicateOfRequestId = badDuplicateId,
+                confidenceScore = 0.8,
+                explanation = "Bad duplicate ID."
+            })));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_MissingMetadataConflictingSeverityAndExtremePopulation_HandledCleanly()
+    {
+        var edgeContext = new AiAnalysisContext
+        {
+            CitizenRequestId = 80001,
+            RequestType = "Medical",
+            Description = "",
+            CurrentUrgencyLevel = "Critical",
+            PeopleCount = 50000,
+            AreaId = 1,
+            AreaName = "Synthetic Edge Zone",
+            CrisisId = null,
+            CrisisName = null,
+            CrisisType = null,
+            CrisisSeverityLevel = "Low", // conflicting with Critical request urgency
+            RecentAreaRequests =
+            [
+                new AiSiblingRequestSnapshot { RequestId = 80010, RequestType = "Food", Description = "", Status = "Pending", CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+                new AiSiblingRequestSnapshot { RequestId = 80011, RequestType = "Medical", Description = "", Status = "Pending", CreatedAt = DateTime.UtcNow.AddMinutes(-3) }
+            ],
+            AvailableInventories = Array.Empty<AiAvailableInventorySnapshot>()
+        };
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(BuildGroqOkEnvelope(new
+            {
+                suggestedCategory = "Medical",
+                suggestedUrgencyLevel = "Critical",
+                isPotentialDuplicate = true,
+                duplicateOfRequestId = 80011,
+                suggestedInventoryId = 9999, // unknown when inventory is empty -> must neutralize
+                suggestedResourceQuantity = 5,
+                confidenceScore = 0.72,
+                explanation = "No inventory available; matched sibling medical request 80011."
+            })));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        var result = await sut.AnalyzeCitizenRequestAsync(edgeContext);
+
+        Assert.Equal("Critical", result.SuggestedUrgencyLevel);
+        Assert.True(result.IsPotentialDuplicate);
+        Assert.Equal(80011, result.DuplicateOfRequestId);
+        Assert.Null(result.SuggestedInventoryId);
+        Assert.Null(result.SuggestedResourceQuantity);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_ProviderTimeout_ThrowsAiProviderUnavailableWithoutLeakingKey()
+    {
+        var logger = new CapturingLogger<GroqAiAnalysisProvider>();
+        var handler = new StubHttpMessageHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(15), ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions(timeoutSeconds: 5)),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Contains("timed out", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(FakeGroqKey, ex.Message);
+        Assert.DoesNotContain(FakeGroqKey, string.Join("\n", logger.Messages));
+    }
+
     private sealed class CapturingLogger<T> : ILogger<T>
     {
         public List<string> Messages { get; } = [];

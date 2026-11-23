@@ -732,11 +732,21 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
         if (string.IsNullOrWhiteSpace(parsed.SuggestedCategory))
             throw new InvalidOperationException("Groq AI returned an empty suggested category.");
 
+        var trimmedCategory = parsed.SuggestedCategory.Trim();
+        if (trimmedCategory.Length > MaxCategoryLength)
+            throw new InvalidOperationException($"Groq AI suggested category exceeds maximum length of {MaxCategoryLength} characters.");
+
+        if (trimmedCategory.All(char.IsDigit) || trimmedCategory.Any(char.IsControl))
+            throw new InvalidOperationException("Groq AI returned an invalid suggested category value.");
+
         if (string.IsNullOrWhiteSpace(parsed.SuggestedUrgencyLevel) ||
             !ValidUrgencyLevels.Contains(parsed.SuggestedUrgencyLevel.Trim(), StringComparer.Ordinal))
         {
             throw new InvalidOperationException("Groq AI returned an invalid suggested urgency level.");
         }
+
+        if (!parsed.IsPotentialDuplicate.HasValue)
+            throw new InvalidOperationException("Groq AI response is missing mandatory isPotentialDuplicate flag.");
 
         if (!parsed.ConfidenceScore.HasValue ||
             parsed.ConfidenceScore.Value < 0m ||
@@ -748,9 +758,25 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
         if (string.IsNullOrWhiteSpace(parsed.Explanation))
             throw new InvalidOperationException("Groq AI returned an empty explanation.");
 
+        var trimmedExplanation = parsed.Explanation.Trim();
+        if (trimmedExplanation.Length > MaxExplanationLength)
+            throw new InvalidOperationException($"Groq AI explanation exceeds maximum length of {MaxExplanationLength} characters.");
+
+        if (parsed.DuplicateOfRequestId.HasValue && parsed.DuplicateOfRequestId.Value <= 0)
+            throw new InvalidOperationException("Groq AI returned an invalid non-positive duplicate request ID.");
+
+        if (parsed.SuggestedInventoryId.HasValue && parsed.SuggestedInventoryId.Value <= 0)
+            throw new InvalidOperationException("Groq AI returned an invalid non-positive inventory ID.");
+
+        if (parsed.SuggestedResourceQuantity.HasValue && parsed.SuggestedResourceQuantity.Value <= 0m)
+            throw new InvalidOperationException("Groq AI returned an invalid non-positive resource quantity.");
+
+        if (!parsed.SuggestedInventoryId.HasValue && parsed.SuggestedResourceQuantity.HasValue)
+            throw new InvalidOperationException("Groq AI returned a resource quantity without a suggested inventory ID.");
+
         var validatedDuplicate = false;
         int? validatedDuplicateId = null;
-        if (parsed.IsPotentialDuplicate == true && parsed.DuplicateOfRequestId.HasValue)
+        if (parsed.IsPotentialDuplicate.Value && parsed.DuplicateOfRequestId.HasValue)
         {
             if (context.RecentAreaRequests.Any(r => r.RequestId == parsed.DuplicateOfRequestId.Value))
             {
@@ -783,14 +809,14 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
 
         return new AiAnalysisResult
         {
-            SuggestedCategory = Truncate(parsed.SuggestedCategory.Trim(), MaxCategoryLength),
+            SuggestedCategory = trimmedCategory,
             SuggestedUrgencyLevel = parsed.SuggestedUrgencyLevel.Trim(),
             IsPotentialDuplicate = validatedDuplicate,
             DuplicateOfRequestId = validatedDuplicateId,
             SuggestedInventoryId = validatedInventoryId,
             SuggestedResourceQuantity = validatedQuantity,
             ConfidenceScore = Math.Round(parsed.ConfidenceScore.Value, 4, MidpointRounding.AwayFromZero),
-            Explanation = Truncate(parsed.Explanation.Trim(), MaxExplanationLength),
+            Explanation = trimmedExplanation,
             ProviderName = ProviderName,
             ModelVersion = modelVersion
         };
