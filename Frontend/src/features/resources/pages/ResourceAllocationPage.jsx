@@ -6,6 +6,7 @@ import {
   resourceService,
   warehouseInventoryService,
 } from '../../../services/api/adminServices';
+import { getEligibleAllocationCrises } from '../../../services/api/backendMappers';
 import { USE_MOCK_API } from '../../../services/api/apiConfig';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DataTable } from '../../../components/tables/DataTable';
@@ -109,6 +110,8 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
     };
   }, [loadData]);
 
+  const eligibleCrises = useMemo(() => getEligibleAllocationCrises(crises), [crises]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allocations.filter((a) => {
@@ -175,7 +178,16 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
       return;
     }
     if (!selectedCrisisId) {
-      setFormError('Select a target crisis event.');
+      setFormError(
+        eligibleCrises.length === 0
+          ? 'No eligible open/active crisis events exist. Closed and Resolved crises cannot receive new allocations.'
+          : 'Select an eligible target crisis event.'
+      );
+      return;
+    }
+    const selectedCrisis = eligibleCrises.find((c) => String(c.id) === String(selectedCrisisId));
+    if (!selectedCrisis) {
+      setFormError('Selected crisis event is closed or resolved and cannot receive new resource allocations.');
       return;
     }
     if (!qty || qty <= 0) {
@@ -526,12 +538,12 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
                 <select
                   value={crisisName}
                   onChange={(e) => setCrisisName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg bg-white"
+                  className="w-full px-3 py-2 text-sm border border-[#CBD5E1] rounded-lg bg-white text-[#0F172A]"
                 >
                   <option value="">None / General Reserve</option>
-                  {crises.map((c) => (
+                  {eligibleCrises.map((c) => (
                     <option key={c.id} value={c.crisisName}>
-                      {c.crisisName}
+                      {c.crisisName} ({c.status})
                     </option>
                   ))}
                 </select>
@@ -544,7 +556,7 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
                   required
                   value={selectedInventoryId}
                   onChange={(e) => setSelectedInventoryId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg bg-white"
+                  className="w-full px-3 py-2 text-sm border border-[#CBD5E1] rounded-lg bg-white text-[#0F172A]"
                 >
                   <option value="">Select warehouse inventory...</option>
                   {inventories.map((inv) => (
@@ -556,19 +568,25 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
               </FormField>
 
               <FormField label="Target Crisis Event" required>
-                <select
-                  required
-                  value={selectedCrisisId}
-                  onChange={(e) => setSelectedCrisisId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg bg-white"
-                >
-                  <option value="">Select crisis event...</option>
-                  {crises.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      #{c.id} — {c.crisisName} ({c.status})
-                    </option>
-                  ))}
-                </select>
+                {eligibleCrises.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+                    <strong>No eligible crisis events available.</strong> Closed and Resolved crisis events are excluded from new resource allocations. Create or activate a crisis event first.
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={selectedCrisisId}
+                    onChange={(e) => setSelectedCrisisId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-[#CBD5E1] rounded-lg bg-white text-[#0F172A]"
+                  >
+                    <option value="">Select eligible crisis event...</option>
+                    {eligibleCrises.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        #{c.id} — {c.crisisName} ({c.status})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </FormField>
 
               <div className="grid grid-cols-2 gap-3">
@@ -613,14 +631,14 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="px-3.5 py-2 text-xs font-medium rounded-lg border border-[#E2E8F0] bg-white"
+              className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-[#94A3B8] bg-[#F1F5F9] text-[#0F172A] hover:bg-[#E2E8F0]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[#0F766E] text-white hover:bg-[#115E59] disabled:opacity-50"
+              disabled={saving || (!USE_MOCK_API && eligibleCrises.length === 0)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[#0F766E] text-white hover:bg-[#115E59] disabled:bg-[#E2E8F0] disabled:text-[#64748B] disabled:border disabled:border-[#CBD5E1]"
             >
               <Truck className="w-3.5 h-3.5" />
               {saving ? 'Submitting...' : USE_MOCK_API ? 'Dispatch Allocation' : 'Create Allocation Request'}

@@ -22,6 +22,116 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.AiRecommendation", b =>
+                {
+                    b.Property<int>("RecommendationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RecommendationId"));
+
+                    b.Property<int>("CitizenRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ConfidenceScore")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CrisisId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DuplicateOfRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("HumanDecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsPotentialDuplicate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModelVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OverriddenCategory")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("OverriddenUrgencyLevel")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("PendingReview");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SuggestedCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("SuggestedInventoryId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("SuggestedResourceQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SuggestedUrgencyLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RecommendationId");
+
+                    b.HasIndex("CitizenRequestId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CrisisId");
+
+                    b.HasIndex("DuplicateOfRequestId");
+
+                    b.HasIndex("ReviewStatus");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("SuggestedInventoryId");
+
+                    b.ToTable("AiRecommendations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AiRecommendations_ConfidenceScore", "[ConfidenceScore] >= 0 AND [ConfidenceScore] <= 1");
+
+                            t.HasCheckConstraint("CK_AiRecommendations_SuggestedResourceQuantity", "[SuggestedResourceQuantity] IS NULL OR [SuggestedResourceQuantity] > 0");
+                        });
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>
                 {
                     b.Property<int>("AreaId")
@@ -610,6 +720,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 31,
                             Description = "Approve, reject, dispatch, deliver and cancel resource allocations",
                             PermissionName = "ResourceAllocations.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 32,
+                            Description = "View AI decision support recommendations and provider status",
+                            PermissionName = "AI.View"
+                        },
+                        new
+                        {
+                            PermissionId = 33,
+                            Description = "Trigger AI analysis and approve, override, or reject AI recommendations",
+                            PermissionName = "AI.Review"
                         });
                 });
 
@@ -1253,6 +1375,36 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 68,
                             PermissionId = 30,
                             RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 69,
+                            PermissionId = 32,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 70,
+                            PermissionId = 33,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 71,
+                            PermissionId = 32,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 72,
+                            PermissionId = 33,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 73,
+                            PermissionId = 32,
+                            RoleId = 4
                         });
                 });
 
@@ -1423,6 +1575,45 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
 
                             t.HasCheckConstraint("CK_WarehouseInventories_ReorderLevel", "[ReorderLevel] >= 0");
                         });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.AiRecommendation", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", "CitizenRequest")
+                        .WithMany()
+                        .HasForeignKey("CitizenRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "CrisisEvent")
+                        .WithMany()
+                        .HasForeignKey("CrisisId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", "DuplicateOfRequest")
+                        .WithMany()
+                        .HasForeignKey("DuplicateOfRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", "SuggestedInventory")
+                        .WithMany()
+                        .HasForeignKey("SuggestedInventoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CitizenRequest");
+
+                    b.Navigation("CrisisEvent");
+
+                    b.Navigation("DuplicateOfRequest");
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("SuggestedInventory");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Area", b =>

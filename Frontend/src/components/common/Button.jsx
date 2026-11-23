@@ -16,6 +16,12 @@ export function Button({
   const variantClass = {
     primary: 'btn-primary',
     secondary: 'btn-secondary',
+    outline: 'btn-outline',
+    ghost: 'btn-ghost',
+    danger: 'btn-danger',
+    destructive: 'btn-danger',
+    'danger-outline': 'btn-danger-outline',
+    icon: 'btn-icon',
     amber: 'btn-amber',
   }[variant] || 'btn-primary';
 

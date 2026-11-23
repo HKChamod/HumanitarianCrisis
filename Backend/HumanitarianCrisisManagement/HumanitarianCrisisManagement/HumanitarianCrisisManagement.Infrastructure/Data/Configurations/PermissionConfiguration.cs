@@ -105,6 +105,20 @@ new Permission
     PermissionId = 31,
     PermissionName = "ResourceAllocations.Manage",
     Description = "Approve, reject, dispatch, deliver and cancel resource allocations"
+},
+
+new Permission
+{
+    PermissionId = 32,
+    PermissionName = "AI.View",
+    Description = "View AI decision support recommendations and provider status"
+},
+
+new Permission
+{
+    PermissionId = 33,
+    PermissionName = "AI.Review",
+    Description = "Trigger AI analysis and approve, override, or reject AI recommendations"
 });
     }
 }

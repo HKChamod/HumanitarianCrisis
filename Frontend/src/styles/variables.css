@@ -80,4 +80,39 @@
   --container-max: 1280px;
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
+
+  /* Button Design Tokens (High-Contrast Accessible System) */
+  --btn-primary-bg: #0F766E;
+  --btn-primary-hover: #115E59;
+  --btn-primary-active: #134E4A;
+  --btn-primary-text: #FFFFFF;
+
+  --btn-secondary-bg: #F1F5F9;
+  --btn-secondary-hover: #E2E8F0;
+  --btn-secondary-active: #CBD5E1;
+  --btn-secondary-border: #94A3B8;
+  --btn-secondary-text: #0F172A;
+
+  --btn-outline-bg: #FFFFFF;
+  --btn-outline-hover: #F0FDFA;
+  --btn-outline-border: #0F766E;
+  --btn-outline-text: #0F766E;
+
+  --btn-ghost-text: #1E293B;
+  --btn-ghost-hover-bg: #E2E8F0;
+  --btn-ghost-hover-text: #0F172A;
+
+  --btn-danger-bg: #DC2626;
+  --btn-danger-hover: #B91C1C;
+  --btn-danger-active: #991B1B;
+  --btn-danger-text: #FFFFFF;
+  --btn-danger-subtle-bg: #FEF2F2;
+  --btn-danger-subtle-border: #FCA5A5;
+  --btn-danger-subtle-text: #B91C1C;
+
+  --btn-disabled-bg: #E2E8F0;
+  --btn-disabled-border: #CBD5E1;
+  --btn-disabled-text: #64748B;
+
+  --btn-focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.35);
 }
