@@ -24,12 +24,11 @@ export function Header() {
         <nav className="navbar" aria-label="Main Navigation">
           {/* Brand Logo */}
           <Link to="/" className="brand-link" onClick={() => setMobileMenuOpen(false)}>
-            <div className="brand-icon-wrapper">
-              <Shield size={20} strokeWidth={2.5} />
-            </div>
-            <span className="brand-name">
-              Relief<span className="brand-highlight">Link</span>
-            </span>
+            <img
+              src="/athwala-logo-full.png"
+              alt="Athwala"
+              style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+            />
           </Link>
 
           {/* Desktop Nav Links */}

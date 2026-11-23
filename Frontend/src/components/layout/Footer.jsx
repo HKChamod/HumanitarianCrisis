@@ -31,15 +31,14 @@ export function Footer() {
           <div className="footer-top">
             {/* Column 1: Brand & Security Statement */}
             <div className="footer-brand">
-              <Link to="/" className="brand-link" style={{ color: '#FFFFFF' }}>
-                <div
-                  className="brand-icon-wrapper"
-                  style={{ backgroundColor: 'rgba(204, 251, 241, 0.15)', color: '#5EEAD4' }}
-                >
-                  <Shield size={20} strokeWidth={2.5} />
-                </div>
-                <span>
-                  Relief<span style={{ color: '#5EEAD4' }}>Link</span>
+              <Link to="/" className="brand-link" style={{ color: '#FFFFFF', gap: '0.65rem' }}>
+                <img
+                  src="/athwala-emblem.png"
+                  alt="Athwala"
+                  style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '50%', background: '#FFFFFF', padding: '3px' }}
+                />
+                <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+                  Ath<span style={{ color: '#5EEAD4' }}>wala</span>
                 </span>
               </Link>
 

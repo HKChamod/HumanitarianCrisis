@@ -361,9 +361,13 @@ export function CitizenDashboard() {
       <footer className="citizen-footer">
         <div className="citizen-footer-inner">
           <div>
-            <div className="citizen-footer-brand">
-              <ShieldCheck size={18} color="#0F766E" />
-              ReliefLink &bull; Humanitarian Crisis Management System
+            <div className="citizen-footer-brand" style={{ fontSize: '1.05rem', gap: '0.65rem' }}>
+              <img
+                src="/athwala-emblem.png"
+                alt="Athwala"
+                style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+              />
+              Athwala &bull; Humanitarian Crisis Management System
             </div>
             <p style={{ margin: '0.4rem 0 0', color: '#64748B', fontSize: '0.75rem' }}>
               Your information is securely encrypted and shared only with authorized disaster responders.

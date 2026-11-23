@@ -7,7 +7,7 @@ export const TRANSLATIONS = {
     // Header & Banner
     hotlineBanner: 'Emergency hotline: 117 — Available 24/7',
     tagline: 'Safe, verified support',
-    brandName: 'ReliefLink',
+    brandName: 'Athwala',
     navCrises: 'Crises',
     navShelters: 'Shelters',
     navMap: 'Crisis Map',
@@ -81,7 +81,7 @@ export const TRANSLATIONS = {
     footerProtection: 'Your information is protected and only shared with authorized responders.',
     footerCoordination: 'Built for safe, impartial coordination.',
     emergencyHotline: 'Emergency hotline: 117',
-    footerCopyright: '© 2026 ReliefLink. Humanitarian support for every community in Sri Lanka.',
+    footerCopyright: '© 2026 Athwala. Humanitarian support for every community in Sri Lanka.',
     footerContact: 'Contact',
     footerPortals: 'Portals',
     footerLanguage: 'Language',
@@ -317,7 +317,7 @@ export const TRANSLATIONS = {
 
     // About Us Page
     systemOverviewLabel: 'System Overview',
-    aboutTitle: 'About ReliefLink (HCMS)',
+    aboutTitle: 'About Athwala (HCMS)',
     aboutSubtitle: 'A centralized digital humanitarian backbone connecting affected citizens, emergency responders, and relief agencies across Sri Lanka.',
     missionTitle: 'Our Mission & Purpose',
     missionText: 'When extreme weather, monsoon flooding, or landslides strike, coordinated information saves lives. The Humanitarian Crisis Management System (HCMS) eliminates chaos by enabling citizens to request emergency assistance directly from their mobile phones—even without logging in—while automatically routing verified needs to the nearest Divisional Secretariat and relief teams.',
@@ -331,7 +331,7 @@ export const TRANSLATIONS = {
 
     // Auth Pages
     welcomeBack: 'Welcome Back',
-    loginSubtitle: 'Sign in to your ReliefLink citizen or responder account',
+    loginSubtitle: 'Sign in to your Athwala citizen or responder account',
     emailLabel: 'Email Address',
     emailPlaceholder: 'e.g. citizen@example.com',
     passwordLabel: 'Password',
@@ -422,7 +422,7 @@ export const TRANSLATIONS = {
     // Header & Banner
     hotlineBanner: 'හදිසි ආපදා ඇමතුම් අංකය: 117 — පැය 24 පුරා ක්‍රියාත්මකයි',
     tagline: 'ආරක්ෂිත, තහවුරු කළ මානුෂීය සහය',
-    brandName: 'ReliefLink',
+    brandName: 'Athwala',
     navCrises: 'ආපදා',
     navShelters: 'නවාතැන්',
     navMap: 'සිතියම',
@@ -496,7 +496,7 @@ export const TRANSLATIONS = {
     footerProtection: 'ඔබගේ පුද්ගලික තොරතුරු ආරක්ෂිත අතර බලයලත් නිලධාරීන් සමඟ පමණක් බෙදා ගැනේ.',
     footerCoordination: 'ආරක්ෂිත හා අපක්ෂපාතී සහන සම්බන්ධීකරණය සඳහා නිර්මාණය කර ඇත.',
     emergencyHotline: 'හදිසි ඇමතුම්: 117',
-    footerCopyright: '© 2026 ReliefLink. ශ්‍රී ලංකාවේ සියලු පුරවැසියන් සඳහා මානුෂීය සහන පද්ධතිය.',
+    footerCopyright: '© 2026 Athwala. ශ්‍රී ලංකාවේ සියලු පුරවැසියන් සඳහා මානුෂීය සහන පද්ධතිය.',
     footerContact: 'සම්බන්ධතා',
     footerPortals: 'දොරටු',
     footerLanguage: 'භාෂාව',
@@ -732,7 +732,7 @@ export const TRANSLATIONS = {
 
     // About Us Page
     systemOverviewLabel: 'පද්ධතිය පිළිබඳ',
-    aboutTitle: 'ReliefLink (HCMS) ගැන',
+    aboutTitle: 'Athwala (HCMS) ගැන',
     aboutSubtitle: 'ශ්‍රී ලංකා පුරා ආශ්‍රිත පුරවැසියන්, හදිසි ප්‍රතිචාරකයන් සහ සහන ආයතන සම්බන්ධ කරන මධ්‍යගත ඩිජිටල් මානවීය කේන්ද්‍රස්ථානය.',
     missionTitle: 'අපේ මෙහෙවර සහ අරමුණ',
     missionText: 'ආන්ත්‍රික කාලගුණය, මෝසම් ගංවතුර හෝ නාය යාම් ඇති විට, සම්බන්ධිත තොරතුරු ජීවිත රකිනවා. HCMS ජංගම දුරකතනවලින් කෙළින්ම හදිසි සහය ඉල්ලා සිටීමට - ලොගින් නොව - හැකිකම ලබා දෙමින් ළඟම ප්‍රාදේශීය ලේකම් කෝෂ්ඨය සහ සහන කණ්ඩායම් වෙත තහවුරු අවශ්‍යතා ස්වයංක්‍රීයව යොමු කරයි.',
@@ -746,7 +746,7 @@ export const TRANSLATIONS = {
 
     // Auth Pages
     welcomeBack: 'නැවත සාදරයෙන් පිළිගනිමු',
-    loginSubtitle: 'ඔබේ ReliefLink පුරවැසි හෝ ප්‍රතිචාරක ගිණුමට පිවිසෙන්න',
+    loginSubtitle: 'ඔබේ Athwala පුරවැසි හෝ ප්‍රතිචාරක ගිණුමට පිවිසෙන්න',
     emailLabel: 'ඊමේල් ලිපිනය',
     emailPlaceholder: 'උදා: citizen@example.com',
     passwordLabel: 'මුරපදය',
@@ -837,7 +837,7 @@ export const TRANSLATIONS = {
     // Header & Banner
     hotlineBanner: 'அவசர உதவி எண்: 117 — 24/7 செயல்படுகிறது',
     tagline: 'பாதுகாப்பான, உறுதிப்படுத்தப்பட்ட மனிதாபிமான உதவி',
-    brandName: 'ReliefLink',
+    brandName: 'Athwala',
     navCrises: 'அனர்த்தங்கள்',
     navShelters: 'தங்குமிடம்',
     navMap: 'வரைபடம்',
@@ -911,7 +911,7 @@ export const TRANSLATIONS = {
     footerProtection: 'உங்கள் தகவல்கள் பாதுகாக்கப்பட்டு அங்கீகரிக்கப்பட்ட அதிகாரிகளுடன் மட்டுமே பகிரப்படும்.',
     footerCoordination: 'பாதுகாப்பான மற்றும் நடுநிலையான ஒருங்கிணைப்புக்காக உருவாக்கப்பட்டது.',
     emergencyHotline: 'அவசர உதவி: 117',
-    footerCopyright: '© 2026 ReliefLink. இலங்கையின் ஒவ்வொரு சமூகத்திற்கும் மனிதாபிமான உதவி.',
+    footerCopyright: '© 2026 Athwala. இலங்கையின் ஒவ்வொரு சமூகத்திற்கும் மனிதாபிமான உதவி.',
     footerContact: 'தொடர்பு',
     footerPortals: 'நுழைவாயில்கள்',
     footerLanguage: 'மொழி',
@@ -1147,7 +1147,7 @@ export const TRANSLATIONS = {
 
     // About Us Page
     systemOverviewLabel: 'கணினி மேலோட்டம்',
-    aboutTitle: 'ReliefLink (HCMS) பற்றி',
+    aboutTitle: 'Athwala (HCMS) பற்றி',
     aboutSubtitle: 'இலங்கை முழுவதும் பாதிக்கப்பட்ட குடிமக்கள், அவசர பதிலளிப்பாளர்கள் மற்றும் நிவாரண நிறுவனங்களை இணைக்கும் மையமான டிஜிட்டல் மனிதாபிமான தளம்.',
     missionTitle: 'எங்கள் நோக்கம் & நோக்கங்கள்',
     missionText: 'தீவிர வானிலை, பருவமழை வெள்ளம் அல்லது நிலச்சரிவு ஏற்படும்போது, ஒருங்கிணைந்த தகவல் உயிர்களை காக்கிறது. HCMS குடிமக்கள் நேரடியாக மொபைல் தொலைபேசிகளிலிருந்து அவசர உதவி கோர - உள்நுழையாமல் - சாத்தியமாக்குகிறது.',
@@ -1161,7 +1161,7 @@ export const TRANSLATIONS = {
 
     // Auth Pages
     welcomeBack: 'மீண்டும் வரவேற்கிறோம்',
-    loginSubtitle: 'உங்கள் ReliefLink குடிமக்கள் அல்லது பதிலளிப்பாளர் கணக்கில் உள்நுழையவும்',
+    loginSubtitle: 'உங்கள் Athwala குடிமக்கள் அல்லது பதிலளிப்பாளர் கணக்கில் உள்நுழையவும்',
     emailLabel: 'மின்னஞ்சல் முகவரி',
     emailPlaceholder: 'எ.கா: citizen@example.com',
     passwordLabel: 'கடவுச்சொல்',
