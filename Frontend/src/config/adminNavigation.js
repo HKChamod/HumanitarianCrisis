@@ -12,6 +12,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { USE_MOCK_API } from '../services/api/apiConfig';
 
 export const ADMIN_NAV_GROUPS = [
   {
@@ -61,8 +62,8 @@ export const ADMIN_NAV_GROUPS = [
     icon: Shield,
     items: [
       { label: 'Users', path: '/admin/users', permission: 'Users.Manage' },
-      { label: 'Roles', path: '/admin/roles', permission: 'Roles.Manage' },
-      { label: 'Permissions', path: '/admin/permissions', permission: 'Permissions.View' },
+      { label: 'Roles', path: '/admin/roles', ...(USE_MOCK_API ? { permission: 'Roles.Manage' } : { requiredRole: 'Administrator' }) },
+      { label: 'Permissions', path: '/admin/permissions', ...(USE_MOCK_API ? { permission: 'Permissions.View' } : { requiredRole: 'Administrator' }) },
     ],
   },
   {
@@ -70,9 +71,9 @@ export const ADMIN_NAV_GROUPS = [
     label: 'Resource Management',
     icon: Package,
     items: [
-      { label: 'Resource Inventory', path: '/admin/resources/inventory', permission: 'Resources.View' },
-      { label: 'Resource Allocation', path: '/admin/resources/allocations', permission: 'Resources.View' },
-      { label: 'Resource Requests', path: '/admin/resources/requests', permission: 'Resources.View' },
+      { label: 'Resource & Warehouse Inventory', path: '/admin/resources/inventory', permission: 'Resources.View' },
+      { label: 'Resource Allocation', path: '/admin/resources/allocations', permission: USE_MOCK_API ? 'Resources.View' : 'ResourceAllocations.View' },
+      { label: 'Resource Requests', path: '/admin/resources/requests', permission: USE_MOCK_API ? 'Resources.View' : 'ResourceAllocations.View' },
     ],
   },
   {
@@ -80,8 +81,8 @@ export const ADMIN_NAV_GROUPS = [
     label: 'Shelter Management',
     icon: Home,
     items: [
-      { label: 'Shelters', path: '/admin/shelters', permission: 'Shelters.View' },
-      { label: 'Shelter Occupancy', path: '/admin/shelters/occupancy', permission: 'Shelters.View' },
+      { label: 'Shelters', path: '/admin/shelters', ...(USE_MOCK_API ? { permission: 'Shelters.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'Shelter Occupancy', path: '/admin/shelters/occupancy', ...(USE_MOCK_API ? { permission: 'Shelters.View' } : { requiredRole: 'Administrator' }) },
     ],
   },
   {
@@ -107,9 +108,9 @@ export const ADMIN_NAV_GROUPS = [
     label: 'AI Decision Support',
     icon: Sparkles,
     items: [
-      { label: 'AI Overview', path: '/admin/ai', permission: 'AI.Review' },
-      { label: 'Recommendations', path: '/admin/ai/recommendations', permission: 'AI.Review' },
-      { label: 'Predictions and Analytics', path: '/admin/ai/analytics', permission: 'AI.Review' },
+      { label: 'AI Overview', path: '/admin/ai', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
+      { label: 'Recommendations', path: '/admin/ai/recommendations', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
+      { label: 'Predictions and Analytics', path: '/admin/ai/analytics', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
     ],
   },
   {
@@ -126,9 +127,9 @@ export const ADMIN_NAV_GROUPS = [
     label: 'System Management',
     icon: Settings,
     items: [
-      { label: 'Notifications', path: '/admin/notifications', permission: 'Notifications.View' },
-      { label: 'Audit Logs', path: '/admin/audit-logs', permission: 'AuditLogs.View' },
-      { label: 'System Settings', path: '/admin/settings', permission: 'Settings.Manage' },
+      { label: 'Notifications', path: '/admin/notifications', ...(USE_MOCK_API ? { permission: 'Notifications.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'Audit Logs', path: '/admin/audit-logs', ...(USE_MOCK_API ? { permission: 'AuditLogs.View' } : { requiredRole: 'Administrator' }) },
+      { label: 'System Settings', path: '/admin/settings', ...(USE_MOCK_API ? { permission: 'Settings.Manage' } : { requiredRole: 'Administrator' }) },
     ],
   },
 ];

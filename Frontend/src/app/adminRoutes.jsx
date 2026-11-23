@@ -1,8 +1,10 @@
 import { Suspense, lazy } from 'react';
 import { Route } from 'react-router-dom';
+import { Info } from 'lucide-react';
 import { AdminLayout } from '../components/layout/AdminLayout';
 import { ProtectedAdminRoute } from './providers/AuthProvider';
 import { LoadingState } from '../components/common/States';
+import { USE_MOCK_API } from '../services/api/apiConfig';
 
 // Lazy-loaded Central Administration Portal pages for clean bundle code-splitting
 const AdminDashboardPage = lazy(() =>
@@ -66,12 +68,44 @@ const SystemSettingsPage = lazy(() =>
   import('../features/settings/pages/SystemSettingsPage').then((m) => ({ default: m.SystemSettingsPage }))
 );
 
-function withSuspense(element, requiredPermission) {
+function LiveModuleUnavailable({ title, detail }) {
+  return (
+    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 max-w-2xl mx-auto mt-6">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+          <Info className="w-5 h-5 text-amber-700" />
+        </div>
+        <div>
+          <h1 className="text-lg font-bold text-[#0F172A]">{title}</h1>
+          <p className="text-sm text-[#475569] mt-1.5 leading-relaxed">{detail}</p>
+          <p className="text-xs text-[#64748B] mt-3">
+            Live API mode (<code className="font-mono bg-slate-100 px-1 rounded">VITE_USE_MOCK_API=false</code>) does not substitute mock data for unimplemented backend modules.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function withSuspense(element, requiredPermission, requiredRole) {
   const wrapped = <Suspense fallback={<LoadingState message="Loading module..." />}>{element}</Suspense>;
-  return requiredPermission ? (
-    <ProtectedAdminRoute requiredPermission={requiredPermission}>{wrapped}</ProtectedAdminRoute>
+  return requiredPermission || requiredRole ? (
+    <ProtectedAdminRoute requiredPermission={requiredPermission} requiredRole={requiredRole}>
+      {wrapped}
+    </ProtectedAdminRoute>
   ) : (
     wrapped
+  );
+}
+
+function withLiveOrMockModule(mockElement, liveTitle, liveDetail, mockPermission) {
+  if (USE_MOCK_API) {
+    return withSuspense(mockElement, mockPermission);
+  }
+  return withSuspense(
+    <LiveModuleUnavailable title={liveTitle} detail={liveDetail} />,
+    undefined,
+    'Administrator'
   );
 }
 
@@ -108,17 +142,61 @@ export function renderAdminRoutes() {
 
       {/* ADM-06, ADM-07, ADM-08: User & Access Management */}
       <Route path="users" element={withSuspense(<UsersPage />, 'Users.Manage')} />
-      <Route path="roles" element={withSuspense(<RolesPage />, 'Roles.Manage')} />
-      <Route path="permissions" element={withSuspense(<PermissionsPage />, 'Permissions.View')} />
+      <Route
+        path="roles"
+        element={withLiveOrMockModule(
+          <RolesPage />,
+          'Role Management Unavailable in Live Mode',
+          'System roles are currently seeded via EF Core migrations. No backend Roles CRUD API endpoint exists yet.',
+          'Roles.Manage'
+        )}
+      />
+      <Route
+        path="permissions"
+        element={withLiveOrMockModule(
+          <PermissionsPage />,
+          'Permissions Registry Unavailable in Live Mode',
+          'Permissions are enforced by the .NET 10 backend authorization policies and seeded via migrations. No backend Permissions CRUD API exists yet.',
+          'Permissions.View'
+        )}
+      />
 
-      {/* ADM-09 & ADM-10: Resource Management */}
+      {/* ADM-09 & ADM-10: Resource & Logistics Management */}
       <Route path="resources/inventory" element={withSuspense(<ResourceInventoryPage />, 'Resources.View')} />
-      <Route path="resources/allocations" element={withSuspense(<ResourceAllocationPage mode="allocations" />, 'Resources.View')} />
-      <Route path="resources/requests" element={withSuspense(<ResourceAllocationPage mode="requests" />, 'Resources.View')} />
+      <Route
+        path="resources/allocations"
+        element={withSuspense(
+          <ResourceAllocationPage mode="allocations" />,
+          USE_MOCK_API ? 'Resources.View' : 'ResourceAllocations.View'
+        )}
+      />
+      <Route
+        path="resources/requests"
+        element={withSuspense(
+          <ResourceAllocationPage mode="requests" />,
+          USE_MOCK_API ? 'Resources.View' : 'ResourceAllocations.View'
+        )}
+      />
 
       {/* ADM-11: Shelter Management */}
-      <Route path="shelters" element={withSuspense(<SheltersPage mode="all" />, 'Shelters.View')} />
-      <Route path="shelters/occupancy" element={withSuspense(<SheltersPage mode="occupancy" />, 'Shelters.View')} />
+      <Route
+        path="shelters"
+        element={withLiveOrMockModule(
+          <SheltersPage mode="all" />,
+          'Shelter Management Unavailable in Live Mode',
+          'No Shelters backend controller or database table has been implemented yet.',
+          'Shelters.View'
+        )}
+      />
+      <Route
+        path="shelters/occupancy"
+        element={withLiveOrMockModule(
+          <SheltersPage mode="occupancy" />,
+          'Shelter Occupancy Unavailable in Live Mode',
+          'No Shelters backend controller or database table has been implemented yet.',
+          'Shelters.View'
+        )}
+      />
 
       {/* ADM-12 & ADM-13: Volunteer Management */}
       <Route path="volunteers" element={withSuspense(<VolunteersPage mode="volunteers" />, 'Volunteers.View')} />
@@ -129,18 +207,66 @@ export function renderAdminRoutes() {
       <Route path="donations/campaigns" element={withSuspense(<DonationsPage mode="campaigns" />, 'Donations.View')} />
 
       {/* ADM-15 & ADM-16: AI Decision Support */}
-      <Route path="ai" element={withSuspense(<AiDecisionSupportPage mode="overview" />, 'AI.Review')} />
-      <Route path="ai/recommendations" element={withSuspense(<AiDecisionSupportPage mode="recommendations" />, 'AI.Review')} />
-      <Route path="ai/analytics" element={withSuspense(<AiDecisionSupportPage mode="analytics" />, 'AI.Review')} />
+      <Route
+        path="ai"
+        element={withLiveOrMockModule(
+          <AiDecisionSupportPage mode="overview" />,
+          'AI Decision Support Unavailable in Live Mode',
+          'The backend AI Decision Support service and recommendation persistence endpoints are scheduled for Phase 5B and are not yet implemented.',
+          'AI.Review'
+        )}
+      />
+      <Route
+        path="ai/recommendations"
+        element={withLiveOrMockModule(
+          <AiDecisionSupportPage mode="recommendations" />,
+          'AI Recommendations Unavailable in Live Mode',
+          'The backend AI Decision Support service and recommendation persistence endpoints are scheduled for Phase 5B and are not yet implemented.',
+          'AI.Review'
+        )}
+      />
+      <Route
+        path="ai/analytics"
+        element={withLiveOrMockModule(
+          <AiDecisionSupportPage mode="analytics" />,
+          'AI Predictions & Analytics Unavailable in Live Mode',
+          'The backend AI Decision Support service and analytics endpoints are scheduled for Phase 5B and are not yet implemented.',
+          'AI.Review'
+        )}
+      />
 
       {/* ADM-17: Reports & Analytics */}
       <Route path="reports" element={withSuspense(<ReportsPage mode="reports" />, 'Reports.View')} />
       <Route path="reports/analytics" element={withSuspense(<ReportsPage mode="analytics" />, 'Reports.View')} />
 
       {/* ADM-18, ADM-19, ADM-20: System Management */}
-      <Route path="notifications" element={withSuspense(<NotificationsPage />, 'Notifications.View')} />
-      <Route path="audit-logs" element={withSuspense(<AuditLogsPage />, 'AuditLogs.View')} />
-      <Route path="settings" element={withSuspense(<SystemSettingsPage />, 'Settings.Manage')} />
+      <Route
+        path="notifications"
+        element={withLiveOrMockModule(
+          <NotificationsPage />,
+          'System Notifications Unavailable in Live Mode',
+          'No backend Notifications persistence or delivery API has been implemented yet.',
+          'Notifications.View'
+        )}
+      />
+      <Route
+        path="audit-logs"
+        element={withLiveOrMockModule(
+          <AuditLogsPage />,
+          'Audit Logs Unavailable in Live Mode',
+          'No backend Audit Logs persistence or query API has been implemented yet.',
+          'AuditLogs.View'
+        )}
+      />
+      <Route
+        path="settings"
+        element={withLiveOrMockModule(
+          <SystemSettingsPage />,
+          'System Settings Unavailable in Live Mode',
+          'No backend System Settings API has been implemented yet.',
+          'Settings.Manage'
+        )}
+      />
     </Route>
   );
 }

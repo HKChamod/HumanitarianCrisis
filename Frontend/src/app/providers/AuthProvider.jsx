@@ -284,6 +284,11 @@ export function AuthProvider({ children }) {
         if (!user || !Array.isArray(user.permissions)) return false;
         return permissions.some((p) => user.permissions.includes(p));
       },
+      hasRole: (role) => {
+        if (!role) return true;
+        if (!user || !Array.isArray(user.roles)) return false;
+        return user.roles.includes(role);
+      },
     }),
     [user]
   );
@@ -297,8 +302,8 @@ export function useAuth() {
   return ctx;
 }
 
-export function ProtectedAdminRoute({ children, requiredPermission }) {
-  const { isAuthenticated, isAdmin, hasPermission } = useAuth();
+export function ProtectedAdminRoute({ children, requiredPermission, requiredRole }) {
+  const { isAuthenticated, isAdmin, hasPermission, hasRole } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -307,6 +312,10 @@ export function ProtectedAdminRoute({ children, requiredPermission }) {
 
   // Block authenticated users who lack administrative permissions from /admin routes
   if (!isAdmin && location.pathname !== '/admin/unauthorized') {
+    return <Navigate to="/admin/unauthorized" replace />;
+  }
+
+  if (requiredRole && !hasRole(requiredRole)) {
     return <Navigate to="/admin/unauthorized" replace />;
   }
 

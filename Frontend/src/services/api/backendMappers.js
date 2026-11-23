@@ -167,3 +167,183 @@ export function mapMemberFromApi(dto, orgId, orgName) {
     joinedAt: dto.joinedAt || dto.createdAt || new Date().toISOString(),
   };
 }
+
+// --- Logistics & Warehouse DTO Mappers (Phase 5A) ---
+
+export const INVENTORY_TRANSACTION_TYPE_LABELS = {
+  1: 'StockIn',
+  2: 'StockOut',
+  3: 'Adjustment',
+  4: 'TransferIn',
+  5: 'TransferOut',
+};
+
+export const INVENTORY_TRANSACTION_TYPE_VALUES = {
+  StockIn: 1,
+  StockOut: 2,
+  Adjustment: 3,
+  TransferIn: 4,
+  TransferOut: 5,
+};
+
+export function mapWarehouseFromApi(dto) {
+  return {
+    id: String(dto.warehouseId ?? dto.id),
+    warehouseId: Number(dto.warehouseId ?? dto.id),
+    warehouseName: dto.warehouseName ?? '',
+    warehouseCode: dto.warehouseCode ?? '',
+    description: dto.description ?? '',
+    address: dto.address ?? '',
+    areaId: Number(dto.areaId ?? 0),
+    areaName: dto.areaName ?? '',
+    contactPerson: dto.contactPerson ?? '',
+    contactNumber: dto.contactNumber ?? '',
+    isActive: typeof dto.isActive === 'boolean' ? dto.isActive : true,
+    createdAt: dto.createdAt ?? null,
+  };
+}
+
+export function mapWarehouseCreateToApi(payload) {
+  return {
+    warehouseName: (payload.warehouseName ?? '').trim(),
+    warehouseCode: (payload.warehouseCode ?? '').trim(),
+    description: (payload.description ?? '').trim() || null,
+    address: (payload.address ?? '').trim(),
+    areaId: Number(payload.areaId),
+    contactPerson: (payload.contactPerson ?? '').trim() || null,
+    contactNumber: (payload.contactNumber ?? '').trim() || null,
+  };
+}
+
+export function mapWarehouseUpdateToApi(payload) {
+  return {
+    ...mapWarehouseCreateToApi(payload),
+    isActive: typeof payload.isActive === 'boolean' ? payload.isActive : true,
+  };
+}
+
+export function mapWarehouseInventoryFromApi(dto) {
+  return {
+    id: String(dto.inventoryId ?? dto.id),
+    inventoryId: Number(dto.inventoryId ?? dto.id),
+    warehouseId: Number(dto.warehouseId ?? 0),
+    warehouseName: dto.warehouseName ?? '',
+    resourceId: Number(dto.resourceId ?? 0),
+    resourceName: dto.resourceName ?? '',
+    resourceCategory: dto.resourceCategory ?? '',
+    quantityAvailable: Number(dto.quantityAvailable ?? 0),
+    reorderLevel: Number(dto.reorderLevel ?? 0),
+    isLowStock: Boolean(dto.isLowStock),
+    lastUpdatedAt: dto.lastUpdatedAt ?? null,
+  };
+}
+
+export function mapWarehouseInventoryCreateToApi(payload) {
+  return {
+    warehouseId: Number(payload.warehouseId),
+    resourceId: Number(payload.resourceId),
+    reorderLevel: Number(payload.reorderLevel ?? 0),
+  };
+}
+
+export function mapInventoryTransactionFromApi(dto) {
+  const rawType = dto.transactionType;
+  const typeLabel =
+    typeof rawType === 'number'
+      ? INVENTORY_TRANSACTION_TYPE_LABELS[rawType] || `Type-${rawType}`
+      : String(rawType ?? '');
+
+  return {
+    id: String(dto.inventoryTransactionId ?? dto.id),
+    inventoryTransactionId: Number(dto.inventoryTransactionId ?? dto.id),
+    inventoryId: Number(dto.inventoryId ?? 0),
+    warehouseName: dto.warehouseName ?? '',
+    resourceName: dto.resourceName ?? '',
+    transactionType: rawType,
+    transactionTypeLabel: typeLabel,
+    quantity: Number(dto.quantity ?? 0),
+    previousQuantity: Number(dto.previousQuantity ?? 0),
+    newQuantity: Number(dto.newQuantity ?? 0),
+    referenceNumber: dto.referenceNumber ?? '',
+    notes: dto.notes ?? '',
+    performedByUserId: Number(dto.performedByUserId ?? 0),
+    performedByUserName: dto.performedByUserName ?? '',
+    transferGroupId: dto.transferGroupId ?? null,
+    createdAt: dto.createdAt ?? null,
+  };
+}
+
+export function mapInventoryTransactionCreateToApi(payload) {
+  const rawType = payload.transactionType;
+  const numericType =
+    typeof rawType === 'number'
+      ? rawType
+      : INVENTORY_TRANSACTION_TYPE_VALUES[rawType] ?? Number(rawType);
+
+  return {
+    inventoryId: Number(payload.inventoryId),
+    transactionType: numericType,
+    quantity: Number(payload.quantity),
+    referenceNumber: (payload.referenceNumber ?? '').trim() || null,
+    notes: (payload.notes ?? '').trim() || null,
+  };
+}
+
+export function mapInventoryTransferToApi(payload) {
+  return {
+    sourceInventoryId: Number(payload.sourceInventoryId),
+    destinationInventoryId: Number(payload.destinationInventoryId),
+    quantity: Number(payload.quantity),
+    referenceNumber: (payload.referenceNumber ?? '').trim() || null,
+    notes: (payload.notes ?? '').trim() || null,
+  };
+}
+
+export function mapResourceAllocationFromApi(dto) {
+  return {
+    id: String(dto.allocationId ?? dto.id),
+    allocationId: Number(dto.allocationId ?? dto.id),
+    inventoryId: Number(dto.inventoryId ?? 0),
+    warehouseName: dto.warehouseName ?? '',
+    resourceId: Number(dto.resourceId ?? 0),
+    resourceName: dto.resourceName ?? '',
+    crisisId: Number(dto.crisisId ?? 0),
+    crisisName: dto.crisisName ?? '',
+    quantityRequested: Number(dto.quantityRequested ?? 0),
+    quantityAllocated: Number(dto.quantityAllocated ?? 0),
+    quantity: Number(dto.quantityAllocated > 0 ? dto.quantityAllocated : dto.quantityRequested ?? 0),
+    unit: dto.unit || 'Units',
+    destination: dto.crisisName || dto.warehouseName || '',
+    destinationType: 'Crisis',
+    status: dto.status ?? 'Pending',
+    requestedByUserId: Number(dto.requestedByUserId ?? 0),
+    requestedByUserName: dto.requestedByUserName ?? '',
+    approvedByUserId: dto.approvedByUserId ?? null,
+    approvedByUserName: dto.approvedByUserName ?? '',
+    referenceNumber: dto.referenceNumber ?? '',
+    notes: dto.notes ?? '',
+    allocatedDate: dto.createdAt ?? null,
+    createdAt: dto.createdAt ?? null,
+    updatedAt: dto.updatedAt ?? null,
+  };
+}
+
+export function mapResourceAllocationCreateToApi(payload) {
+  return {
+    inventoryId: Number(payload.inventoryId),
+    crisisId: Number(payload.crisisId),
+    quantityRequested: Number(payload.quantityRequested ?? payload.quantity),
+    referenceNumber: (payload.referenceNumber ?? '').trim() || null,
+    notes: (payload.notes ?? '').trim() || null,
+  };
+}
+
+export function mapResourceAllocationStatusToApi(payload = {}) {
+  const body = {
+    notes: (payload.notes ?? '').trim() || null,
+  };
+  if (payload.quantityAllocated !== undefined && payload.quantityAllocated !== null && payload.quantityAllocated !== '') {
+    body.quantityAllocated = Number(payload.quantityAllocated);
+  }
+  return body;
+}

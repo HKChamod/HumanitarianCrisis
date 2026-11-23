@@ -34,6 +34,7 @@ function getStatusPillClass(status) {
 
 export function ActiveRequestsTracker({
   requests = [],
+  loading = false,
   onSelectRequest,
   onCancelRequest,
   onOpenSubmitModal,
@@ -50,11 +51,11 @@ export function ActiveRequestsTracker({
         return false;
       }
     } else if (filter === 'In Progress') {
-      if (req.status !== 'Approved' && req.status !== 'In Progress' && req.status !== 'Verified') {
+      if (req.status !== 'Approved' && req.status !== 'In Progress' && req.status !== 'Verified' && req.status !== 'Assigned') {
         return false;
       }
     } else if (filter === 'Completed') {
-      if (req.status !== 'Completed') {
+      if (req.status !== 'Completed' && req.status !== 'Fulfilled') {
         return false;
       }
     }
@@ -134,7 +135,11 @@ export function ActiveRequestsTracker({
       </div>
 
       {/* Cards List */}
-      {filteredRequests.length === 0 ? (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748B', fontSize: '0.9rem' }}>
+          Loading your assistance requests...
+        </div>
+      ) : filteredRequests.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3.5rem 1rem', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
           <Clock size={38} color="#0F766E" style={{ margin: '0 auto 0.75rem', opacity: 0.6 }} />
           <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0F172A', margin: '0 0 0.35rem' }}>
@@ -263,7 +268,7 @@ export function ActiveRequestsTracker({
                       </button>
                     )}
 
-                    {(req.status === 'Submitted' || req.status === 'Under Review') && (
+                    {(req.status === 'Pending' || req.status === 'Submitted' || req.status === 'Under Review') && (
                       <button
                         type="button"
                         onClick={() => onCancelRequest(req.id)}
