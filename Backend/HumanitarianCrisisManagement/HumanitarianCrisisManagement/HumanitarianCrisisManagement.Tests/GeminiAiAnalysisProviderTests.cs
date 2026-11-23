@@ -208,8 +208,10 @@ public class GeminiAiAnalysisProviderTests
         Assert.DoesNotContain("42 Private Lane", capturedBody);
         Assert.DoesNotContain("Secret Street", capturedBody);
         Assert.DoesNotContain("901234567V", capturedBody);
+        Assert.DoesNotContain("Urgent insulin and first-aid kits", capturedBody);
+        Assert.DoesNotContain("Elderly residents in Kalutara South", capturedBody);
         Assert.Contains("application/json", capturedBody);
-        Assert.Contains("untrustedDescription", capturedBody);
+        Assert.Contains("Kalutara South", capturedBody);
 
         Assert.Equal("Medical", result.SuggestedCategory);
         Assert.Equal("Critical", result.SuggestedUrgencyLevel);

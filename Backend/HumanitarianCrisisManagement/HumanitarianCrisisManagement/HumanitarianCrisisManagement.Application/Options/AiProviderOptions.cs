@@ -36,6 +36,14 @@ public class AiProviderOptions
     /// </summary>
     public string BaseUrl { get; set; } = DefaultGeminiBaseUrl;
 
+    /// <summary>
+    /// Controls whether privacy-sanitized free-text descriptions may be sent to external AI providers.
+    /// Defaults to false (strict mode): free-text descriptions are omitted and only structured operational fields are sent.
+    /// When explicitly enabled (true), descriptions pass through <see cref="Interfaces.IAiTextPrivacySanitizer"/>
+    /// and are still omitted automatically if residual personal-data risk is detected.
+    /// </summary>
+    public bool IncludeSanitizedDescriptions { get; set; } = false;
+
     public bool IsGeminiConfigured =>
         string.Equals(Provider?.Trim(), GeminiProviderName, StringComparison.OrdinalIgnoreCase) &&
         !string.IsNullOrWhiteSpace(GeminiApiKey);

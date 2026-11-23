@@ -46,6 +46,7 @@ public static class DependencyInjection
         this IServiceCollection services)
     {
         services.AddOptions<AiProviderOptions>();
+        services.AddSingleton<IAiTextPrivacySanitizer, AiTextPrivacySanitizer>();
         services.AddScoped<UnconfiguredAiAnalysisProvider>();
         services.AddScoped<IAiAnalysisProvider>(sp =>
         {
