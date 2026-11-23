@@ -206,33 +206,18 @@ export function renderAdminRoutes() {
       <Route path="donations" element={withSuspense(<DonationsPage mode="donations" />, 'Donations.View')} />
       <Route path="donations/campaigns" element={withSuspense(<DonationsPage mode="campaigns" />, 'Donations.View')} />
 
-      {/* ADM-15 & ADM-16: AI Decision Support */}
+      {/* ADM-15 & ADM-16: AI Decision Support (Live Backend Integrated) */}
       <Route
         path="ai"
-        element={withLiveOrMockModule(
-          <AiDecisionSupportPage mode="overview" />,
-          'AI Decision Support Unavailable in Live Mode',
-          'The backend AI Decision Support service and recommendation persistence endpoints are scheduled for Phase 5B and are not yet implemented.',
-          'AI.Review'
-        )}
+        element={withSuspense(<AiDecisionSupportPage mode="overview" />, USE_MOCK_API ? 'AI.Review' : 'AI.View')}
       />
       <Route
         path="ai/recommendations"
-        element={withLiveOrMockModule(
-          <AiDecisionSupportPage mode="recommendations" />,
-          'AI Recommendations Unavailable in Live Mode',
-          'The backend AI Decision Support service and recommendation persistence endpoints are scheduled for Phase 5B and are not yet implemented.',
-          'AI.Review'
-        )}
+        element={withSuspense(<AiDecisionSupportPage mode="recommendations" />, USE_MOCK_API ? 'AI.Review' : 'AI.View')}
       />
       <Route
         path="ai/analytics"
-        element={withLiveOrMockModule(
-          <AiDecisionSupportPage mode="analytics" />,
-          'AI Predictions & Analytics Unavailable in Live Mode',
-          'The backend AI Decision Support service and analytics endpoints are scheduled for Phase 5B and are not yet implemented.',
-          'AI.Review'
-        )}
+        element={withSuspense(<AiDecisionSupportPage mode="analytics" />, USE_MOCK_API ? 'AI.Review' : 'AI.View')}
       />
 
       {/* ADM-17: Reports & Analytics */}

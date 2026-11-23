@@ -1,0 +1,57 @@
+namespace HumanitarianCrisisManagement.Application.Options;
+
+public class AiProviderOptions
+{
+    public const string SectionName = "AiProvider";
+    public const string DefaultProvider = "None";
+    public const string GeminiProviderName = "Gemini";
+    public const string DefaultGeminiModel = "gemini-2.5-flash";
+    public const string DefaultGeminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta";
+    public const int DefaultTimeoutSeconds = 30;
+    public const int MinTimeoutSeconds = 5;
+    public const int MaxTimeoutSeconds = 120;
+
+    /// <summary>
+    /// Active AI provider name. Supported values: "None" (default) or "Gemini".
+    /// </summary>
+    public string Provider { get; set; } = DefaultProvider;
+
+    /// <summary>
+    /// Google Gemini API key. Supply via User Secrets or environment variables; never commit to source control.
+    /// </summary>
+    public string? GeminiApiKey { get; set; }
+
+    /// <summary>
+    /// Gemini model identifier (for example "gemini-2.5-flash").
+    /// </summary>
+    public string Model { get; set; } = DefaultGeminiModel;
+
+    /// <summary>
+    /// HTTP timeout in seconds for Gemini API requests.
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = DefaultTimeoutSeconds;
+
+    /// <summary>
+    /// Base URL for the official Google Gemini REST API.
+    /// </summary>
+    public string BaseUrl { get; set; } = DefaultGeminiBaseUrl;
+
+    public bool IsGeminiConfigured =>
+        string.Equals(Provider?.Trim(), GeminiProviderName, StringComparison.OrdinalIgnoreCase) &&
+        !string.IsNullOrWhiteSpace(GeminiApiKey);
+
+    public string GetEffectiveModel() =>
+        string.IsNullOrWhiteSpace(Model) ? DefaultGeminiModel : Model.Trim();
+
+    public string GetEffectiveBaseUrl() =>
+        string.IsNullOrWhiteSpace(BaseUrl)
+            ? DefaultGeminiBaseUrl
+            : BaseUrl.Trim().TrimEnd('/');
+
+    public TimeSpan GetEffectiveTimeout()
+    {
+        var effectiveSeconds = TimeoutSeconds <= 0 ? DefaultTimeoutSeconds : TimeoutSeconds;
+        var clampedSeconds = Math.Clamp(effectiveSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
+        return TimeSpan.FromSeconds(clampedSeconds);
+    }
+}

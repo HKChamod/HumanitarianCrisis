@@ -1,6 +1,8 @@
 
+using HumanitarianCrisisManagement.Application.Options;
 using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
 using HumanitarianCrisisManagement.Infrastructure.Data;
+using HumanitarianCrisisManagement.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -17,6 +19,9 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "DefaultConnection connection string is not configured.");
 
+builder.Services.Configure<AiProviderOptions>(
+    builder.Configuration.GetSection(AiProviderOptions.SectionName));
+builder.Services.AddHttpClient<GeminiAiAnalysisProvider>();
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration

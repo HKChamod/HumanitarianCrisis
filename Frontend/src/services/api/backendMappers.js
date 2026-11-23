@@ -360,3 +360,94 @@ export function getEligibleAllocationCrises(crises = []) {
   if (!Array.isArray(crises)) return [];
   return crises.filter(isCrisisEligibleForAllocation);
 }
+
+// --- AI Decision Support DTO Mappers (Phase 5B-UI) ---
+
+export const AI_REVIEW_STATUSES = ['PendingReview', 'Approved', 'Overridden', 'Rejected'];
+export const AI_REVIEW_DECISIONS = ['Approved', 'Overridden', 'Rejected'];
+
+export function isAiProviderUnavailableError(err) {
+  return Number(err?.status) === 503;
+}
+
+export function mapAiProviderStatusFromApi(dto) {
+  const isConfigured = Boolean(dto?.isConfigured);
+  return {
+    isConfigured,
+    providerName: dto?.providerName ?? 'None',
+    status: dto?.status ?? (isConfigured ? 'Available' : 'Unavailable'),
+    message:
+      dto?.message ??
+      (isConfigured
+        ? 'AI Decision Support provider is active.'
+        : 'No AI provider is configured. Configure an AI provider before running analysis.'),
+  };
+}
+
+export function mapAiRecommendationFromApi(dto) {
+  return {
+    id: String(dto?.recommendationId ?? dto?.id ?? ''),
+    recommendationId: Number(dto?.recommendationId ?? dto?.id ?? 0),
+    citizenRequestId: Number(dto?.citizenRequestId ?? 0),
+    currentRequestType: dto?.currentRequestType ?? '',
+    currentUrgencyLevel: dto?.currentUrgencyLevel ?? '',
+    currentRequestStatus: dto?.currentRequestStatus ?? '',
+    areaName: dto?.areaName ?? '',
+    crisisId: dto?.crisisId ?? null,
+    crisisName: dto?.crisisName ?? null,
+    suggestedCategory: dto?.suggestedCategory ?? '',
+    suggestedUrgencyLevel: dto?.suggestedUrgencyLevel ?? '',
+    isPotentialDuplicate: Boolean(dto?.isPotentialDuplicate),
+    duplicateOfRequestId: dto?.duplicateOfRequestId ?? null,
+    suggestedInventoryId: dto?.suggestedInventoryId ?? null,
+    suggestedWarehouseName: dto?.suggestedWarehouseName ?? null,
+    suggestedResourceName: dto?.suggestedResourceName ?? null,
+    suggestedInventoryAvailableQuantity:
+      dto?.suggestedInventoryAvailableQuantity !== undefined && dto?.suggestedInventoryAvailableQuantity !== null
+        ? Number(dto.suggestedInventoryAvailableQuantity)
+        : null,
+    suggestedResourceQuantity:
+      dto?.suggestedResourceQuantity !== undefined && dto?.suggestedResourceQuantity !== null
+        ? Number(dto.suggestedResourceQuantity)
+        : null,
+    confidenceScore:
+      dto?.confidenceScore !== undefined && dto?.confidenceScore !== null
+        ? Number(dto.confidenceScore)
+        : null,
+    explanation: dto?.explanation ?? '',
+    providerName: dto?.providerName ?? '',
+    modelVersion: dto?.modelVersion ?? null,
+    reviewStatus: dto?.reviewStatus ?? 'PendingReview',
+    reviewedByUserId: dto?.reviewedByUserId ?? null,
+    reviewedByUserName: dto?.reviewedByUserName ?? null,
+    reviewedAt: dto?.reviewedAt ?? null,
+    humanDecisionNote: dto?.humanDecisionNote ?? null,
+    overriddenCategory: dto?.overriddenCategory ?? null,
+    overriddenUrgencyLevel: dto?.overriddenUrgencyLevel ?? null,
+    createdAt: dto?.createdAt ?? null,
+    updatedAt: dto?.updatedAt ?? null,
+  };
+}
+
+export function mapAiReviewDecisionToApi(payload = {}) {
+  const decision = String(payload.decision ?? '').trim();
+  const note = (payload.humanDecisionNote ?? '').trim() || null;
+
+  if (decision === 'Overridden') {
+    const overriddenCategory = (payload.overriddenCategory ?? '').trim() || null;
+    const overriddenUrgencyLevel = (payload.overriddenUrgencyLevel ?? '').trim() || null;
+    return {
+      decision,
+      humanDecisionNote: note,
+      overriddenCategory,
+      overriddenUrgencyLevel,
+    };
+  }
+
+  return {
+    decision,
+    humanDecisionNote: note,
+    overriddenCategory: null,
+    overriddenUrgencyLevel: null,
+  };
+}

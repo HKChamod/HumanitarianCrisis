@@ -34,8 +34,8 @@ export function AdminLayout() {
             <Info className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
             <span>
               <strong>Live .NET 10 API Mode</strong> — Auth, Crises, Citizen Requests, Organizations, Areas, Resources,
-              Warehouses, Warehouse Inventories, Inventory Transactions, and Resource Allocations are connected to SQL Server;
-              unimplemented backend modules display unavailable states instead of mock data.
+              Warehouses, Warehouse Inventories, Inventory Transactions, Resource Allocations, and AI Decision Support are
+              connected to SQL Server; unimplemented backend modules display unavailable states instead of mock data.
             </span>
           </div>
         )}

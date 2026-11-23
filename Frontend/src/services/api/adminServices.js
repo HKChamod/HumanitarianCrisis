@@ -1,5 +1,8 @@
 import { axiosClient, USE_MOCK_API } from './axiosClient';
 import {
+  mapAiProviderStatusFromApi,
+  mapAiRecommendationFromApi,
+  mapAiReviewDecisionToApi,
   mapCrisisCreateToApi,
   mapCrisisFromApi,
   mapInventoryTransactionCreateToApi,
@@ -820,10 +823,60 @@ export const donationService = {
 };
 
 export const aiRecommendationService = {
-  isMock: true,
-  async list() {
+  isMock: USE_MOCK_API,
+  async getStatus() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/AiRecommendations/status');
+      return mapAiProviderStatusFromApi(res.data);
+    }
+    await delay(80);
+    return {
+      isConfigured: true,
+      providerName: 'Mock Demo Engine',
+      status: 'Available',
+      message: 'Mock mode active — displaying sample advisory recommendations.',
+    };
+  },
+  async list({ reviewStatus, citizenRequestId } = {}) {
+    if (!USE_MOCK_API) {
+      const params = {};
+      if (reviewStatus) params.reviewStatus = reviewStatus;
+      if (citizenRequestId) params.citizenRequestId = Number(citizenRequestId);
+      const res = await axiosClient.get('/AiRecommendations', { params });
+      return (Array.isArray(res.data) ? res.data : []).map(mapAiRecommendationFromApi);
+    }
     await delay();
     return [...aiRecommendationStore];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/AiRecommendations/${Number(id)}`);
+      return mapAiRecommendationFromApi(res.data);
+    }
+    await delay(80);
+    return aiRecommendationStore.find((r) => String(r.id) === String(id)) || null;
+  },
+  async analyzeCitizenRequest(citizenRequestId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post(`/AiRecommendations/analyze/${Number(citizenRequestId)}`);
+      return mapAiRecommendationFromApi(res.data);
+    }
+    throw {
+      status: 501,
+      title: 'Mock Mode',
+      detail: 'Live AI analysis endpoint is only called when VITE_USE_MOCK_API=false.',
+      message: 'Live AI analysis endpoint is only called when VITE_USE_MOCK_API=false.',
+    };
+  },
+  async review(id, payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.patch(
+        `/AiRecommendations/${Number(id)}/review`,
+        mapAiReviewDecisionToApi(payload)
+      );
+      return mapAiRecommendationFromApi(res.data);
+    }
+    return this.submitHumanDecision(id, payload.decision, payload.humanDecisionNote || '');
   },
   async submitHumanDecision(id, reviewStatus, humanDecisionNote) {
     await delay();

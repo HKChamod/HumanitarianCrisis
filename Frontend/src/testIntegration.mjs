@@ -23,6 +23,10 @@ import {
   mapResourceAllocationCreateToApi,
   isCrisisEligibleForAllocation,
   getEligibleAllocationCrises,
+  mapAiProviderStatusFromApi,
+  mapAiRecommendationFromApi,
+  mapAiReviewDecisionToApi,
+  isAiProviderUnavailableError,
 } from './services/api/backendMappers.js';
 // Simplified admin check matching AuthProvider.jsx logic
 const ADMIN_PORTAL_ENTRY_PERMISSIONS = [
@@ -250,6 +254,62 @@ async function runTests() {
     'getEligibleAllocationCrises keeps only Active/Reported crises and excludes Closed/Resolved'
   );
 
+  // Phase 5B-UI AI Decision Support DTO mapper & 503 checks
+  const mappedAiStatus = mapAiProviderStatusFromApi({
+    isConfigured: false,
+    providerName: 'None',
+    status: 'Unavailable',
+    message: 'No AI provider is configured.',
+  });
+  assert(
+    mappedAiStatus.isConfigured === false && mappedAiStatus.status === 'Unavailable' && mappedAiStatus.providerName === 'None',
+    'mapAiProviderStatusFromApi maps unconfigured Unavailable state accurately'
+  );
+
+  const mappedAiRec = mapAiRecommendationFromApi({
+    recommendationId: 11,
+    citizenRequestId: 1,
+    currentRequestType: 'Food',
+    currentUrgencyLevel: 'High',
+    currentRequestStatus: 'Fulfilled',
+    areaName: 'Central Province',
+    suggestedCategory: 'Food',
+    suggestedUrgencyLevel: 'Critical',
+    isPotentialDuplicate: false,
+    confidenceScore: 0.87,
+    explanation: 'High household impact reported.',
+    providerName: 'TestProvider',
+    reviewStatus: 'PendingReview',
+  });
+  assert(
+    mappedAiRec.recommendationId === 11 && mappedAiRec.citizenRequestId === 1 && mappedAiRec.confidenceScore === 0.87 && mappedAiRec.reviewStatus === 'PendingReview',
+    'mapAiRecommendationFromApi separates verified facts and AI suggestions accurately'
+  );
+
+  const mappedOverride = mapAiReviewDecisionToApi({
+    decision: 'Overridden',
+    humanDecisionNote: 'Adjusted to Medical',
+    overriddenCategory: 'Medical',
+    overriddenUrgencyLevel: 'Critical',
+  });
+  assert(
+    mappedOverride.decision === 'Overridden' && mappedOverride.overriddenCategory === 'Medical' && mappedOverride.overriddenUrgencyLevel === 'Critical',
+    'mapAiReviewDecisionToApi formats Overridden payload matching ReviewAiRecommendationRequest'
+  );
+
+  const mappedApprove = mapAiReviewDecisionToApi({
+    decision: 'Approved',
+    humanDecisionNote: 'Confirmed',
+    overriddenCategory: 'Ignored',
+  });
+  assert(
+    mappedApprove.decision === 'Approved' && mappedApprove.overriddenCategory === null && mappedApprove.overriddenUrgencyLevel === null,
+    'mapAiReviewDecisionToApi clears override fields for Approved/Rejected decisions'
+  );
+
+  assert(isAiProviderUnavailableError({ status: 503 }) === true, 'isAiProviderUnavailableError detects HTTP 503');
+  assert(isAiProviderUnavailableError({ status: 500 }) === false, 'isAiProviderUnavailableError ignores non-503 errors');
+
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---
   console.log('\n--- TEST GROUP 3: RBAC & Permission Verification ---');
   const citizenUser = {
@@ -282,6 +342,8 @@ async function runTests() {
     'GET /api/Resources',
     'GET /api/Warehouses',
     'GET /api/WarehouseInventories',
+    'GET /api/AiRecommendations/status',
+    'GET /api/AiRecommendations',
   ];
 
   if (!hasAdminEmail || !hasAdminPassword) {
@@ -362,6 +424,8 @@ async function runTests() {
         { path: '/Resources', label: 'GET /api/Resources' },
         { path: '/Warehouses', label: 'GET /api/Warehouses' },
         { path: '/WarehouseInventories', label: 'GET /api/WarehouseInventories' },
+        { path: '/AiRecommendations/status', label: 'GET /api/AiRecommendations/status' },
+        { path: '/AiRecommendations', label: 'GET /api/AiRecommendations', expectArray: true },
       ];
 
       for (const check of readOnlyChecks) {

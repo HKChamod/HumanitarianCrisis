@@ -108,9 +108,9 @@ export const ADMIN_NAV_GROUPS = [
     label: 'AI Decision Support',
     icon: Sparkles,
     items: [
-      { label: 'AI Overview', path: '/admin/ai', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
-      { label: 'Recommendations', path: '/admin/ai/recommendations', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
-      { label: 'Predictions and Analytics', path: '/admin/ai/analytics', ...(USE_MOCK_API ? { permission: 'AI.Review' } : { requiredRole: 'Administrator' }) },
+      { label: 'AI Overview', path: '/admin/ai', permission: USE_MOCK_API ? 'AI.Review' : 'AI.View' },
+      { label: 'Recommendations', path: '/admin/ai/recommendations', permission: USE_MOCK_API ? 'AI.Review' : 'AI.View' },
+      { label: 'Predictions and Analytics', path: '/admin/ai/analytics', permission: USE_MOCK_API ? 'AI.Review' : 'AI.View' },
     ],
   },
   {
