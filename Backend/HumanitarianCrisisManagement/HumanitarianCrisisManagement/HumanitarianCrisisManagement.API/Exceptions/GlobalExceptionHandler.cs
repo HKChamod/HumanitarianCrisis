@@ -27,6 +27,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             KeyNotFoundException =>
                 StatusCodes.Status404NotFound,
 
+            ArgumentException =>
+                StatusCodes.Status400BadRequest,
+
             InvalidOperationException =>
                 StatusCodes.Status400BadRequest,
 
@@ -46,10 +49,17 @@ public class GlobalExceptionHandler : IExceptionHandler
             _ => "An unexpected error occurred."
         };
 
+        var detail = statusCode switch
+        {
+            400 or 404 => exception.Message,
+            _ => null
+        };
+
         var problemDetails = new ProblemDetails
         {
             Status = statusCode,
-            Title = title
+            Title = title,
+            Detail = detail
         };
 
         httpContext.Response.StatusCode = statusCode;

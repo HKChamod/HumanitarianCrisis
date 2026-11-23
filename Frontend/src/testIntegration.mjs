@@ -21,6 +21,8 @@ import {
   mapInventoryTransferToApi,
   mapResourceAllocationFromApi,
   mapResourceAllocationCreateToApi,
+  isCrisisEligibleForAllocation,
+  getEligibleAllocationCrises,
 } from './services/api/backendMappers.js';
 // Simplified admin check matching AuthProvider.jsx logic
 const ADMIN_PORTAL_ENTRY_PERMISSIONS = [
@@ -231,6 +233,22 @@ async function runTests() {
     referenceNumber: 'ALLOC-005',
   });
   assert(mappedAllocCreate.inventoryId === 12 && mappedAllocCreate.crisisId === 3 && mappedAllocCreate.quantityRequested === 40, 'mapResourceAllocationCreateToApi formats numeric DTO payload');
+
+  // Resource Allocation crisis eligibility filtering checks
+  assert(isCrisisEligibleForAllocation({ id: '1', status: 'Active' }) === true, 'isCrisisEligibleForAllocation allows Active crisis');
+  assert(isCrisisEligibleForAllocation({ id: '2', status: 'Reported' }) === true, 'isCrisisEligibleForAllocation allows Reported crisis');
+  assert(isCrisisEligibleForAllocation({ id: '3', status: 'Closed' }) === false, 'isCrisisEligibleForAllocation excludes Closed crisis');
+  assert(isCrisisEligibleForAllocation({ id: '4', status: 'Resolved' }) === false, 'isCrisisEligibleForAllocation excludes Resolved crisis');
+  const eligibleFiltered = getEligibleAllocationCrises([
+    { id: '1', status: 'Active' },
+    { id: '2', status: 'Reported' },
+    { id: '3', status: 'Closed' },
+    { id: '4', status: 'Resolved' },
+  ]);
+  assert(
+    eligibleFiltered.length === 2 && eligibleFiltered.every((c) => c.status !== 'Closed' && c.status !== 'Resolved'),
+    'getEligibleAllocationCrises keeps only Active/Reported crises and excludes Closed/Resolved'
+  );
 
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---
   console.log('\n--- TEST GROUP 3: RBAC & Permission Verification ---');

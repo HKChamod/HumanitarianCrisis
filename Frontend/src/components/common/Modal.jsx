@@ -28,7 +28,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, maxWid
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100"
+            className="p-1.5 rounded-lg border border-transparent text-[#334155] hover:text-[#0F172A] hover:bg-slate-100 hover:border-slate-300"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
@@ -68,7 +68,7 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100"
+            className="p-1.5 rounded-lg border border-transparent text-[#334155] hover:text-[#0F172A] hover:bg-slate-100 hover:border-slate-300"
             aria-label="Close drawer"
           >
             <X className="w-4 h-4" />
@@ -114,7 +114,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-3.5 py-2 text-xs font-medium rounded-lg border border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-slate-50"
+            className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-[#94A3B8] bg-[#F1F5F9] text-[#0F172A] hover:bg-[#E2E8F0] disabled:bg-[#E2E8F0] disabled:text-[#64748B]"
           >
             Cancel
           </button>
@@ -122,7 +122,7 @@ export function ConfirmationDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`px-3.5 py-2 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${confirmClasses}`}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors disabled:bg-[#E2E8F0] disabled:text-[#64748B] ${confirmClasses}`}
           >
             {loading ? 'Processing...' : confirmLabel}
           </button>

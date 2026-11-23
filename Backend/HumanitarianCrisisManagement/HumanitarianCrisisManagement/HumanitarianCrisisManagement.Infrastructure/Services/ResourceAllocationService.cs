@@ -43,11 +43,19 @@ public class ResourceAllocationService : IResourceAllocationService
         if (!inventory.Resource.IsActive)
             throw new InvalidOperationException("Selected resource is inactive.");
 
-        var crisisExists = await _context.CrisisEvents
-            .AnyAsync(c => c.CrisisId == request.CrisisId);
+        var crisis = await _context.CrisisEvents
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.CrisisId == request.CrisisId);
 
-        if (!crisisExists)
+        if (crisis == null)
             throw new KeyNotFoundException("Crisis event not found.");
+
+        if (string.Equals(crisis.Status, "Closed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(crisis.Status, "Resolved", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Cannot create a resource allocation for a crisis event with status '{crisis.Status}'. Only open or active crisis events are eligible.");
+        }
 
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.UserId == requestedByUserId && u.IsActive);

@@ -9,52 +9,144 @@
   gap: 0.5rem;
   font-weight: 600;
   font-size: 0.9375rem;
-  padding: 0.6875rem 1.25rem;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
+  line-height: 1.25;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
 }
 
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--btn-focus-ring);
+}
+
 .btn:disabled {
-  opacity: 0.6;
+  background-color: var(--btn-disabled-bg);
+  border-color: var(--btn-disabled-border);
+  color: var(--btn-disabled-text);
+  box-shadow: none;
+  transform: none;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-inverse);
-  box-shadow: 0 1px 2px rgba(15, 118, 110, 0.2);
+  background-color: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  box-shadow: 0 1px 2px rgba(15, 118, 110, 0.25);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  box-shadow: 0 4px 6px rgba(15, 118, 110, 0.3);
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-primary-hover);
+  box-shadow: 0 4px 6px rgba(15, 118, 110, 0.28);
   transform: translateY(-1px);
 }
 
+.btn-primary:active {
+  background-color: var(--btn-primary-active);
+  transform: translateY(0);
+}
+
 .btn-secondary {
-  background-color: var(--color-surface-card);
-  border: 1px solid var(--color-slate-300);
-  color: var(--color-slate-800);
+  background-color: var(--btn-secondary-bg);
+  border: 1px solid var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-surface-subtle);
-  border-color: var(--color-slate-400);
+  background-color: var(--btn-secondary-hover);
+  border-color: var(--color-slate-500);
+  color: var(--color-slate-900);
+}
+
+.btn-secondary:active {
+  background-color: var(--btn-secondary-active);
+}
+
+.btn-outline {
+  background-color: var(--btn-outline-bg);
+  border: 1.5px solid var(--btn-outline-border);
+  color: var(--btn-outline-text);
+}
+
+.btn-outline:hover {
+  background-color: var(--btn-outline-hover);
+  border-color: var(--btn-primary-hover);
+  color: var(--btn-primary-hover);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--btn-ghost-text);
+}
+
+.btn-ghost:hover {
+  background-color: var(--btn-ghost-hover-bg);
+  color: var(--btn-ghost-hover-text);
+}
+
+.btn-danger,
+.btn-destructive {
+  background-color: var(--btn-danger-bg);
+  border-color: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.2);
+}
+
+.btn-danger:hover,
+.btn-destructive:hover {
+  background-color: var(--btn-danger-hover);
+  border-color: var(--btn-danger-hover);
+}
+
+.btn-danger:active,
+.btn-destructive:active {
+  background-color: var(--btn-danger-active);
+}
+
+.btn-danger-outline {
+  background-color: var(--btn-danger-subtle-bg);
+  border: 1px solid var(--btn-danger-subtle-border);
+  color: var(--btn-danger-subtle-text);
+}
+
+.btn-danger-outline:hover {
+  background-color: #FEE2E2;
+  border-color: #F87171;
+  color: #991B1B;
+}
+
+.btn-icon {
+  padding: 0.45rem;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--color-slate-700);
+}
+
+.btn-icon:hover {
+  background-color: var(--color-slate-100);
+  border-color: var(--color-slate-300);
   color: var(--color-slate-900);
 }
 
 .btn-amber {
   background-color: var(--color-amber);
-  color: #78350F;
+  border-color: var(--color-amber);
+  color: #451A03;
   box-shadow: 0 1px 2px rgba(245, 158, 11, 0.25);
 }
 
 .btn-amber:hover {
   background-color: var(--color-amber-hover);
+  border-color: var(--color-amber-hover);
   color: #FFFFFF;
 }
 
