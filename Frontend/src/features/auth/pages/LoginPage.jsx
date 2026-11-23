@@ -89,9 +89,9 @@ export function LoginPage() {
             style={{ margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <img
-              src="/athwala-logo-full.png"
+              src="/athwala-emblem.png"
               alt="Athwala"
-              style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+              style={{ width: '64px', height: '64px', objectFit: 'contain' }}
             />
           </div>
           <h2>{t('welcomeBack')}</h2>
