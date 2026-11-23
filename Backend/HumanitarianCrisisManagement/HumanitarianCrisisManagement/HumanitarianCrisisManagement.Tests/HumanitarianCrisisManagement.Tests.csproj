@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -19,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HumanitarianCrisisManagement.API\HumanitarianCrisisManagement.API.csproj" />
     <ProjectReference Include="..\HumanitarianCrisisManagement.Application\HumanitarianCrisisManagement.Application.csproj" />
     <ProjectReference Include="..\HumanitarianCrisisManagement.Infrastructure\HumanitarianCrisisManagement.Infrastructure.csproj" />
   </ItemGroup>
