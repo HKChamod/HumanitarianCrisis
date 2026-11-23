@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HumanitarianCrisisManagement.Application.DTOs.AiRecommendations;
 using HumanitarianCrisisManagement.Application.Exceptions;
 using HumanitarianCrisisManagement.Application.Interfaces;
 using HumanitarianCrisisManagement.Application.Options;
@@ -17,6 +19,11 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 /// </summary>
 public class GeminiAiAnalysisProvider : IAiAnalysisProvider
 {
+    private const string DiagnosticPrompt = "Reply with exactly OK";
+    private const int MaxDiagnosticResponseLength = 64;
+    private const int MaxTransient503Retries = 2;
+    private const int BaseRetryDelayMs = 1000;
+    private const int MaxRetryJitterMs = 500;
     private const int MaxDescriptionLength = 2000;
     private const int MaxSiblingDescriptionLength = 500;
     private const int MaxCategoryLength = 100;
@@ -54,17 +61,28 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
     private readonly AiProviderOptions _options;
     private readonly ILogger<GeminiAiAnalysisProvider> _logger;
     private readonly IAiTextPrivacySanitizer _privacySanitizer;
+    private readonly Func<int, TimeSpan> _retryDelayProvider;
 
     public GeminiAiAnalysisProvider(
         HttpClient httpClient,
         IOptions<AiProviderOptions> options,
         ILogger<GeminiAiAnalysisProvider> logger,
-        IAiTextPrivacySanitizer? privacySanitizer = null)
+        IAiTextPrivacySanitizer? privacySanitizer = null,
+        Func<int, TimeSpan>? retryDelayProvider = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _privacySanitizer = privacySanitizer ?? AiTextPrivacySanitizer.Default;
+        _retryDelayProvider = retryDelayProvider ?? ComputeDefaultRetryDelay;
+    }
+
+    public static TimeSpan ComputeDefaultRetryDelay(int retryAttempt)
+    {
+        var exponent = Math.Clamp(retryAttempt - 1, 0, 4);
+        var baseMs = BaseRetryDelayMs * (1 << exponent);
+        var jitterMs = Random.Shared.Next(0, MaxRetryJitterMs + 1);
+        return TimeSpan.FromMilliseconds(baseMs + jitterMs);
     }
 
     public bool IsConfigured => _options.IsGeminiConfigured;
@@ -90,85 +108,278 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
         var requestBody = BuildGeminiRequestBody(sanitizedPayload);
         var serializedBody = JsonSerializer.Serialize(requestBody, JsonOptions);
 
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint)
+        var (rawResponseBody, _) = await SendWithTransient503RetryAsync(
+            endpoint,
+            serializedBody,
+            model,
+            context.CitizenRequestId,
+            "analysis",
+            cancellationToken);
+
+        return ParseAndValidateResponse(rawResponseBody, context, model);
+    }
+
+    public async Task<AiProviderDiagnosticResponse> RunConnectivityDiagnosticAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
         {
-            Content = new StringContent(serializedBody, Encoding.UTF8, "application/json")
+            throw new AiProviderUnavailableException(
+                "Google Gemini AI provider is not configured. Configure AiProvider:Provider=Gemini and AiProvider:GeminiApiKey.");
+        }
+
+        var model = _options.GetEffectiveModel();
+        var endpoint = $"{_options.GetEffectiveBaseUrl()}/models/{Uri.EscapeDataString(model)}:generateContent";
+
+        var requestBody = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new[]
+                    {
+                        new { text = DiagnosticPrompt }
+                    }
+                }
+            }
         };
 
-        // Pass API key via header so it never appears in request URLs or query-string logs.
-        httpRequest.Headers.Add("x-goog-api-key", _options.GeminiApiKey!.Trim());
+        var serializedBody = JsonSerializer.Serialize(requestBody, JsonOptions);
 
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(_options.GetEffectiveTimeout());
+        var (rawResponseBody, elapsedMs) = await SendWithTransient503RetryAsync(
+            endpoint,
+            serializedBody,
+            model,
+            citizenRequestId: 0,
+            "connectivity diagnostic",
+            cancellationToken);
 
-        HttpResponseMessage response;
+        if (string.IsNullOrWhiteSpace(rawResponseBody))
+        {
+            throw new InvalidOperationException("Gemini AI diagnostic returned an empty response.");
+        }
+
+        GeminiGenerateContentResponse? envelope;
         try
         {
-            response = await _httpClient.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                timeoutCts.Token);
+            envelope = JsonSerializer.Deserialize<GeminiGenerateContentResponse>(rawResponseBody, JsonOptions);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (JsonException ex)
         {
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Gemini AI request timed out after {TimeoutSeconds}s for CitizenRequestId {CitizenRequestId}.",
-                _options.GetEffectiveTimeout().TotalSeconds,
-                context.CitizenRequestId);
-            throw new AiProviderUnavailableException(
-                "Gemini AI request timed out. Please try again later.",
-                ex);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Network error communicating with Gemini AI for CitizenRequestId {CitizenRequestId}.",
-                context.CitizenRequestId);
-            throw new AiProviderUnavailableException(
-                "Unable to communicate with Gemini AI service. Please try again later.",
-                ex);
+            _logger.LogWarning(ex, "Failed to parse Gemini AI diagnostic JSON envelope.");
+            throw new InvalidOperationException("Gemini AI diagnostic returned malformed JSON.", ex);
         }
 
-        using (response)
+        var text = envelope?.Candidates?
+            .FirstOrDefault()?.Content?.Parts?
+            .FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text;
+
+        if (string.IsNullOrWhiteSpace(text))
         {
-            string rawResponseBody;
+            throw new InvalidOperationException("Gemini AI diagnostic response did not contain any text.");
+        }
+
+        var modelVersion = string.IsNullOrWhiteSpace(envelope?.ModelVersion)
+            ? model
+            : envelope.ModelVersion.Trim();
+
+        return new AiProviderDiagnosticResponse
+        {
+            Success = true,
+            ProviderName = ProviderName,
+            Model = modelVersion,
+            ElapsedMs = elapsedMs,
+            ResponseText = Truncate(text, MaxDiagnosticResponseLength),
+            Message = "Gemini provider connectivity diagnostic succeeded."
+        };
+    }
+
+    private async Task<(string RawResponseBody, long ElapsedMs)> SendWithTransient503RetryAsync(
+        string endpoint,
+        string serializedBody,
+        string model,
+        int citizenRequestId,
+        string operationName,
+        CancellationToken cancellationToken)
+    {
+        var effectiveTimeout = _options.GetEffectiveTimeout();
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(effectiveTimeout);
+
+        var stopwatch = Stopwatch.StartNew();
+        var maxAttempts = MaxTransient503Retries + 1;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = new StringContent(serializedBody, Encoding.UTF8, "application/json")
+            };
+
+            // Pass API key via header so it never appears in request URLs or query-string logs.
+            httpRequest.Headers.Add("x-goog-api-key", _options.GeminiApiKey!.Trim());
+
+            HttpResponseMessage response;
             try
             {
-                rawResponseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+                response = await _httpClient.SendAsync(
+                    httpRequest,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    timeoutCts.Token);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
+            catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Gemini AI {Operation} timed out after {TimeoutSeconds}s (Attempt={Attempt}/{MaxAttempts}, ElapsedMs={ElapsedMs}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}",
+                    operationName,
+                    effectiveTimeout.TotalSeconds,
+                    attempt,
+                    maxAttempts,
+                    stopwatch.ElapsedMilliseconds,
+                    citizenRequestId,
+                    model,
+                    endpoint);
+                throw new AiProviderUnavailableException(
+                    "Gemini AI request timed out. Please try again later.",
+                    ex);
+            }
             catch (OperationCanceledException ex)
             {
                 _logger.LogWarning(
                     ex,
-                    "Timed out reading Gemini AI response body for CitizenRequestId {CitizenRequestId}.",
-                    context.CitizenRequestId);
+                    "Gemini AI {Operation} HTTP client timed out (Attempt={Attempt}/{MaxAttempts}, ElapsedMs={ElapsedMs}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}",
+                    operationName,
+                    attempt,
+                    maxAttempts,
+                    stopwatch.ElapsedMilliseconds,
+                    citizenRequestId,
+                    model,
+                    endpoint);
                 throw new AiProviderUnavailableException(
-                    "Gemini AI response timed out. Please try again later.",
+                    "Gemini AI request timed out. Please try again later.",
+                    ex);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Network error during Gemini AI {Operation} (Attempt={Attempt}/{MaxAttempts}, ElapsedMs={ElapsedMs}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}",
+                    operationName,
+                    attempt,
+                    maxAttempts,
+                    stopwatch.ElapsedMilliseconds,
+                    citizenRequestId,
+                    model,
+                    endpoint);
+                throw new AiProviderUnavailableException(
+                    "Unable to communicate with Gemini AI service. Please try again later.",
                     ex);
             }
 
-            if (!response.IsSuccessStatusCode)
+            using (response)
             {
+                string rawResponseBody;
+                try
+                {
+                    rawResponseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Timed out reading Gemini AI {Operation} response body after {TimeoutSeconds}s (Attempt={Attempt}/{MaxAttempts}, ElapsedMs={ElapsedMs}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}",
+                        operationName,
+                        effectiveTimeout.TotalSeconds,
+                        attempt,
+                        maxAttempts,
+                        stopwatch.ElapsedMilliseconds,
+                        citizenRequestId,
+                        model,
+                        endpoint);
+                    throw new AiProviderUnavailableException(
+                        "Gemini AI response timed out. Please try again later.",
+                        ex);
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    stopwatch.Stop();
+                    return (rawResponseBody, stopwatch.ElapsedMilliseconds);
+                }
+
+                // Bounded retry ONLY for transient upstream HTTP 503 ServiceUnavailable.
+                // Never retry 400, 401, 403, 404, 429, or other status codes.
+                if (response.StatusCode == HttpStatusCode.ServiceUnavailable && attempt < maxAttempts)
+                {
+                    var (googleStatus, googleMessage) = ExtractSafeGoogleError(rawResponseBody, _options.GeminiApiKey);
+                    var retryDelay = _retryDelayProvider(attempt);
+
+                    _logger.LogWarning(
+                        "Gemini AI {Operation} transient HTTP 503 on retryable attempt {Attempt}/{MaxAttempts} for CitizenRequestId {CitizenRequestId}. Retrying in {DelayMs}ms. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                        operationName,
+                        attempt,
+                        maxAttempts,
+                        citizenRequestId,
+                        (int)retryDelay.TotalMilliseconds,
+                        model,
+                        endpoint,
+                        googleStatus,
+                        googleMessage);
+
+                    try
+                    {
+                        await Task.Delay(retryDelay, timeoutCts.Token);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Gemini AI {Operation} timed out during retry backoff after {TimeoutSeconds}s (Attempt={Attempt}/{MaxAttempts}, ElapsedMs={ElapsedMs}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}",
+                            operationName,
+                            effectiveTimeout.TotalSeconds,
+                            attempt,
+                            maxAttempts,
+                            stopwatch.ElapsedMilliseconds,
+                            citizenRequestId,
+                            model,
+                            endpoint);
+                        throw new AiProviderUnavailableException(
+                            "Gemini AI request timed out. Please try again later.",
+                            ex);
+                    }
+
+                    continue;
+                }
+
                 HandleHttpError(
                     response.StatusCode,
-                    context.CitizenRequestId,
+                    citizenRequestId,
                     model,
                     endpoint,
-                    rawResponseBody);
+                    rawResponseBody,
+                    operationName,
+                    attempt,
+                    maxAttempts);
             }
-
-            return ParseAndValidateResponse(rawResponseBody, context, model);
         }
+
+        throw new AiProviderUnavailableException(
+            "Gemini AI service is temporarily unavailable. Please try again later.");
     }
 
     private void HandleHttpError(
@@ -176,14 +387,19 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
         int citizenRequestId,
         string model,
         string endpoint,
-        string? rawResponseBody)
+        string? rawResponseBody,
+        string operationName,
+        int attemptsMade,
+        int maxAttempts)
     {
         var (googleStatus, googleMessage) = ExtractSafeGoogleError(rawResponseBody, _options.GeminiApiKey);
 
         if (statusCode == HttpStatusCode.TooManyRequests)
         {
             _logger.LogWarning(
-                "Gemini AI rate limit exceeded (HTTP 429) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                "Gemini AI {Operation} final failure: rate limit/quota exceeded (HTTP 429, Attempts={Attempts}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                operationName,
+                attemptsMade,
                 citizenRequestId,
                 model,
                 endpoint,
@@ -196,8 +412,10 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
         if (statusCode == HttpStatusCode.Unauthorized || statusCode == HttpStatusCode.Forbidden)
         {
             _logger.LogError(
-                "Gemini AI authentication/authorization failed (HTTP {StatusCode}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                "Gemini AI {Operation} final failure: authentication/authorization error (HTTP {StatusCode}, Attempts={Attempts}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                operationName,
                 (int)statusCode,
+                attemptsMade,
                 citizenRequestId,
                 model,
                 endpoint,
@@ -207,9 +425,27 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
                 "Gemini AI authentication failed. Verify the configured server API key.");
         }
 
+        if (statusCode == HttpStatusCode.ServiceUnavailable)
+        {
+            _logger.LogWarning(
+                "Gemini AI {Operation} final failure: upstream HTTP 503 persisted after {Attempts}/{MaxAttempts} attempts for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                operationName,
+                attemptsMade,
+                maxAttempts,
+                citizenRequestId,
+                model,
+                endpoint,
+                googleStatus,
+                googleMessage);
+            throw new AiProviderUnavailableException(
+                "Gemini AI service is temporarily unavailable due to high demand (HTTP 503). Please try again later.");
+        }
+
         _logger.LogWarning(
-            "Gemini AI returned HTTP {StatusCode} for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+            "Gemini AI {Operation} final failure: upstream HTTP {StatusCode} (Attempts={Attempts}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+            operationName,
             (int)statusCode,
+            attemptsMade,
             citizenRequestId,
             model,
             endpoint,

@@ -163,7 +163,7 @@ public class AiTextPrivacySanitizerTests
                         }
                     }
                 },
-                modelVersion = "gemini-2.5-flash-001"
+                modelVersion = "gemini-3.1-flash-lite-001"
             };
 
             return new HttpResponseMessage(HttpStatusCode.OK)
@@ -227,7 +227,7 @@ public class AiTextPrivacySanitizerTests
             {
                 Provider = "Gemini",
                 GeminiApiKey = FakeApiKey,
-                Model = "gemini-2.5-flash",
+                Model = "gemini-3.1-flash-lite",
                 IncludeSanitizedDescriptions = true
             }),
             NullLogger<GeminiAiAnalysisProvider>.Instance,
@@ -352,7 +352,7 @@ public class AiTextPrivacySanitizerTests
             {
                 Provider = "Gemini",
                 GeminiApiKey = FakeApiKey,
-                Model = "gemini-2.5-flash",
+                Model = "gemini-3.1-flash-lite",
                 IncludeSanitizedDescriptions = false
             }),
             NullLogger<GeminiAiAnalysisProvider>.Instance,
@@ -383,7 +383,7 @@ public class AiTextPrivacySanitizerTests
         {
             Provider = "Gemini",
             GeminiApiKey = FakeApiKey,
-            Model = "gemini-2.5-flash"
+            Model = "gemini-3.1-flash-lite"
         };
 
         Assert.False(defaultOptions.IncludeSanitizedDescriptions);

@@ -45,6 +45,19 @@ public class AiDecisionSupportService : IAiDecisionSupportService
         };
     }
 
+    public Task<AiProviderDiagnosticResponse> RunProviderDiagnosticAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!_aiProvider.IsConfigured)
+        {
+            throw new AiProviderUnavailableException(
+                "No AI analysis provider is configured. Configure an AI provider to run connectivity diagnostics.");
+        }
+
+        // Pure provider-level connectivity diagnostic: performs zero database reads or writes.
+        return _aiProvider.RunConnectivityDiagnosticAsync(cancellationToken);
+    }
+
     public async Task<AiRecommendationResponse> AnalyzeCitizenRequestAsync(
         int citizenRequestId,
         CancellationToken cancellationToken = default)

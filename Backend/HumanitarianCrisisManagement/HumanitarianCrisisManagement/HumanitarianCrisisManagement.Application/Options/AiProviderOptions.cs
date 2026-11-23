@@ -5,11 +5,11 @@ public class AiProviderOptions
     public const string SectionName = "AiProvider";
     public const string DefaultProvider = "None";
     public const string GeminiProviderName = "Gemini";
-    public const string DefaultGeminiModel = "gemini-2.5-flash";
+    public const string DefaultGeminiModel = "gemini-3.1-flash-lite";
     public const string DefaultGeminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta";
-    public const int DefaultTimeoutSeconds = 30;
+    public const int DefaultTimeoutSeconds = 120;
     public const int MinTimeoutSeconds = 5;
-    public const int MaxTimeoutSeconds = 120;
+    public const int MaxTimeoutSeconds = 300;
 
     /// <summary>
     /// Active AI provider name. Supported values: "None" (default) or "Gemini".
@@ -22,7 +22,7 @@ public class AiProviderOptions
     public string? GeminiApiKey { get; set; }
 
     /// <summary>
-    /// Gemini model identifier (for example "gemini-2.5-flash").
+    /// Gemini model identifier (for example "gemini-3.1-flash-lite").
     /// </summary>
     public string Model { get; set; } = DefaultGeminiModel;
 

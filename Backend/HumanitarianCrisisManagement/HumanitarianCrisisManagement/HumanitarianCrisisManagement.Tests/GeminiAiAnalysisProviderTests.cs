@@ -58,21 +58,21 @@ public class GeminiAiAnalysisProviderTests
         ]
     };
 
-    private static AiProviderOptions CreateConfiguredOptions(int timeoutSeconds = 30) => new()
+    private static AiProviderOptions CreateConfiguredOptions(int timeoutSeconds = 120) => new()
     {
         Provider = "Gemini",
         GeminiApiKey = FakeApiKey,
-        Model = "gemini-2.5-flash",
+        Model = "gemini-3.1-flash-lite",
         TimeoutSeconds = timeoutSeconds
     };
 
-    private static HttpResponseMessage BuildGeminiOkEnvelope(object innerRecommendation, string modelVersion = "gemini-2.5-flash-001")
+    private static HttpResponseMessage BuildGeminiOkEnvelope(object innerRecommendation, string modelVersion = "gemini-3.1-flash-lite-001")
     {
         var innerJson = JsonSerializer.Serialize(innerRecommendation);
         return BuildGeminiRawTextEnvelope(innerJson, modelVersion);
     }
 
-    private static HttpResponseMessage BuildGeminiRawTextEnvelope(string innerText, string modelVersion = "gemini-2.5-flash-001")
+    private static HttpResponseMessage BuildGeminiRawTextEnvelope(string innerText, string modelVersion = "gemini-3.1-flash-lite-001")
     {
         var envelope = new
         {
@@ -148,7 +148,7 @@ public class GeminiAiAnalysisProviderTests
         {
             o.Provider = "Gemini";
             o.GeminiApiKey = FakeApiKey;
-            o.Model = "gemini-2.5-flash";
+            o.Model = "gemini-3.1-flash-lite";
         });
         services.AddSingleton(new HttpClient(new StubHttpMessageHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)))));
@@ -199,7 +199,7 @@ public class GeminiAiAnalysisProviderTests
 
         Assert.NotNull(capturedRequest);
         Assert.Equal(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
             capturedRequest!.RequestUri!.ToString());
         Assert.DoesNotContain(FakeApiKey, capturedRequest.RequestUri.ToString());
         Assert.True(capturedRequest.Headers.TryGetValues("x-goog-api-key", out var keyValues));
@@ -222,7 +222,7 @@ public class GeminiAiAnalysisProviderTests
         Assert.Equal(10m, result.SuggestedResourceQuantity);
         Assert.Equal(0.915m, result.ConfidenceScore);
         Assert.Equal("Gemini", result.ProviderName);
-        Assert.Equal("gemini-2.5-flash-001", result.ModelVersion);
+        Assert.Equal("gemini-3.1-flash-lite-001", result.ModelVersion);
     }
 
     [Fact]
@@ -431,28 +431,61 @@ public class GeminiAiAnalysisProviderTests
             sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
     }
 
+    [Theory]
+    [InlineData(0, 120)]
+    [InlineData(-5, 120)]
+    [InlineData(120, 120)]
+    [InlineData(3, 5)]
+    [InlineData(180, 180)]
+    [InlineData(999, 300)]
+    public void AiProviderOptions_GetEffectiveTimeout_AppliesDefault120SecondsAndClampsRange(
+        int configuredSeconds,
+        int expectedSeconds)
+    {
+        var options = new AiProviderOptions { TimeoutSeconds = configuredSeconds };
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), options.GetEffectiveTimeout());
+    }
+
+    [Fact]
+    public void AiProviderOptions_DefaultTimeout_Is120Seconds()
+    {
+        var options = new AiProviderOptions();
+        Assert.Equal(120, options.TimeoutSeconds);
+        Assert.Equal(TimeSpan.FromSeconds(120), options.GetEffectiveTimeout());
+    }
+
     [Fact]
     public async Task AnalyzeCitizenRequestAsync_ProviderTimeout_ThrowsAiProviderUnavailableException()
     {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
         var handler = new StubHttpMessageHandler(async (_, ct) =>
         {
             await Task.Delay(TimeSpan.FromSeconds(15), ct);
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        using var httpClient = new HttpClient(handler);
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         var sut = new GeminiAiAnalysisProvider(
             httpClient,
             Options.Create(CreateConfiguredOptions(timeoutSeconds: 5)),
-            NullLogger<GeminiAiAnalysisProvider>.Instance);
+            logger);
 
-        await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
             sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Contains("timed out", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("5s", combinedLogs);
+        Assert.Contains("gemini-3.1-flash-lite", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
     }
 
     [Fact]
     public async Task AnalyzeCitizenRequestAsync_CallerCancellation_PropagatesOperationCanceledException()
     {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -462,25 +495,27 @@ public class GeminiAiAnalysisProviderTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        using var httpClient = new HttpClient(handler);
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
         var sut = new GeminiAiAnalysisProvider(
             httpClient,
             Options.Create(CreateConfiguredOptions()),
-            NullLogger<GeminiAiAnalysisProvider>.Instance);
+            logger);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             sut.AnalyzeCitizenRequestAsync(CreateSampleContext(), cts.Token));
+
+        Assert.Empty(logger.Messages);
     }
 
     [Theory]
-    [InlineData("gemini-2.5-flash", "gemini-2.5-flash")]
-    [InlineData("models/gemini-2.5-flash", "gemini-2.5-flash")]
-    [InlineData("  MODELS/gemini-2.5-flash  ", "gemini-2.5-flash")]
-    [InlineData("/Models/gemini-2.5-flash/", "gemini-2.5-flash")]
-    [InlineData("models/models/gemini-2.5-flash", "gemini-2.5-flash")]
-    [InlineData("", "gemini-2.5-flash")]
-    [InlineData("   ", "gemini-2.5-flash")]
-    [InlineData("models/", "gemini-2.5-flash")]
+    [InlineData("gemini-3.1-flash-lite", "gemini-3.1-flash-lite")]
+    [InlineData("models/gemini-3.1-flash-lite", "gemini-3.1-flash-lite")]
+    [InlineData("  MODELS/gemini-3.1-flash-lite  ", "gemini-3.1-flash-lite")]
+    [InlineData("/Models/gemini-3.1-flash-lite/", "gemini-3.1-flash-lite")]
+    [InlineData("models/models/gemini-3.1-flash-lite", "gemini-3.1-flash-lite")]
+    [InlineData("", "gemini-3.1-flash-lite")]
+    [InlineData("   ", "gemini-3.1-flash-lite")]
+    [InlineData("models/", "gemini-3.1-flash-lite")]
     public void AiProviderOptions_GetEffectiveModel_NormalizesWhitespaceCaseAndModelsPrefix(
         string configuredModel,
         string expectedModel)
@@ -490,9 +525,9 @@ public class GeminiAiAnalysisProviderTests
     }
 
     [Theory]
-    [InlineData("gemini-2.5-flash")]
-    [InlineData("models/gemini-2.5-flash")]
-    [InlineData("  MODELS/gemini-2.5-flash  ")]
+    [InlineData("gemini-3.1-flash-lite")]
+    [InlineData("models/gemini-3.1-flash-lite")]
+    [InlineData("  MODELS/gemini-3.1-flash-lite  ")]
     public async Task AnalyzeCitizenRequestAsync_ModelVariants_ProduceExactUrlWithoutDuplicateOrEncodedPrefix(
         string configuredModel)
     {
@@ -523,7 +558,7 @@ public class GeminiAiAnalysisProviderTests
 
         Assert.NotNull(capturedUri);
         Assert.Equal(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
             capturedUri!.AbsoluteUri);
         Assert.DoesNotContain("%2F", capturedUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("/models/models/", capturedUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
@@ -538,7 +573,7 @@ public class GeminiAiAnalysisProviderTests
             error = new
             {
                 code = 404,
-                message = $"models/gemini-2.5-flash is not found for API version v1beta (echoed {FakeApiKey})",
+                message = $"models/gemini-3.1-flash-lite is not found for API version v1beta (echoed {FakeApiKey})",
                 status = "NOT_FOUND"
             }
         });
@@ -565,13 +600,368 @@ public class GeminiAiAnalysisProviderTests
 
         // Structured log captures model, endpoint (no credentials), status, Google status and sanitized message
         var combinedLogs = string.Join("\n", logger.Messages);
-        Assert.Contains("gemini-2.5-flash", combinedLogs);
-        Assert.Contains("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", combinedLogs);
+        Assert.Contains("gemini-3.1-flash-lite", combinedLogs);
+        Assert.Contains("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent", combinedLogs);
         Assert.Contains("404", combinedLogs);
         Assert.Contains("NOT_FOUND", combinedLogs);
         Assert.Contains("is not found for API version v1beta", combinedLogs);
         Assert.DoesNotContain(FakeApiKey, combinedLogs);
         Assert.Contains("[REDACTED_KEY]", combinedLogs);
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_Success_SendsFixedNonSensitivePromptAndReturnsOk()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        string? capturedBody = null;
+
+        var handler = new StubHttpMessageHandler(async (req, ct) =>
+        {
+            capturedRequest = req;
+            capturedBody = await req.Content!.ReadAsStringAsync(ct);
+            return BuildGeminiRawTextEnvelope("OK", "gemini-3.1-flash-lite");
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            NullLogger<GeminiAiAnalysisProvider>.Instance);
+
+        var result = await sut.RunConnectivityDiagnosticAsync();
+
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
+            capturedRequest!.RequestUri!.AbsoluteUri);
+        Assert.True(capturedRequest.Headers.TryGetValues("x-goog-api-key", out var keyValues));
+        Assert.Equal(FakeApiKey, Assert.Single(keyValues));
+
+        Assert.NotNull(capturedBody);
+        Assert.Contains("Reply with exactly OK", capturedBody);
+        Assert.DoesNotContain("citizenRequest", capturedBody);
+        Assert.DoesNotContain("responseSchema", capturedBody);
+        Assert.DoesNotContain(FakeApiKey, capturedBody);
+
+        Assert.True(result.Success);
+        Assert.Equal("Gemini", result.ProviderName);
+        Assert.Equal("gemini-3.1-flash-lite", result.Model);
+        Assert.Equal("OK", result.ResponseText);
+        Assert.True(result.ElapsedMs >= 0);
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_ProviderTimeout_ThrowsAiProviderUnavailableWithoutLeakingKey()
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var handler = new StubHttpMessageHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(15), ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions(timeoutSeconds: 5)),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.RunConnectivityDiagnosticAsync());
+
+        Assert.Contains("timed out", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("gemini-3.1-flash-lite", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    public async Task RunConnectivityDiagnosticAsync_HttpError_ThrowsAiProviderUnavailableWithoutLeakingKey(
+        HttpStatusCode statusCode)
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var errorJson = JsonSerializer.Serialize(new
+        {
+            error = new
+            {
+                code = (int)statusCode,
+                status = statusCode.ToString().ToUpperInvariant(),
+                message = $"Upstream error for diagnostic ({FakeApiKey})"
+            }
+        });
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(errorJson, Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.RunConnectivityDiagnosticAsync());
+
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_CallerCancellation_PropagatesOperationCanceledException()
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var handler = new StubHttpMessageHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.RunConnectivityDiagnosticAsync(cts.Token));
+
+        Assert.Empty(logger.Messages);
+    }
+
+    [Fact]
+    public async Task UnconfiguredProvider_RunConnectivityDiagnosticAsync_ThrowsAiProviderUnavailableException()
+    {
+        var sut = new UnconfiguredAiAnalysisProvider();
+        await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.RunConnectivityDiagnosticAsync());
+    }
+
+    [Fact]
+    public void ComputeDefaultRetryDelay_UsesExponentialBackoffWithJitter()
+    {
+        var delay1 = GeminiAiAnalysisProvider.ComputeDefaultRetryDelay(1);
+        var delay2 = GeminiAiAnalysisProvider.ComputeDefaultRetryDelay(2);
+
+        Assert.InRange(delay1.TotalMilliseconds, 1000, 1500);
+        Assert.InRange(delay2.TotalMilliseconds, 2000, 2500);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_Transient503ThenSuccess_RetriesAndSucceeds()
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var attempts = 0;
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            attempts++;
+            if (attempts <= 2)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent(
+                        "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"High demand\"}}",
+                        Encoding.UTF8,
+                        "application/json")
+                });
+            }
+
+            return Task.FromResult(BuildGeminiOkEnvelope(new
+            {
+                suggestedCategory = "Food",
+                suggestedUrgencyLevel = "High",
+                isPotentialDuplicate = false,
+                confidenceScore = 0.9,
+                explanation = "Succeeded on retry."
+            }));
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger,
+            retryDelayProvider: _ => TimeSpan.FromMilliseconds(5));
+
+        var result = await sut.AnalyzeCitizenRequestAsync(CreateSampleContext());
+
+        Assert.Equal(3, attempts);
+        Assert.Equal("Food", result.SuggestedCategory);
+        Assert.Equal("High", result.SuggestedUrgencyLevel);
+
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("retryable attempt 1/3", combinedLogs);
+        Assert.Contains("retryable attempt 2/3", combinedLogs);
+        Assert.DoesNotContain("final failure", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_Transient503ThenSuccess_RetriesAndReturnsOk()
+    {
+        var attempts = 0;
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            attempts++;
+            if (attempts == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent(
+                        "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"Temporary spike\"}}",
+                        Encoding.UTF8,
+                        "application/json")
+                });
+            }
+
+            return Task.FromResult(BuildGeminiRawTextEnvelope("OK", "gemini-3.1-flash-lite"));
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            NullLogger<GeminiAiAnalysisProvider>.Instance,
+            retryDelayProvider: _ => TimeSpan.FromMilliseconds(5));
+
+        var result = await sut.RunConnectivityDiagnosticAsync();
+
+        Assert.Equal(2, attempts);
+        Assert.True(result.Success);
+        Assert.Equal("OK", result.ResponseText);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_Persistent503_ExhaustsMax2RetriesAndLogsFinalFailure()
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var attempts = 0;
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            attempts++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent(
+                    "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"High demand\"}}",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger,
+            retryDelayProvider: _ => TimeSpan.FromMilliseconds(5));
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Equal(3, attempts); // 1 initial attempt + 2 retries
+        Assert.Contains("503", ex.Message);
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("retryable attempt 1/3", combinedLogs);
+        Assert.Contains("retryable attempt 2/3", combinedLogs);
+        Assert.Contains("final failure: upstream HTTP 503 persisted after 3/3 attempts", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_CancellationDuring503Backoff_StopsImmediatelyAndPropagatesCancellation()
+    {
+        var attempts = 0;
+        using var cts = new CancellationTokenSource();
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            attempts++;
+            cts.CancelAfter(TimeSpan.FromMilliseconds(30));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent(
+                    "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"High demand\"}}",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            NullLogger<GeminiAiAnalysisProvider>.Instance,
+            retryDelayProvider: _ => TimeSpan.FromSeconds(10));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext(), cts.Token));
+
+        Assert.Equal(1, attempts);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task AnalyzeCitizenRequestAsync_NonRetryableStatusCodes_NeverRetryAndHandle429Separately(
+        HttpStatusCode statusCode)
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var attempts = 0;
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            attempts++;
+            return Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(
+                    $"{{\"error\":{{\"code\":{(int)statusCode},\"status\":\"ERR\",\"message\":\"Failure\"}}}}",
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger,
+            retryDelayProvider: _ => TimeSpan.FromMilliseconds(5));
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Equal(1, attempts);
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+
+        if (statusCode == HttpStatusCode.TooManyRequests)
+        {
+            Assert.Contains("rate limit", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("503", ex.Message);
+        }
+
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("final failure", combinedLogs);
+        Assert.DoesNotContain("retryable attempt", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
     }
 
     private sealed class CapturingLogger<T> : ILogger<T>

@@ -37,6 +37,16 @@ public class AiRecommendationsController : ControllerBase
         return Ok(_aiService.GetProviderStatus());
     }
 
+    [HttpPost("diagnostic")]
+    [Authorize(Policy = "AI.Review")]
+    [ProducesResponseType(typeof(AiProviderDiagnosticResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> RunDiagnostic(CancellationToken cancellationToken)
+    {
+        var result = await _aiService.RunProviderDiagnosticAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet]
     [Authorize(Policy = "AI.View")]
     [ProducesResponseType(typeof(IReadOnlyList<AiRecommendationResponse>), StatusCodes.Status200OK)]

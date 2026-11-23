@@ -21,7 +21,12 @@ var connectionString = builder.Configuration
 
 builder.Services.Configure<AiProviderOptions>(
     builder.Configuration.GetSection(AiProviderOptions.SectionName));
-builder.Services.AddHttpClient<GeminiAiAnalysisProvider>();
+builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
+{
+    // Timeout is enforced per request via AiProviderOptions.GetEffectiveTimeout()
+    // using a linked CancellationTokenSource so HttpClient's 100s default never cuts off longer configured timeouts.
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration
