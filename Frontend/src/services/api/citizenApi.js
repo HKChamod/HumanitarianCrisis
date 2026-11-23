@@ -1,24 +1,43 @@
 /**
  * Citizen API Service
- * Handles Citizen Portal communication with HCMS backend API
- * Clean state with ZERO pre-seeded dummy data
+ * Handles Citizen Portal communication with HCMS .NET 10 backend API via centralized axiosClient.
+ *
+ * Live Mode (USE_MOCK_API === false):
+ *  - GET    /api/CitizenRequests/my
+ *  - POST   /api/CitizenRequests
+ *  - DELETE /api/CitizenRequests/{id}   (only Pending requests owned by citizen)
+ *  - GET    /api/Areas                  (active geographic areas)
+ *  - Never silently falls back to localStorage or mock data on API failure.
+ *  - Unsupported backend operations fail cleanly with normalized 501 errors.
+ *
+ * Mock Mode (USE_MOCK_API === true):
+ *  - Preserves localStorage-backed mock workflow for local UI testing.
  */
 import { axiosClient, USE_MOCK_API } from './axiosClient';
 
 const STORAGE_KEY_REQUESTS = 'hcms_citizen_requests_v3';
 const STORAGE_KEY_NOTIFICATIONS = 'hcms_citizen_notifications_v3';
 
-// Clean initial state: zero dummy data
 const INITIAL_CITIZEN_REQUESTS = [];
 const INITIAL_CITIZEN_NOTIFICATIONS = [];
 
-// Clean legacy dummy data if still present in user's browser
 try {
   localStorage.removeItem('hcms_citizen_requests');
   localStorage.removeItem('hcms_citizen_notifications');
   localStorage.removeItem('hcms_citizen_requests_v2');
   localStorage.removeItem('hcms_citizen_notifications_v2');
-} catch {}
+} catch {
+  // ignore storage cleanup errors
+}
+
+function createUnsupportedError(detail) {
+  return {
+    status: 501,
+    title: 'Not Supported',
+    detail,
+    message: detail,
+  };
+}
 
 function getStoredRequests() {
   try {
@@ -62,114 +81,211 @@ function saveStoredNotifications(notifs) {
   }
 }
 
+export function mapCitizenAreaFromApi(dto) {
+  return {
+    areaId: Number(dto?.areaId),
+    areaName: dto?.areaName ?? '',
+    areaType: dto?.areaType ?? '',
+    parentAreaId: dto?.parentAreaId ?? null,
+    parentAreaName: dto?.parentAreaName ?? null,
+    code: dto?.code ?? null,
+    isActive: Boolean(dto?.isActive),
+  };
+}
+
+export function mapCitizenRequestFromApi(dto) {
+  const createdAt = dto?.createdAt ?? new Date().toISOString();
+  const updatedAt = dto?.updatedAt ?? createdAt;
+  const status = dto?.status ?? 'Pending';
+
+  return {
+    id: String(dto?.requestId ?? dto?.id ?? ''),
+    requestId: dto?.requestId ?? null,
+    referenceNumber: dto?.requestId != null ? `REQ-${dto.requestId}` : '',
+    userId: dto?.userId ?? null,
+    citizenName: dto?.citizenName ?? '',
+    crisisId: dto?.crisisId ?? null,
+    crisisTitle: dto?.crisisName ?? null,
+    areaId: dto?.areaId ?? null,
+    areaName: dto?.areaName ?? '',
+    category: dto?.requestType ?? 'Other',
+    urgencyLevel: dto?.urgencyLevel ?? 'Medium',
+    status,
+    peopleAffected: dto?.peopleCount ?? 1,
+    description: dto?.description ?? '',
+    location: {
+      province: '',
+      district: dto?.areaName ?? '',
+      dsDivision: '',
+      gnDivision: '',
+      addressLine: dto?.address ?? '',
+    },
+    latitude: dto?.latitude ?? null,
+    longitude: dto?.longitude ?? null,
+    contactPhone: '',
+    contactName: dto?.citizenName ?? '',
+    createdAt,
+    updatedAt,
+    assignedOrganization: null,
+    assignedOfficer: null,
+    history: [
+      {
+        status,
+        timestamp: updatedAt,
+        note: `Current backend status: ${status}.`,
+      },
+    ],
+  };
+}
+
+export function normalizeUrgencyForApi(urgency) {
+  if (urgency === 'Standard') return 'Medium';
+  if (['Low', 'Medium', 'High', 'Critical'].includes(urgency)) return urgency;
+  return 'Medium';
+}
+
+export function buildCitizenRequestPayload(payload) {
+  const parsedAreaId = Number(payload?.areaId);
+  if (!Number.isInteger(parsedAreaId) || parsedAreaId <= 0) {
+    const detail = 'Please select a valid active geographic area before submitting your request.';
+    throw {
+      status: 400,
+      title: 'Validation Error',
+      detail,
+      message: detail,
+    };
+  }
+
+  const parsedCrisisId =
+    payload?.crisisId !== undefined && payload?.crisisId !== null && payload?.crisisId !== ''
+      ? Number(payload.crisisId)
+      : null;
+
+  const peopleCount = Number.parseInt(payload?.peopleAffected ?? payload?.peopleCount, 10);
+  const addressValue = (payload?.location?.addressLine || payload?.addressLine || payload?.address || '').trim();
+
+  return {
+    requestType: (payload?.category || payload?.requestType || 'Other').trim(),
+    description: (payload?.description || '').trim(),
+    urgencyLevel: normalizeUrgencyForApi(payload?.urgencyLevel),
+    peopleCount: Number.isInteger(peopleCount) && peopleCount >= 1 ? Math.min(peopleCount, 1000) : 1,
+    areaId: parsedAreaId,
+    crisisId: Number.isInteger(parsedCrisisId) && parsedCrisisId > 0 ? parsedCrisisId : null,
+    address: addressValue || null,
+    latitude:
+      payload?.latitude !== undefined && payload?.latitude !== null && payload?.latitude !== ''
+        ? Number(payload.latitude)
+        : null,
+    longitude:
+      payload?.longitude !== undefined && payload?.longitude !== null && payload?.longitude !== ''
+        ? Number(payload.longitude)
+        : null,
+  };
+}
+
 export const citizenApi = {
   /**
-   * Get all assistance requests submitted by the logged-in citizen
+   * Load active geographic areas from GET /api/Areas (live mode)
+   */
+  async getActiveAreas() {
+    if (USE_MOCK_API) {
+      return [];
+    }
+    const response = await axiosClient.get('/Areas');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(mapCitizenAreaFromApi).filter((a) => a.isActive);
+  },
+
+  /**
+   * Get all assistance requests submitted by the logged-in citizen (GET /api/CitizenRequests/my)
    */
   async getMyRequests() {
     if (USE_MOCK_API) {
       const data = getStoredRequests();
       return { data, total: data.length };
     }
-    try {
-      const response = await axiosClient.get('/CitizenRequests/my');
-      const items = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      return { data: items, total: items.length };
-    } catch {
-      // Fallback to local storage if backend endpoint is still pending
-      const data = getStoredRequests();
-      return { data, total: data.length };
-    }
+
+    const response = await axiosClient.get('/CitizenRequests/my');
+    const items = Array.isArray(response.data) ? response.data : [];
+    const mapped = items.map(mapCitizenRequestFromApi);
+    return { data: mapped, total: mapped.length };
   },
 
   /**
-   * Submit a new emergency assistance request
+   * Submit a new emergency assistance request (POST /api/CitizenRequests)
    */
   async submitRequest(payload) {
-    const newRef = `HCMS-2026-000${Math.floor(100 + Math.random() * 900)}`;
-    const nowIso = new Date().toISOString();
-
-    const newRequest = {
-      id: `req-${Date.now()}`,
-      referenceNumber: newRef,
-      crisisId: payload.crisisId || 'cr-kalutara-2026',
-      crisisTitle: payload.crisisTitle || 'Kalutara Flood Emergency 2026',
-      category: payload.category || 'Food',
-      urgencyLevel: payload.urgencyLevel || 'High',
-      status: 'Submitted',
-      peopleAffected: parseInt(payload.peopleAffected, 10) || 1,
-      description: payload.description || '',
-      location: {
-        province: payload.province || 'Western Province',
-        district: payload.district || 'Kalutara',
-        dsDivision: payload.dsDivision || '',
-        gnDivision: payload.gnDivision || '',
-        addressLine: payload.addressLine || '',
-      },
-      contactPhone: payload.contactPhone || '+94 77 123 4567',
-      contactName: payload.contactName || 'Kavinda Perera',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      assignedOrganization: null,
-      assignedOfficer: null,
-      history: [
-        {
-          status: 'Submitted',
-          timestamp: nowIso,
-          note: 'Assistance request submitted by citizen via Citizen Portal.'
-        }
-      ]
-    };
-
     if (USE_MOCK_API) {
-      const current = getStoredRequests();
-      const updated = [newRequest, ...current];
-      saveStoredRequests(updated);
+      const newRef = `HCMS-2026-000${Math.floor(100 + Math.random() * 900)}`;
+      const nowIso = new Date().toISOString();
 
-      // Confirmation notification
+      const newRequest = {
+        id: `req-${Date.now()}`,
+        referenceNumber: newRef,
+        crisisId: payload.crisisId || 'cr-kalutara-2026',
+        crisisTitle: payload.crisisTitle || 'Kalutara Flood Emergency 2026',
+        category: payload.category || 'Food',
+        urgencyLevel: payload.urgencyLevel || 'High',
+        status: 'Submitted',
+        peopleAffected: parseInt(payload.peopleAffected, 10) || 1,
+        description: payload.description || '',
+        location: {
+          province: payload.province || 'Western Province',
+          district: payload.district || 'Kalutara',
+          dsDivision: payload.dsDivision || '',
+          gnDivision: payload.gnDivision || '',
+          addressLine: payload.addressLine || '',
+        },
+        contactPhone: payload.contactPhone || '+94 77 123 4567',
+        contactName: payload.contactName || 'Kavinda Perera',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        assignedOrganization: null,
+        assignedOfficer: null,
+        history: [
+          {
+            status: 'Submitted',
+            timestamp: nowIso,
+            note: 'Assistance request submitted by citizen via Citizen Portal.',
+          },
+        ],
+      };
+
+      const current = getStoredRequests();
+      saveStoredRequests([newRequest, ...current]);
+
       const notifs = getStoredNotifications();
-      const newNotif = {
-        id: `notif-${Date.now()}`,
-        title: 'Request Submitted Successfully',
-        message: `Your request for ${newRequest.category} (${newRef}) has been received and registered with the Disaster Management Centre.`,
-        timestamp: nowIso,
-        read: false,
-        type: 'info',
-        referenceNumber: newRef
-      };
-      saveStoredNotifications([newNotif, ...notifs]);
+      saveStoredNotifications([
+        {
+          id: `notif-${Date.now()}`,
+          title: 'Request Submitted Successfully',
+          message: `Your request for ${newRequest.category} (${newRef}) has been received and registered with the Disaster Management Centre.`,
+          timestamp: nowIso,
+          read: false,
+          type: 'info',
+          referenceNumber: newRef,
+        },
+        ...notifs,
+      ]);
 
       return { data: newRequest };
     }
 
-    try {
-      const requestPayload = {
-        requestType: payload.category || 'Other',
-        description: payload.description || 'Emergency assistance needed',
-        urgencyLevel: ['Low', 'Medium', 'High', 'Critical'].includes(payload.urgencyLevel)
-          ? payload.urgencyLevel
-          : 'High',
-        peopleCount: parseInt(payload.peopleAffected, 10) || 1,
-        areaId: payload.areaId ? parseInt(payload.areaId, 10) : 1,
-        crisisId: payload.crisisId ? parseInt(payload.crisisId, 10) : null,
-        address: payload.location?.addressLine || payload.addressLine || payload.address || null,
-        latitude: payload.latitude ? Number(payload.latitude) : null,
-        longitude: payload.longitude ? Number(payload.longitude) : null,
-      };
-      const response = await axiosClient.post('/CitizenRequests', requestPayload);
-      return { data: response.data };
-    } catch {
-      const current = getStoredRequests();
-      const updated = [newRequest, ...current];
-      saveStoredRequests(updated);
-      return { data: newRequest };
-    }
+    const requestPayload = buildCitizenRequestPayload(payload);
+    const response = await axiosClient.post('/CitizenRequests', requestPayload);
+    return { data: mapCitizenRequestFromApi(response.data) };
   },
 
   /**
-   * Track request by reference number
+   * Track request by reference number (mock-only; backend has no public reference lookup endpoint)
    */
   async trackRequest(referenceNumber) {
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Public reference-number tracking is not currently supported by the HCMS backend API. Select one of your submitted requests from the dashboard to view its live status.'
+      );
+    }
+
     const requests = getStoredRequests();
     const match = requests.find(
       (r) => r.referenceNumber?.toLowerCase().trim() === referenceNumber?.toLowerCase().trim()
@@ -179,10 +295,15 @@ export const citizenApi = {
   },
 
   /**
-   * Progress request to next status (Submitted -> Under Review -> Verified -> Approved -> In Progress -> Completed)
-   * This allows the user to test and verify every stage of the lifecycle.
+   * Progress request to next status (mock-only simulator)
    */
   async advanceRequestStatus(requestId) {
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Client-side status simulation is disabled in live API mode. Status transitions are managed by authorized coordinators.'
+      );
+    }
+
     const requests = getStoredRequests();
     let updatedReq = null;
     const nowIso = new Date().toISOString();
@@ -233,37 +354,42 @@ export const citizenApi = {
           {
             status: nextStatus,
             timestamp: nowIso,
-            note: nextNote
-          }
-        ]
+            note: nextNote,
+          },
+        ],
       };
       return updatedReq;
     });
 
     if (updatedReq) {
       saveStoredRequests(updatedList);
-
-      // Add status change notification
       const notifs = getStoredNotifications();
-      const notif = {
-        id: `notif-${Date.now()}`,
-        title: `Status Updated: ${updatedReq.status}`,
-        message: `Your request ${updatedReq.referenceNumber} (${updatedReq.category}) is now ${updatedReq.status}.`,
-        timestamp: nowIso,
-        read: false,
-        type: updatedReq.status === 'Completed' ? 'success' : 'info',
-        referenceNumber: updatedReq.referenceNumber
-      };
-      saveStoredNotifications([notif, ...notifs]);
+      saveStoredNotifications([
+        {
+          id: `notif-${Date.now()}`,
+          title: `Status Updated: ${updatedReq.status}`,
+          message: `Your request ${updatedReq.referenceNumber} (${updatedReq.category}) is now ${updatedReq.status}.`,
+          timestamp: nowIso,
+          read: false,
+          type: updatedReq.status === 'Completed' ? 'success' : 'info',
+          referenceNumber: updatedReq.referenceNumber,
+        },
+        ...notifs,
+      ]);
     }
 
     return { data: updatedReq };
   },
 
   /**
-   * Cancel an assistance request
+   * Cancel/delete a Pending assistance request (DELETE /api/CitizenRequests/{id} in live mode)
    */
   async cancelRequest(requestId) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/CitizenRequests/${Number(requestId)}`);
+      return { success: true };
+    }
+
     const requests = getStoredRequests();
     const nowIso = new Date().toISOString();
     const updated = requests.map((r) => {
@@ -277,9 +403,9 @@ export const citizenApi = {
             {
               status: 'Cancelled',
               timestamp: nowIso,
-              note: 'Cancelled by citizen.'
-            }
-          ]
+              note: 'Cancelled by citizen.',
+            },
+          ],
         };
       }
       return r;
@@ -289,19 +415,24 @@ export const citizenApi = {
   },
 
   /**
-   * Submit citizen feedback for a completed request
+   * Submit citizen feedback (mock-only; no backend feedback endpoint exists)
    */
   async submitFeedback(requestId, feedbackData) {
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError(
+        'Citizen feedback submission is not currently supported by the HCMS backend API.'
+      );
+    }
+
     const requests = getStoredRequests();
     const updated = requests.map((r) => {
       if (r.id === requestId) {
         return {
           ...r,
           feedback: {
-            rating: feedbackData.rating,
-            comments: feedbackData.comments,
-            submittedAt: new Date().toISOString()
-          }
+            ...feedbackData,
+            submittedAt: new Date().toISOString(),
+          },
         };
       }
       return r;
@@ -311,28 +442,36 @@ export const citizenApi = {
   },
 
   /**
-   * Get citizen notifications
+   * Get notifications (mock-only; live notifications API not implemented yet)
    */
   async getNotifications() {
-    const data = getStoredNotifications();
-    return { data, total: data.length };
+    if (!USE_MOCK_API) {
+      return { data: [], unsupported: true };
+    }
+    return { data: getStoredNotifications(), unsupported: false };
   },
 
   /**
-   * Mark all notifications as read
+   * Mark all notifications as read (mock-only)
    */
   async markAllNotificationsRead() {
+    if (!USE_MOCK_API) {
+      return { success: false, unsupported: true };
+    }
     const notifs = getStoredNotifications().map((n) => ({ ...n, read: true }));
     saveStoredNotifications(notifs);
     return { success: true };
   },
 
   /**
-   * Reset / clear all citizen data to test clean again
+   * Reset all local mock citizen data (mock-only)
    */
   clearAllCitizenData() {
-    localStorage.removeItem(STORAGE_KEY_REQUESTS);
-    localStorage.removeItem(STORAGE_KEY_NOTIFICATIONS);
+    if (!USE_MOCK_API) {
+      throw createUnsupportedError('Clearing mock citizen data is only available in mock mode.');
+    }
+    saveStoredRequests([]);
+    saveStoredNotifications([]);
     return { success: true };
-  }
+  },
 };

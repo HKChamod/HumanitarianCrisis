@@ -33,8 +33,9 @@ export function AdminLayout() {
           <div className="bg-[#F0FDFA] border-b border-teal-200 px-4 lg:px-6 py-1.5 flex items-center gap-2 text-xs text-[#134E4A]">
             <Info className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
             <span>
-              <strong>Live .NET 10 API Mode</strong> — Auth, Crises, Citizen Requests, Organizations, Resources, and Areas
-              are connected to SQL Server; unimplemented modules remain mock-backed until backend endpoints are added.
+              <strong>Live .NET 10 API Mode</strong> — Auth, Crises, Citizen Requests, Organizations, Areas, Resources,
+              Warehouses, Warehouse Inventories, Inventory Transactions, and Resource Allocations are connected to SQL Server;
+              unimplemented backend modules display unavailable states instead of mock data.
             </span>
           </div>
         )}

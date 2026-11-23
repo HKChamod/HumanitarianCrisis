@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Search, CheckCircle2, Clock, MapPin, Users, Phone, Building, AlertCircle, Star, ArrowRight } from 'lucide-react';
 import { citizenApi } from '../../../services/api/citizenApi';
+import { USE_MOCK_API } from '../../../services/api/apiConfig';
 
 export function TrackRequestModal({
   isOpen,
@@ -87,28 +88,44 @@ export function TrackRequestModal({
 
         <div className="citizen-modal-body">
           {/* Reference Search Bar */}
-          <form onSubmit={handleSearch} style={{ marginBottom: '1.25rem' }}>
-            <label className="citizen-form-label">Search by Reference Number</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <div className="requests-search-bar" style={{ maxWidth: 'none', flex: 1 }}>
-                <Search size={16} color="#64748B" />
-                <input
-                  type="text"
-                  placeholder="e.g. HCMS-2026-000123"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
+          {USE_MOCK_API ? (
+            <form onSubmit={handleSearch} style={{ marginBottom: '1.25rem' }}>
+              <label className="citizen-form-label">Search by Reference Number</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="requests-search-bar" style={{ maxWidth: 'none', flex: 1 }}>
+                  <Search size={16} color="#64748B" />
+                  <input
+                    type="text"
+                    placeholder="e.g. HCMS-2026-000123"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn-teal-primary"
+                  disabled={loading}
+                  style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}
+                >
+                  {loading ? 'Searching...' : 'Search'}
+                </button>
               </div>
-              <button
-                type="submit"
-                className="btn-teal-primary"
-                disabled={loading}
-                style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </button>
+            </form>
+          ) : (
+            <div
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                color: '#475569',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                marginBottom: '1rem',
+              }}
+            >
+              Public reference-number lookup and citizen feedback submission are not backed by the live API yet. Select any request from your dashboard to inspect its live backend status.
             </div>
-          </form>
+          )}
 
           {error && (
             <div
@@ -262,8 +279,8 @@ export function TrackRequestModal({
                 ))}
               </div>
 
-              {/* Citizen Feedback Form if Completed (CIT-09) */}
-              {activeRequest.status === 'Completed' && (
+              {/* Citizen Feedback Form if Completed (mock-only; backend feedback endpoint not implemented) */}
+              {USE_MOCK_API && activeRequest.status === 'Completed' && (
                 <div
                   style={{
                     background: '#F8FAFC',

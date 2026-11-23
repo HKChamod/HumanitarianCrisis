@@ -2,15 +2,26 @@ import { axiosClient, USE_MOCK_API } from './axiosClient';
 import {
   mapCrisisCreateToApi,
   mapCrisisFromApi,
+  mapInventoryTransactionCreateToApi,
+  mapInventoryTransactionFromApi,
+  mapInventoryTransferToApi,
   mapMemberFromApi,
   mapOrganizationCreateToApi,
   mapOrganizationFromApi,
   mapOrganizationUpdateToApi,
   mapRequestFromApi,
   mapRequestStatusToApi,
+  mapResourceAllocationCreateToApi,
+  mapResourceAllocationFromApi,
+  mapResourceAllocationStatusToApi,
   mapResourceCreateToApi,
   mapResourceFromApi,
   mapResourceUpdateToApi,
+  mapWarehouseCreateToApi,
+  mapWarehouseFromApi,
+  mapWarehouseInventoryCreateToApi,
+  mapWarehouseInventoryFromApi,
+  mapWarehouseUpdateToApi,
 } from './backendMappers';
 import {
   MOCK_AI_RECOMMENDATIONS,
@@ -506,10 +517,16 @@ export const resourceService = {
     return true;
   },
   async listAllocations() {
+    if (!USE_MOCK_API) {
+      return resourceAllocationService.list();
+    }
     await delay();
     return [...allocationStore];
   },
   async createAllocation(payload) {
+    if (!USE_MOCK_API) {
+      return resourceAllocationService.create(payload);
+    }
     await delay();
     const created = {
       ...payload,
@@ -535,6 +552,218 @@ export const resourceService = {
       `Allocated ${created.quantity} ${created.unit} of ${created.resourceName} to ${created.destination}.`
     );
     return created;
+  },
+};
+
+export const warehouseService = {
+  isMock: USE_MOCK_API,
+  async list() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/Warehouses');
+      return (Array.isArray(res.data) ? res.data : []).map(mapWarehouseFromApi);
+    }
+    await delay();
+    return [];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/Warehouses/${Number(id)}`);
+      return mapWarehouseFromApi(res.data);
+    }
+    await delay();
+    return null;
+  },
+  async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/Warehouses', mapWarehouseCreateToApi(payload));
+      return mapWarehouseFromApi(res.data);
+    }
+    await delay();
+    return { ...payload, id: `WH-${Date.now()}`, warehouseId: Date.now(), isActive: true };
+  },
+  async update(id, payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.put(`/Warehouses/${Number(id)}`, mapWarehouseUpdateToApi(payload));
+      return mapWarehouseFromApi(res.data);
+    }
+    await delay();
+    return { ...payload, id: String(id), warehouseId: Number(id) };
+  },
+  async delete(id) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/Warehouses/${Number(id)}`);
+      return true;
+    }
+    await delay();
+    return true;
+  },
+};
+
+export const warehouseInventoryService = {
+  isMock: USE_MOCK_API,
+  async list() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/WarehouseInventories');
+      return (Array.isArray(res.data) ? res.data : []).map(mapWarehouseInventoryFromApi);
+    }
+    await delay();
+    return [];
+  },
+  async listByWarehouse(warehouseId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/WarehouseInventories/warehouse/${Number(warehouseId)}`);
+      return (Array.isArray(res.data) ? res.data : []).map(mapWarehouseInventoryFromApi);
+    }
+    await delay();
+    return [];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/WarehouseInventories/${Number(id)}`);
+      return mapWarehouseInventoryFromApi(res.data);
+    }
+    await delay();
+    return null;
+  },
+  async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/WarehouseInventories', mapWarehouseInventoryCreateToApi(payload));
+      return mapWarehouseInventoryFromApi(res.data);
+    }
+    await delay();
+    return { ...payload, id: `INV-${Date.now()}`, inventoryId: Date.now(), quantityAvailable: 0 };
+  },
+  async updateReorderLevel(id, reorderLevel) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.put(`/WarehouseInventories/${Number(id)}/reorder-level`, {
+        reorderLevel: Number(reorderLevel),
+      });
+      return mapWarehouseInventoryFromApi(res.data);
+    }
+    await delay();
+    return { id: String(id), reorderLevel: Number(reorderLevel) };
+  },
+  async delete(id) {
+    if (!USE_MOCK_API) {
+      await axiosClient.delete(`/WarehouseInventories/${Number(id)}`);
+      return true;
+    }
+    await delay();
+    return true;
+  },
+};
+
+export const inventoryTransactionService = {
+  isMock: USE_MOCK_API,
+  async list() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/InventoryTransactions');
+      return (Array.isArray(res.data) ? res.data : []).map(mapInventoryTransactionFromApi);
+    }
+    await delay();
+    return [];
+  },
+  async listByInventory(inventoryId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/InventoryTransactions/inventory/${Number(inventoryId)}`);
+      return (Array.isArray(res.data) ? res.data : []).map(mapInventoryTransactionFromApi);
+    }
+    await delay();
+    return [];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/InventoryTransactions/${Number(id)}`);
+      return mapInventoryTransactionFromApi(res.data);
+    }
+    await delay();
+    return null;
+  },
+  async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/InventoryTransactions', mapInventoryTransactionCreateToApi(payload));
+      return mapInventoryTransactionFromApi(res.data);
+    }
+    await delay();
+    return { ...payload, id: `TXN-${Date.now()}` };
+  },
+  async transfer(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/InventoryTransactions/transfer', mapInventoryTransferToApi(payload));
+      return Array.isArray(res.data) ? res.data.map(mapInventoryTransactionFromApi) : res.data;
+    }
+    await delay();
+    return [];
+  },
+};
+
+export const resourceAllocationService = {
+  isMock: USE_MOCK_API,
+  async list() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/ResourceAllocations');
+      return (Array.isArray(res.data) ? res.data : []).map(mapResourceAllocationFromApi);
+    }
+    await delay();
+    return [...allocationStore];
+  },
+  async listMy() {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get('/ResourceAllocations/my');
+      return (Array.isArray(res.data) ? res.data : []).map(mapResourceAllocationFromApi);
+    }
+    await delay();
+    return [...allocationStore];
+  },
+  async getById(id) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/ResourceAllocations/${Number(id)}`);
+      return mapResourceAllocationFromApi(res.data);
+    }
+    await delay();
+    return allocationStore.find((a) => a.id === String(id)) || null;
+  },
+  async create(payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post('/ResourceAllocations', mapResourceAllocationCreateToApi(payload));
+      return mapResourceAllocationFromApi(res.data);
+    }
+    return resourceService.createAllocation(payload);
+  },
+  async approve(id, payload) {
+    const res = await axiosClient.patch(
+      `/ResourceAllocations/${Number(id)}/approve`,
+      mapResourceAllocationStatusToApi(payload)
+    );
+    return mapResourceAllocationFromApi(res.data);
+  },
+  async reject(id, payload = {}) {
+    const res = await axiosClient.patch(
+      `/ResourceAllocations/${Number(id)}/reject`,
+      mapResourceAllocationStatusToApi(payload)
+    );
+    return mapResourceAllocationFromApi(res.data);
+  },
+  async dispatch(id, payload = {}) {
+    const res = await axiosClient.patch(
+      `/ResourceAllocations/${Number(id)}/dispatch`,
+      mapResourceAllocationStatusToApi(payload)
+    );
+    return mapResourceAllocationFromApi(res.data);
+  },
+  async deliver(id, payload = {}) {
+    const res = await axiosClient.patch(
+      `/ResourceAllocations/${Number(id)}/deliver`,
+      mapResourceAllocationStatusToApi(payload)
+    );
+    return mapResourceAllocationFromApi(res.data);
+  },
+  async cancel(id, payload = {}) {
+    const res = await axiosClient.patch(
+      `/ResourceAllocations/${Number(id)}/cancel`,
+      mapResourceAllocationStatusToApi(payload)
+    );
+    return mapResourceAllocationFromApi(res.data);
   },
 };
 

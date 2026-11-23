@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { citizenApi } from '../../services/api/citizenApi';
+import { USE_MOCK_API } from '../../services/api/apiConfig';
 import { CitizenHeader } from './components/CitizenHeader';
 import { CitizenHero } from './components/CitizenHero';
 import { CitizenStats } from './components/CitizenStats';
@@ -13,16 +14,19 @@ import { NotificationsDrawer } from './components/NotificationsDrawer';
 import { VerifiedAlertsWidget } from './components/VerifiedAlertsWidget';
 import { NearbySheltersWidget } from './components/NearbySheltersWidget';
 import { CitizenProfileModal } from './components/CitizenProfileModal';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import '../../styles/citizen.css';
 
 export function CitizenDashboard() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [requests, setRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const loadSeqRef = useRef(0);
 
   // Modals state
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -32,41 +36,64 @@ export function CitizenDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('Food');
   const [selectedRequestForTracking, setSelectedRequestForTracking] = useState(null);
 
-  // Citizen Profile
+  // Citizen Profile (live mode uses authenticated user; mock mode allows local demo profile)
   const [citizenUser, setCitizenUser] = useState(() => {
+    if (!USE_MOCK_API && user) {
+      return {
+        fullName: user.fullName || user.email || 'Authenticated Citizen',
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+        district: 'Sri Lanka',
+        address: '',
+        emergencyContact: '',
+      };
+    }
     try {
       const stored = localStorage.getItem('hcms_citizen_user');
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch {
+      // ignore storage errors
+    }
     return {
-      fullName: 'Kavinda Perera',
-      email: 'kavinda.perera@example.com',
-      phone: '+94 77 123 4567',
-      district: 'Kalutara',
-      address: 'No. 42, Temple Road, Nagoda, Kalutara',
-      emergencyContact: '+94 71 987 6543 (Brother)',
+      fullName: USE_MOCK_API ? 'Kavinda Perera' : 'Authenticated Citizen',
+      email: USE_MOCK_API ? 'kavinda.perera@example.com' : '',
+      phone: USE_MOCK_API ? '+94 77 123 4567' : '',
+      district: USE_MOCK_API ? 'Kalutara' : 'Sri Lanka',
+      address: USE_MOCK_API ? 'No. 42, Temple Road, Nagoda, Kalutara' : '',
+      emergencyContact: USE_MOCK_API ? '+94 71 987 6543 (Brother)' : '',
     };
   });
 
-  // Load citizen data
-  const loadCitizenData = async () => {
+  // Load citizen data with stale-response protection and explicit error state
+  const loadCitizenData = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
+    setLoading(true);
+    setLoadError('');
     try {
       const [reqRes, notifRes] = await Promise.all([
         citizenApi.getMyRequests(),
         citizenApi.getNotifications(),
       ]);
+      if (loadSeqRef.current !== seq) return;
       setRequests(reqRes.data || []);
       setNotifications(notifRes.data || []);
     } catch (err) {
-      console.error('Error fetching citizen data:', err);
+      if (loadSeqRef.current !== seq) return;
+      setRequests([]);
+      setLoadError(err?.detail || err?.message || 'Unable to load your assistance requests from the server.');
     } finally {
-      setLoading(false);
+      if (loadSeqRef.current === seq) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadCitizenData();
-  }, []);
+    return () => {
+      loadSeqRef.current += 1;
+    };
+  }, [loadCitizenData]);
 
   // Quick category click from "What do you need?"
   const handleSelectCategory = (catKey) => {
@@ -76,12 +103,14 @@ export function CitizenDashboard() {
 
   // Submit new request
   const handleSubmitSuccess = async (payload) => {
+    setActionError('');
     await citizenApi.submitRequest(payload);
     await loadCitizenData();
   };
 
-  // Advance lifecycle status for testing/checking
+  // Advance lifecycle status for mock testing only
   const handleAdvanceStatus = async (requestId) => {
+    if (!USE_MOCK_API) return;
     const res = await citizenApi.advanceRequestStatus(requestId);
     if (res?.data && selectedRequestForTracking?.id === requestId) {
       setSelectedRequestForTracking(res.data);
@@ -89,19 +118,25 @@ export function CitizenDashboard() {
     await loadCitizenData();
   };
 
-  // Reset / clear all test data
+  // Reset / clear all mock test data
   const handleClearAllData = async () => {
+    if (!USE_MOCK_API) return;
     if (window.confirm('Clear all submitted requests to test clean again?')) {
       citizenApi.clearAllCitizenData();
       await loadCitizenData();
     }
   };
 
-  // Cancel request
+  // Cancel / delete Pending request
   const handleCancelRequest = async (requestId) => {
     if (window.confirm('Are you sure you want to cancel this assistance request?')) {
-      await citizenApi.cancelRequest(requestId);
-      await loadCitizenData();
+      setActionError('');
+      try {
+        await citizenApi.cancelRequest(requestId);
+        await loadCitizenData();
+      } catch (err) {
+        setActionError(err?.detail || err?.message || 'Unable to cancel assistance request.');
+      }
     }
   };
 
@@ -184,17 +219,63 @@ export function CitizenDashboard() {
         {/* "What do you need?" Category Quick Launcher */}
         <CategoryQuickLauncher onSelectCategory={handleSelectCategory} />
 
+        {/* Error Banners for Live Mode */}
+        {(loadError || actionError) && (
+          <div
+            style={{
+              background: '#FEE2E2',
+              border: '1px solid #FECACA',
+              color: '#991B1B',
+              padding: '0.85rem 1rem',
+              borderRadius: '10px',
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              fontSize: '0.85rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{loadError || actionError}</span>
+            </div>
+            {loadError && (
+              <button
+                type="button"
+                onClick={loadCitizenData}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #FCA5A5',
+                  color: '#991B1B',
+                  borderRadius: '6px',
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <RefreshCw size={13} /> Retry
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Real-time Assistance Requests Tracker */}
         <ActiveRequestsTracker
           requests={requests}
+          loading={loading}
           onSelectRequest={handleSelectRequest}
           onCancelRequest={handleCancelRequest}
           onOpenSubmitModal={() => {
             setSelectedCategory('Food');
             setIsSubmitModalOpen(true);
           }}
-          onAdvanceStatus={handleAdvanceStatus}
-          onClearAllData={handleClearAllData}
+          onAdvanceStatus={USE_MOCK_API ? handleAdvanceStatus : undefined}
+          onClearAllData={USE_MOCK_API ? handleClearAllData : undefined}
         />
 
         {/* Two-Column Widget Grid: Verified Alerts & Open Shelters */}
@@ -258,7 +339,7 @@ export function CitizenDashboard() {
         onClose={() => setIsTrackModalOpen(false)}
         initialRequest={selectedRequestForTracking}
         onFeedbackSubmit={loadCitizenData}
-        onAdvanceStatus={handleAdvanceStatus}
+        onAdvanceStatus={USE_MOCK_API ? handleAdvanceStatus : undefined}
       />
 
       <NotificationsDrawer
