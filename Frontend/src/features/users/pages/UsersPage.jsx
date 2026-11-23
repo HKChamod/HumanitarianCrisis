@@ -56,7 +56,7 @@ export function UsersPage() {
     if (!toggleTarget) return;
     setSaving(true);
     try {
-      const updated = await userService.toggleActive(toggleTarget.id);
+      const updated = await userService.toggleActive(toggleTarget.id, toggleTarget.isActive);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setToggleTarget(null);

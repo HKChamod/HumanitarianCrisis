@@ -465,6 +465,8 @@ export function mapShelterFromApi(dto) {
     areaId: Number(dto?.areaId ?? 0),
     areaName: dto?.areaName ?? '',
     district: dto?.areaName ?? '',
+    dsDivision: dto?.areaName ?? '',
+    operatorOrganization: dto?.contactName || dto?.areaName || 'ReliefLink Operations',
     address: dto?.address ?? '',
     capacity,
     currentOccupancy,
@@ -550,31 +552,39 @@ export function mapVolunteerAssignmentFromApi(dto) {
 }
 
 export function mapDonationFromApi(dto) {
+  const amount = dto?.amount !== null && dto?.amount !== undefined ? Number(dto.amount) : null;
+  const createdAt = dto?.createdAt ?? null;
   return {
     id: String(dto?.donationId ?? dto?.id ?? ''),
     donationId: Number(dto?.donationId ?? dto?.id ?? 0),
     donorName: dto?.donorName ?? '',
+    donorType: dto?.donorUserId ? 'Registered Donor' : 'Direct Donor',
     donorEmail: dto?.donorEmail ?? '',
     donorPhone: dto?.donorPhone ?? '',
     donationType: dto?.donationType ?? 'Monetary',
     type: dto?.donationType ?? 'Monetary',
-    amount: dto?.amount !== null && dto?.amount !== undefined ? Number(dto.amount) : null,
+    amount,
+    amountLkr: amount,
     currency: dto?.currency ?? 'LKR',
     resourceId: dto?.resourceId ?? null,
     resourceName: dto?.resourceName ?? null,
+    itemDescription: dto?.resourceName || dto?.notes || '',
+    unit: 'units',
     warehouseId: dto?.warehouseId ?? null,
     warehouseName: dto?.warehouseName ?? null,
     quantity: dto?.quantity !== null && dto?.quantity !== undefined ? Number(dto.quantity) : null,
     inventoryTransactionId: dto?.inventoryTransactionId ?? null,
     crisisId: dto?.crisisId ?? null,
     crisisName: dto?.crisisName ?? null,
+    campaignName: dto?.crisisName || 'General Relief Fund',
     referenceNumber: dto?.referenceNumber ?? '',
     status: dto?.status ?? 'Pending',
     verifiedByUserName: dto?.verifiedByUserName ?? null,
     verifiedAt: dto?.verifiedAt ?? null,
     notes: dto?.notes ?? '',
-    date: dto?.createdAt ?? null,
-    createdAt: dto?.createdAt ?? null,
+    date: createdAt,
+    donatedAt: createdAt,
+    createdAt,
   };
 }
 
