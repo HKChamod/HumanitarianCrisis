@@ -1,11 +1,8 @@
-
 using System.Security.Claims;
 using HumanitarianCrisisManagement.Application.DTOs.Auth;
 using HumanitarianCrisisManagement.Application.Interfaces;
-using HumanitarianCrisisManagement.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace HumanitarianCrisisManagement.API.Controllers;
 
@@ -14,14 +11,10 @@ namespace HumanitarianCrisisManagement.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly ApplicationDbContext _context;
 
-    public AuthController(
-        IAuthService authService,
-        ApplicationDbContext context)
+    public AuthController(IAuthService authService)
     {
         _authService = authService;
-        _context = context;
     }
 
     // POST: api/auth/register
@@ -51,7 +44,6 @@ public class AuthController : ControllerBase
         }
     }
 
-
     // POST: api/auth/login
     [HttpPost("login")]
     [AllowAnonymous]
@@ -66,12 +58,10 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-
-
     // GET: api/auth/me
     [HttpGet("me")]
     [Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CurrentUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetCurrentUser()
     {
@@ -86,13 +76,9 @@ public class AuthController : ControllerBase
             });
         }
 
-        var user = await _context.Users
-            .AsNoTracking()
-            .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-            .FirstOrDefaultAsync(u => u.UserId == userId);
+        var currentUser = await _authService.GetCurrentUserAsync(userId);
 
-        if (user == null || !user.IsActive)
+        if (currentUser == null)
         {
             return Unauthorized(new
             {
@@ -100,16 +86,6 @@ public class AuthController : ControllerBase
             });
         }
 
-        return Ok(new
-        {
-            user.UserId,
-            user.FullName,
-            user.Email,
-            user.PhoneNumber,
-            user.CreatedAt,
-            Roles = user.UserRoles
-                .Select(ur => ur.Role.RoleName)
-                .ToList()
-        });
+        return Ok(currentUser);
     }
 }

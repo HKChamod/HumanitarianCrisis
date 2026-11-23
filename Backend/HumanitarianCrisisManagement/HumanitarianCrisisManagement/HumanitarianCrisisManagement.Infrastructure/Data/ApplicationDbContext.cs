@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
 
     // Organizations
     public DbSet<Organization> Organizations => Set<Organization>();
@@ -28,8 +29,26 @@ public class ApplicationDbContext : DbContext
     // Crisis Management
     public DbSet<CrisisEvent> CrisisEvents => Set<CrisisEvent>();
     public DbSet<Area> Areas => Set<Area>();
+    public DbSet<CitizenRequest> CitizenRequests => Set<CitizenRequest>();
 
-   
+    public DbSet<Resource> Resources => Set<Resource>();
+
+    public DbSet<WarehouseInventory> WarehouseInventories => Set<WarehouseInventory>();
+
+    public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
+
+    public DbSet<ResourceAllocation> ResourceAllocations => Set<ResourceAllocation>();
+
+    public DbSet<AiRecommendation> AiRecommendations => Set<AiRecommendation>();
+
+    // Shelters, Volunteers, Donations, Notifications & Audit
+    public DbSet<Shelter> Shelters => Set<Shelter>();
+    public DbSet<ShelterPlacement> ShelterPlacements => Set<ShelterPlacement>();
+    public DbSet<Volunteer> Volunteers => Set<Volunteer>();
+    public DbSet<VolunteerAssignment> VolunteerAssignments => Set<VolunteerAssignment>();
+    public DbSet<Donation> Donations => Set<Donation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

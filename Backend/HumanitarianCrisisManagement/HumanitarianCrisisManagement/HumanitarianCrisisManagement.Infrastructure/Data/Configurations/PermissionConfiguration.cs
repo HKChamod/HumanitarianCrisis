@@ -52,7 +52,115 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
             new Permission { PermissionId = 21, PermissionName = "Volunteers.Approve", Description = "Approve volunteer applications" },
 
             new Permission { PermissionId = 22, PermissionName = "Reports.View", Description = "View system reports" },
-            new Permission { PermissionId = 23, PermissionName = "Reports.Generate", Description = "Generate system reports" }
-        );
+            new Permission { PermissionId = 23, PermissionName = "Reports.Generate", Description = "Generate system reports" },
+            new Permission
+            {
+                PermissionId = 24,
+                PermissionName = "CitizenRequests.View",
+                Description = "View citizen assistance requests"
+            },
+
+new Permission
+{
+    PermissionId = 25,
+    PermissionName = "CitizenRequests.Manage",
+    Description = "Manage citizen request status and processing"
+},
+       new Permission
+       {
+           PermissionId = 26,
+           PermissionName = "Warehouses.View",
+           Description = "View warehouse information"
+       },
+
+new Permission
+{
+    PermissionId = 27,
+    PermissionName = "Warehouses.Manage",
+    Description = "Create, update and delete warehouses"
+},
+new Permission
+{
+    PermissionId = 28,
+    PermissionName = "Inventory.View",
+    Description = "View warehouse inventory and stock levels"
+},
+
+new Permission
+{
+    PermissionId = 29,
+    PermissionName = "Inventory.Manage",
+    Description = "Manage warehouse inventory records and reorder levels"
+},
+
+new Permission
+{
+    PermissionId = 30,
+    PermissionName = "ResourceAllocations.View",
+    Description = "View resource allocation requests and details"
+},
+
+new Permission
+{
+    PermissionId = 31,
+    PermissionName = "ResourceAllocations.Manage",
+    Description = "Approve, reject, dispatch, deliver and cancel resource allocations"
+},
+
+new Permission
+{
+    PermissionId = 32,
+    PermissionName = "AI.View",
+    Description = "View AI decision support recommendations and provider status"
+},
+
+new Permission
+{
+    PermissionId = 33,
+    PermissionName = "AI.Review",
+    Description = "Trigger AI analysis and approve, override, or reject AI recommendations"
+},
+
+new Permission
+{
+    PermissionId = 34,
+    PermissionName = "Shelters.View",
+    Description = "View shelters and occupancy status"
+},
+
+new Permission
+{
+    PermissionId = 35,
+    PermissionName = "Shelters.Manage",
+    Description = "Register, update shelters and manage resident placements"
+},
+
+new Permission
+{
+    PermissionId = 36,
+    PermissionName = "Notifications.View",
+    Description = "View and manage operational notifications"
+},
+
+new Permission
+{
+    PermissionId = 37,
+    PermissionName = "AuditLogs.View",
+    Description = "View system audit logs"
+},
+
+new Permission
+{
+    PermissionId = 38,
+    PermissionName = "Roles.Manage",
+    Description = "Manage roles and role permission assignments"
+},
+
+new Permission
+{
+    PermissionId = 39,
+    PermissionName = "Permissions.View",
+    Description = "View system permissions registry"
+});
     }
 }

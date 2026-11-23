@@ -1,0 +1,336 @@
+/**
+ * Scoped Styles for Assigned Areas Management & Sri Lanka Leaflet Map
+ * ReliefLink Organization Management Portal
+ */
+
+.org-areas-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* -------------------------------------------------------------
+   Map Container Card & Overlays
+-------------------------------------------------------------- */
+.org-map-card {
+  background-color: var(--org-card);
+  border: 1px solid var(--org-border);
+  border-radius: var(--org-radius-lg);
+  box-shadow: var(--org-shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.org-map-header {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--org-border);
+  background-color: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.org-map-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-map-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--org-navy);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-map-subtitle {
+  font-size: 12px;
+  color: var(--org-muted);
+  margin: 0;
+}
+
+.org-map-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.org-map-demo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #B45309;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--org-radius-full);
+}
+
+.org-btn-reset-map {
+  background-color: #FFFFFF;
+  color: var(--org-primary);
+  border: 1px solid var(--org-primary-border);
+  border-radius: var(--org-radius-md);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.org-btn-reset-map:hover {
+  background-color: var(--org-primary-bg);
+  border-color: var(--org-primary);
+}
+
+.org-leaflet-wrapper {
+  position: relative;
+  height: 520px;
+  width: 100%;
+  background-color: #E2E8F0;
+}
+
+/* Fallback message if tiles fail */
+.org-map-tile-fallback {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--org-border);
+  border-radius: var(--org-radius-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #64748B;
+  pointer-events: none;
+}
+
+/* Map Floating Legend */
+.org-map-floating-legend {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 500;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--org-border);
+  border-radius: var(--org-radius-md);
+  padding: 12px 16px;
+  box-shadow: var(--org-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.org-legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--org-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.org-legend-items {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.org-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.org-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Custom Marker Pins on Leaflet Map */
+.org-map-pin-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transform: translate(-50%, -100%);
+}
+
+.org-map-pin-bubble {
+  padding: 4px 8px;
+  border-radius: var(--org-radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  border: 2px solid #FFFFFF;
+}
+
+.org-map-pin-point {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  margin-top: -1px;
+}
+
+.org-map-pin-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 2px;
+  animation: marker-pulse 2s infinite;
+}
+
+@keyframes marker-pulse {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+/* Leaflet Popup Styling */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--org-radius-md) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2) !important;
+  border: 1px solid var(--org-border) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.org-map-popup-card {
+  padding: 16px;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: inherit;
+}
+
+.org-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.org-popup-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--org-navy);
+  margin: 0;
+}
+
+.org-popup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  background-color: #F8FAFC;
+  padding: 8px 10px;
+  border-radius: var(--org-radius-sm);
+  border: 1px solid var(--org-border);
+  font-size: 11px;
+}
+
+.org-popup-field-label {
+  color: var(--org-muted);
+  font-weight: 600;
+}
+
+.org-popup-field-val {
+  color: var(--org-navy);
+  font-weight: 700;
+}
+
+.org-popup-btn {
+  background-color: var(--org-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--org-radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.org-popup-btn:hover {
+  background-color: var(--org-primary-dark);
+}
+
+/* -------------------------------------------------------------
+   Status Pills for Assigned Areas
+-------------------------------------------------------------- */
+.org-area-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--org-radius-full);
+  white-space: nowrap;
+}
+
+.org-area-status-pill.active {
+  background-color: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
+.org-area-status-pill.monitoring {
+  background-color: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.org-area-status-pill.awaiting {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.org-area-status-pill.stabilized {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+/* -------------------------------------------------------------
+   Responsive Breakpoints
+-------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .org-leaflet-wrapper {
+    height: 420px;
+  }
+  .org-map-floating-legend {
+    position: static;
+    margin: 12px;
+  }
+}

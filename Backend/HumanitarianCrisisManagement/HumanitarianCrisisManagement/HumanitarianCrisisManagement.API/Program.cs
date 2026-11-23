@@ -1,6 +1,11 @@
 
+using HumanitarianCrisisManagement.Application.Options;
 using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
+using HumanitarianCrisisManagement.Infrastructure.Data;
+using HumanitarianCrisisManagement.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using HumanitarianCrisisManagement.API.Exceptions;
 using System.Security.Claims;
@@ -15,6 +20,18 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "DefaultConnection connection string is not configured.");
 
+builder.Services.Configure<AiProviderOptions>(
+    builder.Configuration.GetSection(AiProviderOptions.SectionName));
+builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
+{
+    // Timeout is enforced per request via AiProviderOptions.GetEffectiveTimeout()
+    // using a linked CancellationTokenSource so HttpClient's 100s default never cuts off longer configured timeouts.
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
+builder.Services.AddHttpClient<GroqAiAnalysisProvider>(client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration
@@ -53,10 +70,21 @@ var permissionNames = new[]
     "CrisisEvents.Delete",
     "CrisisEvents.Manage",
 
-    "Areas.View",
-    "Areas.Manage",
+    "CitizenRequests.View",
+    "CitizenRequests.Manage",
+"Areas.View",
+"Areas.Manage",
 
-    "Resources.View",
+"Warehouses.View",
+"Warehouses.Manage",
+
+"Inventory.View",
+"Inventory.Manage",
+
+    "ResourceAllocations.View",
+    "ResourceAllocations.Manage",
+
+"Resources.View",
     "Resources.Manage",
     "Resources.Allocate",
 
@@ -69,7 +97,19 @@ var permissionNames = new[]
     "Volunteers.Approve",
 
     "Reports.View",
-    "Reports.Generate"
+    "Reports.Generate",
+
+    "AI.View",
+    "AI.Review",
+
+    "Shelters.View",
+    "Shelters.Manage",
+
+    "Notifications.View",
+    "AuditLogs.View",
+
+    "Roles.Manage",
+    "Permissions.View"
 };
 
 builder.Services.AddAuthorization(options =>
@@ -119,12 +159,55 @@ builder.Services.AddScoped<
 
 
 
+// CORS Configuration
+const string FrontendCorsPolicy = "FrontendDevPolicy";
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>();
+
+if (allowedOrigins == null || allowedOrigins.Length == 0)
+{
+    allowedOrigins = ["http://localhost:5173"];
+}
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        }
+        else
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .WithHeaders("Authorization", "Content-Type", "Accept", "X-Organization-Id", "X-Correlation-ID");
+        }
+    });
+});
+
 // API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "HumanitarianCrisisManagement.API",
+        Version = "v1"
+    });
+
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -157,6 +240,12 @@ var app = builder.Build();
 // HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+    }
+
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
@@ -166,13 +255,22 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
+
+app.UseCors(FrontendCorsPolicy);
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

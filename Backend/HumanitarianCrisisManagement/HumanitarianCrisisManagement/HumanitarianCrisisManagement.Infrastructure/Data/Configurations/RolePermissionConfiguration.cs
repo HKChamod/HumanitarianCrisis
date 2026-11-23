@@ -87,7 +87,95 @@ public class RolePermissionConfiguration
             // Volunteer
             new RolePermission { RolePermissionId = 45, RoleId = 6, PermissionId = 6 },
             new RolePermission { RolePermissionId = 46, RoleId = 6, PermissionId = 11 },
-            new RolePermission { RolePermissionId = 47, RoleId = 6, PermissionId = 19 }
+            new RolePermission { RolePermissionId = 47, RoleId = 6, PermissionId = 19 },
+
+// Citizen Request Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 48, RoleId = 2, PermissionId = 24 },
+new RolePermission { RolePermissionId = 49, RoleId = 2, PermissionId = 25 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 50, RoleId = 3, PermissionId = 24 },
+new RolePermission { RolePermissionId = 51, RoleId = 3, PermissionId = 25 },
+
+// Responder
+new RolePermission { RolePermissionId = 52, RoleId = 4, PermissionId = 24 },
+new RolePermission { RolePermissionId = 53, RoleId = 4, PermissionId = 25 },
+// Warehouse Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 54, RoleId = 2, PermissionId = 26 },
+new RolePermission { RolePermissionId = 55, RoleId = 2, PermissionId = 27 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 56, RoleId = 3, PermissionId = 26 },
+new RolePermission { RolePermissionId = 57, RoleId = 3, PermissionId = 27 },
+
+// Responder
+new RolePermission { RolePermissionId = 58, RoleId = 4, PermissionId = 26 },
+
+// Inventory Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 59, RoleId = 2, PermissionId = 28 },
+new RolePermission { RolePermissionId = 60, RoleId = 2, PermissionId = 29 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 61, RoleId = 3, PermissionId = 28 },
+new RolePermission { RolePermissionId = 62, RoleId = 3, PermissionId = 29 },
+
+// Responder
+new RolePermission { RolePermissionId = 63, RoleId = 4, PermissionId = 28 },
+
+// Resource Allocation Permissions
+
+// Administrator
+new RolePermission { RolePermissionId = 64, RoleId = 2, PermissionId = 30 },
+new RolePermission { RolePermissionId = 65, RoleId = 2, PermissionId = 31 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 66, RoleId = 3, PermissionId = 30 },
+new RolePermission { RolePermissionId = 67, RoleId = 3, PermissionId = 31 },
+
+// Responder
+new RolePermission { RolePermissionId = 68, RoleId = 4, PermissionId = 30 },
+
+// AI Decision Support Permissions
+// Administrator
+new RolePermission { RolePermissionId = 69, RoleId = 2, PermissionId = 32 },
+new RolePermission { RolePermissionId = 70, RoleId = 2, PermissionId = 33 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 71, RoleId = 3, PermissionId = 32 },
+new RolePermission { RolePermissionId = 72, RoleId = 3, PermissionId = 33 },
+
+// Responder
+new RolePermission { RolePermissionId = 73, RoleId = 4, PermissionId = 32 },
+
+// Shelters, Notifications, AuditLogs, Roles & Permissions
+// Administrator
+new RolePermission { RolePermissionId = 74, RoleId = 2, PermissionId = 34 },
+new RolePermission { RolePermissionId = 75, RoleId = 2, PermissionId = 35 },
+new RolePermission { RolePermissionId = 76, RoleId = 2, PermissionId = 36 },
+new RolePermission { RolePermissionId = 77, RoleId = 2, PermissionId = 37 },
+new RolePermission { RolePermissionId = 78, RoleId = 2, PermissionId = 38 },
+new RolePermission { RolePermissionId = 79, RoleId = 2, PermissionId = 39 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 80, RoleId = 3, PermissionId = 34 },
+new RolePermission { RolePermissionId = 81, RoleId = 3, PermissionId = 35 },
+new RolePermission { RolePermissionId = 82, RoleId = 3, PermissionId = 36 },
+
+// Responder
+new RolePermission { RolePermissionId = 83, RoleId = 4, PermissionId = 34 },
+new RolePermission { RolePermissionId = 84, RoleId = 4, PermissionId = 36 },
+
+// Citizen, Donor, Volunteer
+new RolePermission { RolePermissionId = 85, RoleId = 1, PermissionId = 34 },
+new RolePermission { RolePermissionId = 86, RoleId = 1, PermissionId = 36 },
+new RolePermission { RolePermissionId = 87, RoleId = 5, PermissionId = 36 },
+new RolePermission { RolePermissionId = 88, RoleId = 6, PermissionId = 36 }
         );
     }
 }

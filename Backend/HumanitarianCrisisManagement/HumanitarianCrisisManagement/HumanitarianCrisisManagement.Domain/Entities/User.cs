@@ -32,6 +32,9 @@ namespace HumanitarianCrisisManagement.Domain.Entities
         public ICollection<OrganizationMembership> OrganizationMemberships { get; set; }
     = new List<OrganizationMembership>();
 
+        public ICollection<CitizenRequest> CitizenRequests { get; set; }
+    = new List<CitizenRequest>();
+
 
     }
 }
