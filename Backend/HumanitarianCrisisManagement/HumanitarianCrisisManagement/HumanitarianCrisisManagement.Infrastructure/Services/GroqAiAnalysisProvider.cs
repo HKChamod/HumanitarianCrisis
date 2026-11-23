@@ -23,6 +23,9 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
 {
     private const string DiagnosticPrompt = "Reply with exactly OK";
     private const int MaxDiagnosticResponseLength = 64;
+    private const int DiagnosticMaxCompletionTokens = 256;
+    private const int AnalysisMaxCompletionTokens = 2048;
+    private const string DefaultReasoningEffort = "low";
     private const int MaxTransientServerRetries = 2;
     private const int BaseRetryDelayMs = 1000;
     private const int MaxRetryJitterMs = 500;
@@ -124,6 +127,10 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
         {
             model,
             temperature = 0.1,
+            stream = false,
+            reasoning_effort = DefaultReasoningEffort,
+            include_reasoning = false,
+            max_completion_tokens = AnalysisMaxCompletionTokens,
             response_format = new { type = "json_object" },
             messages = new[]
             {
@@ -161,7 +168,10 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
         {
             model,
             temperature = 0.0,
-            max_tokens = 16,
+            stream = false,
+            reasoning_effort = DefaultReasoningEffort,
+            include_reasoning = false,
+            max_completion_tokens = DiagnosticMaxCompletionTokens,
             messages = new[]
             {
                 new { role = "user", content = DiagnosticPrompt }
@@ -194,11 +204,7 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
             throw new InvalidOperationException("Groq AI diagnostic returned malformed JSON.", ex);
         }
 
-        var text = envelope?.Choices?.FirstOrDefault()?.Message?.Content;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new InvalidOperationException("Groq AI diagnostic response did not contain any text.");
-        }
+        var text = ExtractFinalChoiceContent(envelope, "diagnostic");
 
         var modelVersion = string.IsNullOrWhiteSpace(envelope?.Model)
             ? model
@@ -705,9 +711,7 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
             throw new InvalidOperationException("Groq AI returned malformed JSON.", ex);
         }
 
-        var contentText = envelope?.Choices?.FirstOrDefault()?.Message?.Content;
-        if (string.IsNullOrWhiteSpace(contentText))
-            throw new InvalidOperationException("Groq AI response did not contain any structured content.");
+        var contentText = ExtractFinalChoiceContent(envelope, "analysis");
 
         var normalizedJson = StripMarkdownJsonFences(contentText);
 
@@ -816,6 +820,51 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
+    private string ExtractFinalChoiceContent(GroqChatCompletionResponse? envelope, string operationLabel)
+    {
+        if (envelope?.Choices == null || envelope.Choices.Count == 0)
+        {
+            _logger.LogWarning(
+                "Groq AI {Operation} response contained no choices.",
+                operationLabel);
+            throw new InvalidOperationException(
+                $"Groq AI {operationLabel} response did not contain any choices.");
+        }
+
+        var choice = envelope.Choices[0];
+        var content = choice.Message?.Content;
+        var finishReason = string.IsNullOrWhiteSpace(choice.FinishReason)
+            ? "unknown"
+            : choice.FinishReason.Trim();
+        var hasReasoning = !string.IsNullOrWhiteSpace(choice.Message?.Reasoning);
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            _logger.LogWarning(
+                "Groq AI {Operation} returned empty final content. FinishReason={FinishReason}, HasReasoning={HasReasoning}",
+                operationLabel,
+                finishReason,
+                hasReasoning);
+
+            if (string.Equals(finishReason, "length", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Groq AI {operationLabel} stopped due to token limit (finish_reason=length) before producing final content.");
+            }
+
+            if (hasReasoning)
+            {
+                throw new InvalidOperationException(
+                    $"Groq AI {operationLabel} returned reasoning without final content (finish_reason={finishReason}). Reasoning is not accepted as final output.");
+            }
+
+            throw new InvalidOperationException(
+                $"Groq AI {operationLabel} response did not contain any final content (finish_reason={finishReason}).");
+        }
+
+        return content;
+    }
+
     private sealed class GroqChatCompletionResponse
     {
         public string? Model { get; set; }
@@ -825,12 +874,16 @@ public class GroqAiAnalysisProvider : IAiAnalysisProvider
     private sealed class GroqChoice
     {
         public GroqMessage? Message { get; set; }
+
+        [JsonPropertyName("finish_reason")]
+        public string? FinishReason { get; set; }
     }
 
     private sealed class GroqMessage
     {
         public string? Role { get; set; }
         public string? Content { get; set; }
+        public string? Reasoning { get; set; }
     }
 
     private sealed class GroqStructuredRecommendation

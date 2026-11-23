@@ -198,6 +198,13 @@ public class GroqAiAnalysisProviderTests
 
         Assert.NotNull(capturedBody);
         Assert.Contains("\"model\":\"openai/gpt-oss-120b\"", capturedBody);
+        Assert.Contains("\"include_reasoning\":false", capturedBody);
+        Assert.Contains("\"reasoning_effort\":\"low\"", capturedBody);
+        Assert.Contains("\"stream\":false", capturedBody);
+        Assert.Contains("\"max_completion_tokens\":2048", capturedBody);
+        Assert.Contains("\"response_format\":{\"type\":\"json_object\"}", capturedBody);
+        Assert.DoesNotContain("reasoning_format", capturedBody);
+        Assert.DoesNotContain("\"max_tokens\"", capturedBody);
         Assert.DoesNotContain("42 Private Lane", capturedBody);
         Assert.DoesNotContain("077-1234567", capturedBody);
         Assert.DoesNotContain("901234567V", capturedBody);
@@ -239,6 +246,13 @@ public class GroqAiAnalysisProviderTests
         Assert.NotNull(capturedBody);
         Assert.Contains("Reply with exactly OK", capturedBody);
         Assert.Contains("\"model\":\"openai/gpt-oss-120b\"", capturedBody);
+        Assert.Contains("\"include_reasoning\":false", capturedBody);
+        Assert.Contains("\"reasoning_effort\":\"low\"", capturedBody);
+        Assert.Contains("\"stream\":false", capturedBody);
+        Assert.Contains("\"max_completion_tokens\":256", capturedBody);
+        Assert.DoesNotContain("reasoning_format", capturedBody);
+        Assert.DoesNotContain("\"max_tokens\"", capturedBody);
+        Assert.DoesNotContain("response_format", capturedBody);
         Assert.DoesNotContain("citizenRequest", capturedBody);
         Assert.DoesNotContain(FakeGroqKey, capturedBody);
 
@@ -481,6 +495,152 @@ public class GroqAiAnalysisProviderTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             sut.AnalyzeCitizenRequestAsync(CreateSampleContext(), cts.Token));
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_ReasoningPresentButEmptyContent_RejectsAndNeverUsesReasoningAsAnswer()
+    {
+        var logger = new CapturingLogger<GroqAiAnalysisProvider>();
+        var envelope = new
+        {
+            model = "openai/gpt-oss-120b",
+            choices = new[]
+            {
+                new
+                {
+                    finish_reason = "stop",
+                    message = new
+                    {
+                        role = "assistant",
+                        content = "",
+                        reasoning = "The user wants me to reply with OK."
+                    }
+                }
+            }
+        };
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(envelope), Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.RunConnectivityDiagnosticAsync());
+
+        Assert.Contains("reasoning without final content", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var logs = string.Join("\n", logger.Messages);
+        Assert.Contains("HasReasoning=True", logs);
+        Assert.DoesNotContain("The user wants me to reply", logs);
+    }
+
+    [Fact]
+    public async Task RunConnectivityDiagnosticAsync_EmptyContentWithFinishReasonLength_ReportsTokenLimitError()
+    {
+        var logger = new CapturingLogger<GroqAiAnalysisProvider>();
+        var envelope = new
+        {
+            model = "openai/gpt-oss-120b",
+            choices = new[]
+            {
+                new
+                {
+                    finish_reason = "length",
+                    message = new
+                    {
+                        role = "assistant",
+                        content = (string?)null,
+                        reasoning = "Thinking about replying OK..."
+                    }
+                }
+            }
+        };
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(envelope), Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.RunConnectivityDiagnosticAsync());
+
+        Assert.Contains("finish_reason=length", ex.Message);
+        Assert.Contains("token limit", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_EmptyContentWithFinishReasonLength_RejectsSafely()
+    {
+        var envelope = new
+        {
+            model = "openai/gpt-oss-120b",
+            choices = new[]
+            {
+                new
+                {
+                    finish_reason = "length",
+                    message = new
+                    {
+                        role = "assistant",
+                        content = "",
+                        reasoning = "Step 1: analyze medical request..."
+                    }
+                }
+            }
+        };
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(envelope), Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Contains("finish_reason=length", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("{\"model\":\"openai/gpt-oss-120b\",\"choices\":[]}")]
+    [InlineData("{\"model\":\"openai/gpt-oss-120b\"}")]
+    public async Task AnalyzeCitizenRequestAsync_MissingOrEmptyChoices_ThrowsInvalidOperationException(string rawJson)
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(rawJson, Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var sut = new GroqAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateGroqOptions()),
+            NullLogger<GroqAiAnalysisProvider>.Instance);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        Assert.Contains("choices", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class CapturingLogger<T> : ILogger<T>
