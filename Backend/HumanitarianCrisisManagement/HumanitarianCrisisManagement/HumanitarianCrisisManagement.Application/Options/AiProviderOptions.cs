@@ -48,8 +48,31 @@ public class AiProviderOptions
         string.Equals(Provider?.Trim(), GeminiProviderName, StringComparison.OrdinalIgnoreCase) &&
         !string.IsNullOrWhiteSpace(GeminiApiKey);
 
-    public string GetEffectiveModel() =>
-        string.IsNullOrWhiteSpace(Model) ? DefaultGeminiModel : Model.Trim();
+    public string GetEffectiveModel()
+    {
+        if (string.IsNullOrWhiteSpace(Model))
+        {
+            return DefaultGeminiModel;
+        }
+
+        var normalized = Model.Trim().TrimStart('/');
+        const string modelsPrefix = "models/";
+
+        while (normalized.StartsWith(modelsPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[modelsPrefix.Length..].TrimStart('/');
+        }
+
+        normalized = normalized.TrimEnd('/');
+
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            string.Equals(normalized, "models", StringComparison.OrdinalIgnoreCase))
+        {
+            return DefaultGeminiModel;
+        }
+
+        return normalized;
+    }
 
     public string GetEffectiveBaseUrl() =>
         string.IsNullOrWhiteSpace(BaseUrl)

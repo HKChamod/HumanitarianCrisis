@@ -7,6 +7,7 @@ using HumanitarianCrisisManagement.Application.Options;
 using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
 using HumanitarianCrisisManagement.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -469,6 +470,127 @@ public class GeminiAiAnalysisProviderTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             sut.AnalyzeCitizenRequestAsync(CreateSampleContext(), cts.Token));
+    }
+
+    [Theory]
+    [InlineData("gemini-2.5-flash", "gemini-2.5-flash")]
+    [InlineData("models/gemini-2.5-flash", "gemini-2.5-flash")]
+    [InlineData("  MODELS/gemini-2.5-flash  ", "gemini-2.5-flash")]
+    [InlineData("/Models/gemini-2.5-flash/", "gemini-2.5-flash")]
+    [InlineData("models/models/gemini-2.5-flash", "gemini-2.5-flash")]
+    [InlineData("", "gemini-2.5-flash")]
+    [InlineData("   ", "gemini-2.5-flash")]
+    [InlineData("models/", "gemini-2.5-flash")]
+    public void AiProviderOptions_GetEffectiveModel_NormalizesWhitespaceCaseAndModelsPrefix(
+        string configuredModel,
+        string expectedModel)
+    {
+        var options = new AiProviderOptions { Model = configuredModel };
+        Assert.Equal(expectedModel, options.GetEffectiveModel());
+    }
+
+    [Theory]
+    [InlineData("gemini-2.5-flash")]
+    [InlineData("models/gemini-2.5-flash")]
+    [InlineData("  MODELS/gemini-2.5-flash  ")]
+    public async Task AnalyzeCitizenRequestAsync_ModelVariants_ProduceExactUrlWithoutDuplicateOrEncodedPrefix(
+        string configuredModel)
+    {
+        Uri? capturedUri = null;
+        var handler = new StubHttpMessageHandler((req, _) =>
+        {
+            capturedUri = req.RequestUri;
+            return Task.FromResult(BuildGeminiOkEnvelope(new
+            {
+                suggestedCategory = "Food",
+                suggestedUrgencyLevel = "High",
+                isPotentialDuplicate = false,
+                confidenceScore = 0.88,
+                explanation = "Structured triage complete."
+            }));
+        });
+
+        var options = CreateConfiguredOptions();
+        options.Model = configuredModel;
+
+        using var httpClient = new HttpClient(handler);
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(options),
+            NullLogger<GeminiAiAnalysisProvider>.Instance);
+
+        await sut.AnalyzeCitizenRequestAsync(CreateSampleContext());
+
+        Assert.NotNull(capturedUri);
+        Assert.Equal(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            capturedUri!.AbsoluteUri);
+        Assert.DoesNotContain("%2F", capturedUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/models/models/", capturedUri.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AnalyzeCitizenRequestAsync_Http404WithGoogleErrorBody_LogsSafeDiagnosticsAndProtectsKeyAndRawDetails()
+    {
+        var logger = new CapturingLogger<GeminiAiAnalysisProvider>();
+        var google404Json = JsonSerializer.Serialize(new
+        {
+            error = new
+            {
+                code = 404,
+                message = $"models/gemini-2.5-flash is not found for API version v1beta (echoed {FakeApiKey})",
+                status = "NOT_FOUND"
+            }
+        });
+
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(google404Json, Encoding.UTF8, "application/json")
+            }));
+
+        using var httpClient = new HttpClient(handler);
+        var sut = new GeminiAiAnalysisProvider(
+            httpClient,
+            Options.Create(CreateConfiguredOptions()),
+            logger);
+
+        var ex = await Assert.ThrowsAsync<AiProviderUnavailableException>(() =>
+            sut.AnalyzeCitizenRequestAsync(CreateSampleContext()));
+
+        // Exception remains safe and generic for HTTP 503 mapping (no raw Google error details or key)
+        Assert.Contains("HTTP 404", ex.Message);
+        Assert.DoesNotContain(FakeApiKey, ex.Message);
+        Assert.DoesNotContain("is not found for API version v1beta", ex.Message);
+
+        // Structured log captures model, endpoint (no credentials), status, Google status and sanitized message
+        var combinedLogs = string.Join("\n", logger.Messages);
+        Assert.Contains("gemini-2.5-flash", combinedLogs);
+        Assert.Contains("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", combinedLogs);
+        Assert.Contains("404", combinedLogs);
+        Assert.Contains("NOT_FOUND", combinedLogs);
+        Assert.Contains("is not found for API version v1beta", combinedLogs);
+        Assert.DoesNotContain(FakeApiKey, combinedLogs);
+        Assert.Contains("[REDACTED_KEY]", combinedLogs);
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Messages.Add(formatter(state, exception));
+        }
     }
 
     private sealed class StubHttpMessageHandler(

@@ -21,6 +21,8 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
     private const int MaxSiblingDescriptionLength = 500;
     private const int MaxCategoryLength = 100;
     private const int MaxExplanationLength = 2000;
+    private const int MaxLoggedErrorStatusLength = 64;
+    private const int MaxLoggedErrorMessageLength = 240;
 
     private static readonly string[] ValidUrgencyLevels = ["Low", "Medium", "High", "Critical"];
 
@@ -157,20 +159,36 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
 
             if (!response.IsSuccessStatusCode)
             {
-                HandleHttpError(response.StatusCode, context.CitizenRequestId);
+                HandleHttpError(
+                    response.StatusCode,
+                    context.CitizenRequestId,
+                    model,
+                    endpoint,
+                    rawResponseBody);
             }
 
             return ParseAndValidateResponse(rawResponseBody, context, model);
         }
     }
 
-    private void HandleHttpError(HttpStatusCode statusCode, int citizenRequestId)
+    private void HandleHttpError(
+        HttpStatusCode statusCode,
+        int citizenRequestId,
+        string model,
+        string endpoint,
+        string? rawResponseBody)
     {
+        var (googleStatus, googleMessage) = ExtractSafeGoogleError(rawResponseBody, _options.GeminiApiKey);
+
         if (statusCode == HttpStatusCode.TooManyRequests)
         {
             _logger.LogWarning(
-                "Gemini AI rate limit exceeded (HTTP 429) for CitizenRequestId {CitizenRequestId}.",
-                citizenRequestId);
+                "Gemini AI rate limit exceeded (HTTP 429) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
+                citizenRequestId,
+                model,
+                endpoint,
+                googleStatus,
+                googleMessage);
             throw new AiProviderUnavailableException(
                 "Gemini AI rate limit exceeded. Please wait and try again.");
         }
@@ -178,19 +196,89 @@ public class GeminiAiAnalysisProvider : IAiAnalysisProvider
         if (statusCode == HttpStatusCode.Unauthorized || statusCode == HttpStatusCode.Forbidden)
         {
             _logger.LogError(
-                "Gemini AI authentication/authorization failed (HTTP {StatusCode}) for CitizenRequestId {CitizenRequestId}.",
+                "Gemini AI authentication/authorization failed (HTTP {StatusCode}) for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
                 (int)statusCode,
-                citizenRequestId);
+                citizenRequestId,
+                model,
+                endpoint,
+                googleStatus,
+                googleMessage);
             throw new AiProviderUnavailableException(
                 "Gemini AI authentication failed. Verify the configured server API key.");
         }
 
         _logger.LogWarning(
-            "Gemini AI returned HTTP {StatusCode} for CitizenRequestId {CitizenRequestId}.",
+            "Gemini AI returned HTTP {StatusCode} for CitizenRequestId {CitizenRequestId}. Model={Model}, Endpoint={Endpoint}, GoogleStatus={GoogleStatus}, GoogleMessage={GoogleMessage}",
             (int)statusCode,
-            citizenRequestId);
+            citizenRequestId,
+            model,
+            endpoint,
+            googleStatus,
+            googleMessage);
         throw new AiProviderUnavailableException(
             $"Gemini AI service returned an error (HTTP {(int)statusCode}). Please try again later.");
+    }
+
+    private static (string Status, string Message) ExtractSafeGoogleError(
+        string? rawResponseBody,
+        string? configuredApiKey)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseBody))
+        {
+            return ("Unknown", "No error details returned.");
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rawResponseBody);
+            if (!doc.RootElement.TryGetProperty("error", out var errorElement) ||
+                errorElement.ValueKind != JsonValueKind.Object)
+            {
+                return ("Unknown", "Unstructured upstream error response.");
+            }
+
+            var status = errorElement.TryGetProperty("status", out var statusProp) &&
+                         statusProp.ValueKind == JsonValueKind.String
+                ? SanitizeLogSnippet(statusProp.GetString(), MaxLoggedErrorStatusLength, configuredApiKey)
+                : "Unknown";
+
+            var message = errorElement.TryGetProperty("message", out var messageProp) &&
+                          messageProp.ValueKind == JsonValueKind.String
+                ? SanitizeLogSnippet(messageProp.GetString(), MaxLoggedErrorMessageLength, configuredApiKey)
+                : "No upstream error message.";
+
+            return (
+                string.IsNullOrWhiteSpace(status) ? "Unknown" : status,
+                string.IsNullOrWhiteSpace(message) ? "No upstream error message." : message);
+        }
+        catch (JsonException)
+        {
+            return ("Unknown", "Non-JSON upstream error response.");
+        }
+    }
+
+    private static string SanitizeLogSnippet(string? value, int maxLength, string? configuredApiKey)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = value
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
+
+        if (!string.IsNullOrWhiteSpace(configuredApiKey))
+        {
+            var trimmedKey = configuredApiKey.Trim();
+            if (trimmedKey.Length > 0)
+            {
+                cleaned = cleaned.Replace(trimmedKey, "[REDACTED_KEY]", StringComparison.Ordinal);
+            }
+        }
+
+        return cleaned.Length <= maxLength ? cleaned : cleaned[..maxLength] + "...";
     }
 
     private object BuildSanitizedPayload(AiAnalysisContext context)
