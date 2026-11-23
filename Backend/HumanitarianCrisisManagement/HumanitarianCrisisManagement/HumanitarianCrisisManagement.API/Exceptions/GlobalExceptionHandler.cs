@@ -1,4 +1,5 @@
 
+using HumanitarianCrisisManagement.Application.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +34,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             InvalidOperationException =>
                 StatusCodes.Status400BadRequest,
 
+            AiProviderUnavailableException =>
+                StatusCodes.Status503ServiceUnavailable,
+
             _ => StatusCodes.Status500InternalServerError
         };
 
@@ -46,12 +50,13 @@ public class GlobalExceptionHandler : IExceptionHandler
             401 => "Unauthorized",
             404 => "Resource not found",
             400 => "Bad request",
+            503 => "AI service unavailable",
             _ => "An unexpected error occurred."
         };
 
         var detail = statusCode switch
         {
-            400 or 404 => exception.Message,
+            400 or 404 or 503 => exception.Message,
             _ => null
         };
 

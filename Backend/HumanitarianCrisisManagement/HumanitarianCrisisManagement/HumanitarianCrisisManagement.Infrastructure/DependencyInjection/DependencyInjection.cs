@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<ICitizenRequestService, CitizenRequestService>();
         services.AddScoped<IInventoryTransactionService, InventoryTransactionService>();
         services.AddScoped<IResourceAllocationService, ResourceAllocationService>();
+        services.AddScoped<IAiAnalysisProvider, UnconfiguredAiAnalysisProvider>();
+        services.AddScoped<IAiDecisionSupportService, AiDecisionSupportService>();
 
         return services;
     }
