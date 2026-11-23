@@ -51,6 +51,7 @@ public class AiRecommendationConfiguration : IEntityTypeConfiguration<AiRecommen
             .HasConversion<string>()
             .HasMaxLength(20)
             .HasDefaultValue(AiRecommendationReviewStatus.PendingReview)
+            .HasSentinel(default(AiRecommendationReviewStatus))
             .IsRequired();
 
         builder.Property(r => r.HumanDecisionNote)
