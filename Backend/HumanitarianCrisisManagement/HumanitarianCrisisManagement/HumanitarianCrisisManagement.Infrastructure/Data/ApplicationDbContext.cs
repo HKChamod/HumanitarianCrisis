@@ -39,6 +39,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<ResourceAllocation> ResourceAllocations => Set<ResourceAllocation>();
 
+    public DbSet<AiRecommendation> AiRecommendations => Set<AiRecommendation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

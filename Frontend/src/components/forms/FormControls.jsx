@@ -108,7 +108,7 @@ export function FilterPanel({ children, onReset, hasActiveFilters }) {
           <button
             type="button"
             onClick={onReset}
-            className="text-xs font-medium text-[#0F766E] hover:text-[#115E59] px-2 py-1 rounded-md hover:bg-[#F0FDFA]"
+            className="text-xs font-semibold text-[#0F766E] border border-[#0F766E]/40 bg-[#F0FDFA] hover:bg-[#CCFBF1] hover:text-[#115E59] px-2.5 py-1.5 rounded-md transition-colors"
           >
             Reset
           </button>

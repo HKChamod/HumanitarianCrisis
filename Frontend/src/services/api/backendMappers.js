@@ -347,3 +347,16 @@ export function mapResourceAllocationStatusToApi(payload = {}) {
   }
   return body;
 }
+
+export const INELIGIBLE_ALLOCATION_CRISIS_STATUSES = ['Closed', 'Resolved'];
+
+export function isCrisisEligibleForAllocation(crisis) {
+  if (!crisis || !crisis.status) return false;
+  const normalized = String(crisis.status).trim().toLowerCase();
+  return !INELIGIBLE_ALLOCATION_CRISIS_STATUSES.some((s) => s.toLowerCase() === normalized);
+}
+
+export function getEligibleAllocationCrises(crises = []) {
+  if (!Array.isArray(crises)) return [];
+  return crises.filter(isCrisisEligibleForAllocation);
+}

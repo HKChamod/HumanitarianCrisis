@@ -82,7 +82,10 @@ var permissionNames = new[]
     "Volunteers.Approve",
 
     "Reports.View",
-    "Reports.Generate"
+    "Reports.Generate",
+
+    "AI.View",
+    "AI.Review"
 };
 
 builder.Services.AddAuthorization(options =>
