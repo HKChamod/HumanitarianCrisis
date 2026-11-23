@@ -28,6 +28,10 @@ builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
     // using a linked CancellationTokenSource so HttpClient's 100s default never cuts off longer configured timeouts.
     client.Timeout = Timeout.InfiniteTimeSpan;
 });
+builder.Services.AddHttpClient<GroqAiAnalysisProvider>(client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration

@@ -59,6 +59,11 @@ public static class DependencyInjection
         services.AddScoped<IAiAnalysisProvider>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<AiProviderOptions>>().Value;
+            if (options.IsGroqConfigured)
+            {
+                return sp.GetRequiredService<GroqAiAnalysisProvider>();
+            }
+
             if (options.IsGeminiConfigured)
             {
                 return sp.GetRequiredService<GeminiAiAnalysisProvider>();
