@@ -11,6 +11,8 @@ public class ResourceAllocation
 
     public int CrisisId { get; set; }
 
+    public int? CitizenRequestId { get; set; }
+
     public decimal QuantityRequested { get; set; }
 
     public decimal QuantityAllocated { get; set; }
@@ -32,6 +34,8 @@ public class ResourceAllocation
     public WarehouseInventory Inventory { get; set; } = null!;
 
     public CrisisEvent Crisis { get; set; } = null!;
+
+    public CitizenRequest? CitizenRequest { get; set; }
 
     public User RequestedByUser { get; set; } = null!;
 

@@ -119,6 +119,48 @@ new Permission
     PermissionId = 33,
     PermissionName = "AI.Review",
     Description = "Trigger AI analysis and approve, override, or reject AI recommendations"
+},
+
+new Permission
+{
+    PermissionId = 34,
+    PermissionName = "Shelters.View",
+    Description = "View shelters and occupancy status"
+},
+
+new Permission
+{
+    PermissionId = 35,
+    PermissionName = "Shelters.Manage",
+    Description = "Register, update shelters and manage resident placements"
+},
+
+new Permission
+{
+    PermissionId = 36,
+    PermissionName = "Notifications.View",
+    Description = "View and manage operational notifications"
+},
+
+new Permission
+{
+    PermissionId = 37,
+    PermissionName = "AuditLogs.View",
+    Description = "View system audit logs"
+},
+
+new Permission
+{
+    PermissionId = 38,
+    PermissionName = "Roles.Manage",
+    Description = "Manage roles and role permission assignments"
+},
+
+new Permission
+{
+    PermissionId = 39,
+    PermissionName = "Permissions.View",
+    Description = "View system permissions registry"
 });
     }
 }

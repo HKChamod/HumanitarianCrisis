@@ -10,17 +10,22 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 
 public class AiDecisionSupportService : IAiDecisionSupportService
 {
+    private const int MaxCategoryLength = 100;
+    private const int MaxExplanationLength = 2000;
     private static readonly string[] ValidUrgencyLevels = ["Low", "Medium", "High", "Critical"];
 
     private readonly ApplicationDbContext _context;
     private readonly IAiAnalysisProvider _aiProvider;
+    private readonly IAuditLogService? _auditLogService;
 
     public AiDecisionSupportService(
         ApplicationDbContext context,
-        IAiAnalysisProvider aiProvider)
+        IAiAnalysisProvider aiProvider,
+        IAuditLogService? auditLogService = null)
     {
         _context = context;
         _aiProvider = aiProvider;
+        _auditLogService = auditLogService;
     }
 
     public AiProviderStatusResponse GetProviderStatus()
@@ -43,6 +48,19 @@ public class AiDecisionSupportService : IAiDecisionSupportService
             Status = "Unavailable",
             Message = "No AI provider is configured. AI analysis is unavailable until an AI provider is registered."
         };
+    }
+
+    public Task<AiProviderDiagnosticResponse> RunProviderDiagnosticAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!_aiProvider.IsConfigured)
+        {
+            throw new AiProviderUnavailableException(
+                "No AI analysis provider is configured. Configure an AI provider to run connectivity diagnostics.");
+        }
+
+        // Pure provider-level connectivity diagnostic: performs zero database reads or writes.
+        return _aiProvider.RunConnectivityDiagnosticAsync(cancellationToken);
     }
 
     public async Task<AiRecommendationResponse> AnalyzeCitizenRequestAsync(
@@ -122,6 +140,10 @@ public class AiDecisionSupportService : IAiDecisionSupportService
         if (string.IsNullOrWhiteSpace(result.SuggestedCategory))
             throw new InvalidOperationException("AI provider returned an empty suggested category.");
 
+        var trimmedCategory = result.SuggestedCategory.Trim();
+        if (trimmedCategory.Length > MaxCategoryLength || trimmedCategory.All(char.IsDigit))
+            throw new InvalidOperationException("AI provider returned an invalid or oversized suggested category.");
+
         if (!ValidUrgencyLevels.Contains(result.SuggestedUrgencyLevel, StringComparer.Ordinal))
             throw new InvalidOperationException("AI provider returned an invalid suggested urgency level.");
 
@@ -130,6 +152,22 @@ public class AiDecisionSupportService : IAiDecisionSupportService
 
         if (string.IsNullOrWhiteSpace(result.Explanation))
             throw new InvalidOperationException("AI provider must return a non-empty explanation.");
+
+        var trimmedExplanation = result.Explanation.Trim();
+        if (trimmedExplanation.Length > MaxExplanationLength)
+            throw new InvalidOperationException("AI provider explanation exceeds maximum allowed length.");
+
+        if (result.DuplicateOfRequestId.HasValue && result.DuplicateOfRequestId.Value <= 0)
+            throw new InvalidOperationException("AI provider returned an invalid non-positive duplicate request ID.");
+
+        if (result.SuggestedInventoryId.HasValue && result.SuggestedInventoryId.Value <= 0)
+            throw new InvalidOperationException("AI provider returned an invalid non-positive inventory ID.");
+
+        if (result.SuggestedResourceQuantity.HasValue && result.SuggestedResourceQuantity.Value <= 0m)
+            throw new InvalidOperationException("AI provider returned an invalid non-positive resource quantity.");
+
+        if (!result.SuggestedInventoryId.HasValue && result.SuggestedResourceQuantity.HasValue)
+            throw new InvalidOperationException("AI provider returned a resource quantity without a suggested inventory ID.");
 
         int? validatedDuplicateId = null;
         if (result.IsPotentialDuplicate && result.DuplicateOfRequestId.HasValue)
@@ -158,14 +196,14 @@ public class AiDecisionSupportService : IAiDecisionSupportService
         {
             CitizenRequestId = citizenRequest.RequestId,
             CrisisId = citizenRequest.CrisisId,
-            SuggestedCategory = result.SuggestedCategory.Trim(),
+            SuggestedCategory = trimmedCategory,
             SuggestedUrgencyLevel = result.SuggestedUrgencyLevel.Trim(),
             IsPotentialDuplicate = result.IsPotentialDuplicate && validatedDuplicateId.HasValue,
             DuplicateOfRequestId = validatedDuplicateId,
             SuggestedInventoryId = validatedInventoryId,
             SuggestedResourceQuantity = validatedQuantity,
             ConfidenceScore = result.ConfidenceScore,
-            Explanation = result.Explanation.Trim(),
+            Explanation = trimmedExplanation,
             ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
                 ? _aiProvider.ProviderName
                 : result.ProviderName.Trim(),
@@ -176,6 +214,17 @@ public class AiDecisionSupportService : IAiDecisionSupportService
 
         _context.AiRecommendations.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                null,
+                null,
+                "AiRecommendation.Generated",
+                "AiRecommendation",
+                entity.RecommendationId.ToString(),
+                $"Generated advisory AI recommendation #{entity.RecommendationId} for CitizenRequest #{entity.CitizenRequestId} via {entity.ProviderName}.");
+        }
 
         return await GetByIdAsync(entity.RecommendationId);
     }
@@ -230,24 +279,47 @@ public class AiDecisionSupportService : IAiDecisionSupportService
         if (recommendation == null)
             throw new KeyNotFoundException("AI recommendation not found.");
 
+        if (recommendation.ReviewStatus != AiRecommendationReviewStatus.PendingReview)
+        {
+            throw new InvalidOperationException(
+                $"AI recommendation #{recommendationId} has already been reviewed ({recommendation.ReviewStatus}) and cannot be reviewed again.");
+        }
+
         var reviewerExists = await _context.Users
             .AnyAsync(u => u.UserId == reviewerUserId && u.IsActive);
 
         if (!reviewerExists)
             throw new UnauthorizedAccessException("Active reviewer account not found.");
 
-        if (!Enum.TryParse<AiRecommendationReviewStatus>(request.Decision.Trim(), false, out var targetStatus) ||
+        var trimmedDecision = request.Decision?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmedDecision) ||
+            int.TryParse(trimmedDecision, out _) ||
+            !Enum.TryParse<AiRecommendationReviewStatus>(trimmedDecision, false, out var targetStatus) ||
             targetStatus == AiRecommendationReviewStatus.PendingReview)
         {
             throw new ArgumentException("Decision must be Approved, Overridden, or Rejected.");
         }
 
-        if (targetStatus == AiRecommendationReviewStatus.Overridden &&
-            string.IsNullOrWhiteSpace(request.OverriddenCategory) &&
-            string.IsNullOrWhiteSpace(request.OverriddenUrgencyLevel))
+        if (targetStatus == AiRecommendationReviewStatus.Overridden)
         {
-            throw new ArgumentException(
-                "Overriding a recommendation requires at least an OverriddenCategory or OverriddenUrgencyLevel.");
+            if (string.IsNullOrWhiteSpace(request.OverriddenCategory) &&
+                string.IsNullOrWhiteSpace(request.OverriddenUrgencyLevel))
+            {
+                throw new ArgumentException(
+                    "Overriding a recommendation requires at least an OverriddenCategory or OverriddenUrgencyLevel.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.OverriddenCategory) &&
+                request.OverriddenCategory.Trim().Length > MaxCategoryLength)
+            {
+                throw new ArgumentException($"OverriddenCategory cannot exceed {MaxCategoryLength} characters.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.OverriddenUrgencyLevel) &&
+                !ValidUrgencyLevels.Contains(request.OverriddenUrgencyLevel.Trim(), StringComparer.Ordinal))
+            {
+                throw new ArgumentException("OverriddenUrgencyLevel must be Low, Medium, High, or Critical.");
+            }
         }
 
         recommendation.ReviewStatus = targetStatus;
@@ -265,6 +337,17 @@ public class AiDecisionSupportService : IAiDecisionSupportService
         recommendation.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                reviewerUserId,
+                null,
+                $"AiRecommendation.{targetStatus}",
+                "AiRecommendation",
+                recommendation.RecommendationId.ToString(),
+                $"Reviewed AI recommendation #{recommendation.RecommendationId} for CitizenRequest #{recommendation.CitizenRequestId}: {targetStatus}.");
+        }
 
         return await GetByIdAsync(recommendationId);
     }

@@ -10,10 +10,17 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 public class CrisisEventService : ICrisisEventService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService? _auditLogService;
+    private readonly INotificationService? _notificationService;
 
-    public CrisisEventService(ApplicationDbContext context)
+    public CrisisEventService(
+        ApplicationDbContext context,
+        IAuditLogService? auditLogService = null,
+        INotificationService? notificationService = null)
     {
         _context = context;
+        _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     public async Task<CrisisEventResponse> CreateAsync(
@@ -31,6 +38,29 @@ public class CrisisEventService : ICrisisEventService
 
         _context.CrisisEvents.Add(crisis);
         await _context.SaveChangesAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                null,
+                null,
+                "CrisisEvent.Created",
+                "CrisisEvent",
+                crisis.CrisisId.ToString(),
+                $"Created crisis '{crisis.CrisisName}' ({crisis.CrisisType}, severity {crisis.SeverityLevel}).");
+        }
+
+        if (_notificationService != null)
+        {
+            await _notificationService.NotifyUsersByRoleAsync(
+                "Administrator",
+                $"New Crisis Declared: {crisis.CrisisName}",
+                $"Crisis '{crisis.CrisisName}' ({crisis.SeverityLevel}) is now Active.",
+                "Crisis",
+                crisis.SeverityLevel == "Critical" ? "Critical" : "Warning",
+                "CrisisEvent",
+                crisis.CrisisId);
+        }
 
         return MapToResponse(crisis);
     }
