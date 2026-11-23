@@ -14,6 +14,13 @@ import {
   mapRequestFromApi,
   mapOrganizationFromApi,
   mapResourceFromApi,
+  mapWarehouseFromApi,
+  mapWarehouseInventoryFromApi,
+  mapInventoryTransactionFromApi,
+  mapInventoryTransactionCreateToApi,
+  mapInventoryTransferToApi,
+  mapResourceAllocationFromApi,
+  mapResourceAllocationCreateToApi,
 } from './services/api/backendMappers.js';
 // Simplified admin check matching AuthProvider.jsx logic
 const ADMIN_PORTAL_ENTRY_PERMISSIONS = [
@@ -152,6 +159,78 @@ async function runTests() {
   assert(mappedRequest.category === 'Food', 'mapRequestFromApi maps requestType to category');
   assert(mappedRequest.urgency === 'High', 'mapRequestFromApi maps urgencyLevel to urgency');
   assert(mappedRequest.peopleAffected === 4, 'mapRequestFromApi maps peopleCount to peopleAffected');
+
+  // Phase 5A Logistics DTO Mapper checks
+  const mappedWh = mapWarehouseFromApi({
+    warehouseId: 7,
+    warehouseName: 'Matale Central Depot',
+    warehouseCode: 'WH-MAT-01',
+    address: 'Main Rd, Matale',
+    areaId: 2,
+    areaName: 'Matale District',
+    isActive: true,
+  });
+  assert(mappedWh.warehouseId === 7 && mappedWh.areaId === 2, 'mapWarehouseFromApi maps warehouseId and areaId');
+
+  const mappedInv = mapWarehouseInventoryFromApi({
+    inventoryId: 12,
+    warehouseId: 7,
+    warehouseName: 'Matale Central Depot',
+    resourceId: 3,
+    resourceName: 'Drinking Water',
+    resourceCategory: 'Water',
+    quantityAvailable: 150,
+    reorderLevel: 200,
+    isLowStock: true,
+  });
+  assert(mappedInv.inventoryId === 12 && mappedInv.isLowStock === true, 'mapWarehouseInventoryFromApi maps stock & low-stock flag');
+
+  const mappedTxnCreate = mapInventoryTransactionCreateToApi({
+    inventoryId: '12',
+    transactionType: 'StockIn',
+    quantity: '50',
+    referenceNumber: 'IN-001',
+  });
+  assert(mappedTxnCreate.transactionType === 1 && mappedTxnCreate.quantity === 50, 'mapInventoryTransactionCreateToApi maps StockIn enum to integer 1');
+
+  const mappedTxn = mapInventoryTransactionFromApi({
+    inventoryTransactionId: 99,
+    inventoryId: 12,
+    transactionType: 5,
+    quantity: 20,
+    previousQuantity: 150,
+    newQuantity: 130,
+  });
+  assert(mappedTxn.transactionTypeLabel === 'TransferOut', 'mapInventoryTransactionFromApi maps enum 5 to TransferOut');
+
+  const mappedTransfer = mapInventoryTransferToApi({
+    sourceInventoryId: '12',
+    destinationInventoryId: '15',
+    quantity: '20',
+  });
+  assert(mappedTransfer.sourceInventoryId === 12 && mappedTransfer.destinationInventoryId === 15, 'mapInventoryTransferToApi maps source/destination IDs');
+
+  const mappedAlloc = mapResourceAllocationFromApi({
+    allocationId: 5,
+    inventoryId: 12,
+    warehouseName: 'Matale Central Depot',
+    resourceId: 3,
+    resourceName: 'Drinking Water',
+    crisisId: 3,
+    crisisName: 'Monsoon Flood',
+    quantityRequested: 40,
+    quantityAllocated: 35,
+    status: 'Approved',
+  });
+  assert(mappedAlloc.allocationId === 5 && mappedAlloc.quantityAllocated === 35 && mappedAlloc.status === 'Approved', 'mapResourceAllocationFromApi maps allocation fields');
+
+  const mappedAllocCreate = mapResourceAllocationCreateToApi({
+    inventoryId: '12',
+    crisisId: '3',
+    quantityRequested: '40',
+    referenceNumber: 'ALLOC-005',
+  });
+  assert(mappedAllocCreate.inventoryId === 12 && mappedAllocCreate.crisisId === 3 && mappedAllocCreate.quantityRequested === 40, 'mapResourceAllocationCreateToApi formats numeric DTO payload');
 
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---
   console.log('\n--- TEST GROUP 3: RBAC & Permission Verification ---');

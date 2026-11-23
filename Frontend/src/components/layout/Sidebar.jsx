@@ -6,7 +6,7 @@ import { useAuth } from '../../app/providers/AuthProvider';
 
 export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }) {
   const { pathname } = useLocation();
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole } = useAuth();
 
   const [openGroups, setOpenGroups] = useState(() => {
     const initial = {};
@@ -23,7 +23,9 @@ export function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile
 
   const visibleGroups = ADMIN_NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => hasPermission(item.permission)),
+    items: group.items.filter(
+      (item) => hasPermission(item.permission) && hasRole(item.requiredRole)
+    ),
   })).filter((group) => group.items.length > 0);
 
   const sidebarContent = (
