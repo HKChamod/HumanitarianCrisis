@@ -76,11 +76,15 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right Graphic Card (Floating Relief Emblem Card from Screenshot) */}
+            {/* Right Graphic Card (Athwala Emblem Card from Screenshot) */}
             <div className="hero-visual-container">
               <div className="hero-card-display">
-                <div className="hero-icon-bubble">
-                  <HeartHandshake size={56} strokeWidth={2.2} />
+                <div className="hero-icon-bubble" style={{ background: '#FFFFFF', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img
+                    src="/athwala-emblem.png"
+                    alt="Athwala Supporting Hands"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
                   <div className="hero-pin-badge" title="Active responder location">
                     <MapPin size={16} />
                   </div>
