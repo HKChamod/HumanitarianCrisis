@@ -8,6 +8,7 @@ import { AidRequestsPage } from './components/AidRequestsPage';
 import { ResponseTeamsPage } from './components/ResponseTeamsPage';
 import { AssignedAreasPage } from './components/AssignedAreasPage';
 import { OrganizationSettingsPage } from './components/OrganizationSettingsPage';
+import { OrganizationMembersAndAllocationsPage } from './components/OrganizationMembersAndAllocationsPage';
 
 /**
  * OrganizationPortal Main Container
@@ -21,6 +22,9 @@ export const OrganizationPortal = () => {
     const path = window.location.pathname;
     if (path.includes('/settings')) {
       return 'settings';
+    }
+    if (path.includes('/members')) {
+      return 'members';
     }
     if (path.includes('/assigned-areas') || path.includes('/areas')) {
       return 'areas';
@@ -45,6 +49,8 @@ export const OrganizationPortal = () => {
       const path = window.location.pathname;
       if (path.includes('/settings')) {
         setActiveTab('settings');
+      } else if (path.includes('/members')) {
+        setActiveTab('members');
       } else if (path.includes('/assigned-areas') || path.includes('/areas')) {
         setActiveTab('areas');
       } else if (path.includes('/response-teams') || path.includes('/teams')) {
@@ -72,6 +78,8 @@ export const OrganizationPortal = () => {
       newPath = '/organization/response-teams';
     } else if (tabId === 'areas') {
       newPath = '/organization/assigned-areas';
+    } else if (tabId === 'members') {
+      newPath = '/organization/members';
     } else if (tabId === 'settings') {
       newPath = '/organization/settings';
     }
@@ -100,6 +108,7 @@ export const OrganizationPortal = () => {
           {/* Main Body */}
           <main className="org-dashboard-body">
             {activeTab === 'settings' && <OrganizationSettingsPage />}
+            {activeTab === 'members' && <OrganizationMembersAndAllocationsPage />}
             {activeTab === 'areas' && <AssignedAreasPage />}
             {activeTab === 'teams' && <ResponseTeamsPage />}
             {activeTab === 'requests' && <AidRequestsPage />}

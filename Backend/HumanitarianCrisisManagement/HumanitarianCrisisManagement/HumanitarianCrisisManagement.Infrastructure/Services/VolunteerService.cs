@@ -1,3 +1,4 @@
+using System.Data;
 using HumanitarianCrisisManagement.Application.DTOs.Volunteers;
 using HumanitarianCrisisManagement.Application.Interfaces;
 using HumanitarianCrisisManagement.Domain.Entities;
@@ -220,6 +221,8 @@ public class VolunteerService : IVolunteerService
         CreateVolunteerAssignmentRequest request,
         int actorUserId)
     {
+        await using var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
         var volunteer = await _context.Volunteers.FirstOrDefaultAsync(v => v.VolunteerId == request.VolunteerId);
         if (volunteer == null)
             throw new KeyNotFoundException("Volunteer not found.");
@@ -266,6 +269,7 @@ public class VolunteerService : IVolunteerService
 
         _context.VolunteerAssignments.Add(assignment);
         await _context.SaveChangesAsync();
+        await tx.CommitAsync();
 
         await _auditLogService.RecordAsync(
             actorUserId,
@@ -304,6 +308,8 @@ public class VolunteerService : IVolunteerService
         UpdateVolunteerAssignmentStatusRequest request,
         int actorUserId)
     {
+        await using var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
         var assignment = await _context.VolunteerAssignments
             .Include(a => a.Volunteer)
             .Include(a => a.Crisis)
@@ -338,6 +344,7 @@ public class VolunteerService : IVolunteerService
         }
 
         await _context.SaveChangesAsync();
+        await tx.CommitAsync();
 
         await _auditLogService.RecordAsync(
             actorUserId,

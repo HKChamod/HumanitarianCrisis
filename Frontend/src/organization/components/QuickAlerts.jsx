@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconAlertTriangle, IconClock, IconShieldCheck } from './Icons';
+import { IconClock } from './Icons';
 import { mockUrgentAlerts } from '../data/mockDashboardData';
 import { getLocalizedRelativeTime } from '../utils/localizationUtils';
 import { USE_MOCK_API } from '../../services/api/apiConfig';
+import { organizationOperationsService } from '../services/organizationOperationsService';
 
 export const QuickAlerts = () => {
   const { t } = useTranslation();
+  const [liveState, setLiveState] = useState({
+    loading: !USE_MOCK_API,
+    notifications: [],
+    inventories: [],
+    invForbidden: false,
+  });
+
+  useEffect(() => {
+    if (USE_MOCK_API) return undefined;
+    let cancelled = false;
+
+    Promise.allSettled([
+      organizationOperationsService.getMyNotifications(5),
+      organizationOperationsService.getWarehouseInventories(),
+    ]).then(([notifRes, invRes]) => {
+      if (cancelled) return;
+      setLiveState({
+        loading: false,
+        notifications: notifRes.status === 'fulfilled' ? notifRes.value : [],
+        inventories: invRes.status === 'fulfilled' ? invRes.value.items : [],
+        invForbidden: invRes.status === 'fulfilled' ? invRes.value.forbidden : false,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!USE_MOCK_API) {
     return (
@@ -15,25 +44,56 @@ export const QuickAlerts = () => {
           <div className="org-section-header">
             <div className="org-section-title-wrap">
               <h2 className="org-section-title">
-                {t('dashboard.criticalNotices.title', { defaultValue: 'Critical Field Notices' })}
+                {t('dashboard.criticalNotices.title', { defaultValue: 'Operational Notifications' })}
               </h2>
               <p className="org-section-subtitle">
-                Live operational advisories
+                Live notices from <code>GET /api/Notifications/my</code>
               </p>
             </div>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              padding: '2px 8px',
-              backgroundColor: '#F1F5F9',
-              color: '#475569',
-              borderRadius: '9999px'
-            }}>
-              Not Connected
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '2px 8px',
+                backgroundColor: '#ECFDF5',
+                color: '#065F46',
+                borderRadius: '9999px',
+              }}
+            >
+              {liveState.loading ? 'Loading...' : `${liveState.notifications.length} Recent`}
             </span>
           </div>
-          <div style={{ padding: '16px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-            Live DMC advisories and organization-scoped field notices are not exposed by the current backend API.
+          <div className="org-alerts-list" style={{ padding: '12px 16px' }}>
+            {liveState.loading ? (
+              <div style={{ fontSize: '13px', color: '#64748B' }}>Loading notifications...</div>
+            ) : liveState.notifications.length === 0 ? (
+              <div style={{ fontSize: '13px', color: '#64748B' }}>
+                No personal or operational notifications recorded yet.
+              </div>
+            ) : (
+              liveState.notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className={`org-alert-item ${notif.severity === 'Critical' || notif.severity === 'Warning' ? 'critical' : ''}`}
+                >
+                  <div className="org-alert-top">
+                    <span
+                      className={`org-alert-badge ${
+                        notif.severity === 'Critical' || notif.severity === 'Warning' ? 'critical' : 'warning'
+                      }`}
+                    >
+                      {notif.severity}
+                    </span>
+                    <span className="org-alert-time" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <IconClock size={12} />
+                      <span>{notif.time}</span>
+                    </span>
+                  </div>
+                  <h3 className="org-alert-title">{notif.title}</h3>
+                  <p className="org-alert-message">{notif.description}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -41,15 +101,53 @@ export const QuickAlerts = () => {
           <div className="org-section-header">
             <div className="org-section-title-wrap">
               <h2 className="org-section-title">
-                {t('dashboard.resourceReadiness.title', { defaultValue: 'Resource Readiness' })}
+                {t('dashboard.resourceReadiness.title', { defaultValue: 'Warehouse Stock Snapshot' })}
               </h2>
               <p className="org-section-subtitle">
-                Hub inventory &amp; standby capacity
+                Live hub inventory from <code>GET /api/WarehouseInventories</code>
               </p>
             </div>
           </div>
-          <div style={{ padding: '16px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-            Organization hub readiness percentages and field team standby metrics are not available from the backend API yet.
+          <div style={{ padding: '14px 16px', fontSize: '13px', color: '#475569' }}>
+            {liveState.loading ? (
+              <div>Loading inventory snapshot...</div>
+            ) : liveState.invForbidden ? (
+              <div>
+                Warehouse stock levels require <code>Inventory.View</code> permission.
+              </div>
+            ) : liveState.inventories.length === 0 ? (
+              <div>No warehouse inventory items registered yet.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {liveState.inventories.slice(0, 4).map((inv) => (
+                  <div
+                    key={inv.inventoryId}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      backgroundColor: inv.isLowStock ? '#FEF2F2' : '#F8FAFC',
+                      border: `1px solid ${inv.isLowStock ? '#FECACA' : '#E2E8F0'}`,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{inv.resourceName}</div>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>{inv.warehouseName}</div>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: inv.isLowStock ? '#DC2626' : '#10756F',
+                      }}
+                    >
+                      {inv.quantityAvailable} {inv.unitOfMeasure}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -76,7 +174,6 @@ export const QuickAlerts = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Urgent Operational Alerts */}
       <div className="org-section-card">
         <div className="org-section-header">
           <div className="org-section-title-wrap">
@@ -124,7 +221,6 @@ export const QuickAlerts = () => {
         </div>
       </div>
 
-      {/* Resource & Operational Readiness Overview */}
       <div className="org-section-card">
         <div className="org-section-header">
           <div className="org-section-title-wrap">

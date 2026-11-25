@@ -7,13 +7,18 @@
  *  - POST   /api/CitizenRequests
  *  - DELETE /api/CitizenRequests/{id}   (only Pending requests owned by citizen)
  *  - GET    /api/Areas                  (active geographic areas)
+ *  - GET    /api/Notifications/my       (personal notifications)
+ *  - PATCH  /api/Notifications/{id}/read
+ *  - PATCH  /api/Notifications/read-all
+ *  - GET    /api/Shelters?activeOnly=true
+ *  - GET    /api/CrisisEvents
  *  - Never silently falls back to localStorage or mock data on API failure.
  *  - Unsupported backend operations fail cleanly with normalized 501 errors.
  *
  * Mock Mode (USE_MOCK_API === true):
  *  - Preserves localStorage-backed mock workflow for local UI testing.
  */
-import { axiosClient, USE_MOCK_API } from './axiosClient';
+import { axiosClient, USE_MOCK_API } from './axiosClient.js';
 
 const STORAGE_KEY_REQUESTS = 'hcms_citizen_requests_v3';
 const STORAGE_KEY_NOTIFICATIONS = 'hcms_citizen_notifications_v3';
@@ -135,6 +140,73 @@ export function mapCitizenRequestFromApi(dto) {
         note: `Current backend status: ${status}.`,
       },
     ],
+  };
+}
+
+export function mapCitizenNotificationFromApi(dto) {
+  const severity = String(dto?.severity || 'Info');
+  const type =
+    severity === 'Critical' || severity === 'Warning' || severity === 'Error'
+      ? 'urgent'
+      : severity === 'Success'
+        ? 'success'
+        : 'info';
+
+  const relatedType = dto?.relatedEntityType ?? null;
+  const relatedId = dto?.relatedEntityId ?? null;
+  const referenceNumber =
+    relatedType === 'CitizenRequest' && relatedId != null ? `REQ-${relatedId}` : null;
+
+  return {
+    id: String(dto?.notificationId ?? dto?.id ?? ''),
+    notificationId: dto?.notificationId ?? null,
+    title: dto?.title ?? 'Notification',
+    message: dto?.message ?? '',
+    category: dto?.category ?? 'System',
+    severity,
+    type,
+    timestamp: dto?.createdAt ?? new Date().toISOString(),
+    read: Boolean(dto?.isRead),
+    referenceNumber,
+    relatedEntityType: relatedType,
+    relatedEntityId: relatedId,
+  };
+}
+
+export function mapCitizenShelterFromApi(dto) {
+  const facilitiesRaw = String(dto?.facilities || '').trim();
+  const facilities = facilitiesRaw
+    ? facilitiesRaw.split(',').map((f) => f.trim()).filter(Boolean)
+    : [];
+
+  return {
+    id: String(dto?.shelterId ?? ''),
+    shelterId: dto?.shelterId ?? null,
+    name: dto?.shelterName ?? '',
+    areaName: dto?.areaName ?? '',
+    address: dto?.address ?? '',
+    distance: dto?.areaName ? `${dto.areaName}` : dto?.address || 'Active Shelter',
+    status: dto?.status ?? 'Open',
+    used: Number(dto?.currentOccupancy ?? 0),
+    total: Math.max(1, Number(dto?.capacity ?? 1)),
+    availableCapacity: Number(dto?.availableCapacity ?? Math.max(0, Number(dto?.capacity ?? 0) - Number(dto?.currentOccupancy ?? 0))),
+    facilities,
+    isActive: Boolean(dto?.isActive ?? true),
+  };
+}
+
+export function mapCitizenCrisisAlertFromApi(dto) {
+  return {
+    id: String(dto?.crisisId ?? ''),
+    crisisId: dto?.crisisId ?? null,
+    severity: dto?.severityLevel ?? 'Medium',
+    title: dto?.crisisName ?? '',
+    crisisType: dto?.crisisType ?? '',
+    location: dto?.crisisType ? `${dto.crisisType} Response` : 'Active Advisory',
+    startDate: dto?.startDate ?? null,
+    status: dto?.status ?? 'Active',
+    verifiedBy: 'Disaster Management Command',
+    instructions: dto?.description ?? '',
   };
 }
 
@@ -442,25 +514,76 @@ export const citizenApi = {
   },
 
   /**
-   * Get notifications (mock-only; live notifications API not implemented yet)
+   * Get personal notifications (GET /api/Notifications/my in live mode)
    */
   async getNotifications() {
     if (!USE_MOCK_API) {
-      return { data: [], unsupported: true };
+      const response = await axiosClient.get('/Notifications/my', {
+        params: { limit: 50 },
+      });
+      const items = Array.isArray(response.data) ? response.data : [];
+      return {
+        data: items.map(mapCitizenNotificationFromApi),
+        unsupported: false,
+      };
     }
     return { data: getStoredNotifications(), unsupported: false };
   },
 
   /**
-   * Mark all notifications as read (mock-only)
+   * Mark a single notification as read (PATCH /api/Notifications/{id}/read in live mode)
+   */
+  async markNotificationRead(notificationId) {
+    if (!USE_MOCK_API) {
+      await axiosClient.patch(`/Notifications/${Number(notificationId)}/read`);
+      return { success: true };
+    }
+    const notifs = getStoredNotifications().map((n) =>
+      String(n.id) === String(notificationId) ? { ...n, read: true } : n
+    );
+    saveStoredNotifications(notifs);
+    return { success: true };
+  },
+
+  /**
+   * Mark all notifications as read (PATCH /api/Notifications/read-all in live mode)
    */
   async markAllNotificationsRead() {
     if (!USE_MOCK_API) {
-      return { success: false, unsupported: true };
+      await axiosClient.patch('/Notifications/read-all');
+      return { success: true, unsupported: false };
     }
     const notifs = getStoredNotifications().map((n) => ({ ...n, read: true }));
     saveStoredNotifications(notifs);
     return { success: true };
+  },
+
+  /**
+   * Load active shelters for Citizen Portal widget (GET /api/Shelters?activeOnly=true)
+   */
+  async getOpenShelters() {
+    if (USE_MOCK_API) {
+      return [];
+    }
+    const response = await axiosClient.get('/Shelters', {
+      params: { activeOnly: true },
+    });
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(mapCitizenShelterFromApi);
+  },
+
+  /**
+   * Load active crisis advisories for Citizen Portal widget (GET /api/CrisisEvents)
+   */
+  async getActiveCrisisAlerts() {
+    if (USE_MOCK_API) {
+      return [];
+    }
+    const response = await axiosClient.get('/CrisisEvents');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items
+      .filter((c) => String(c?.status || '').toLowerCase() === 'active')
+      .map(mapCitizenCrisisAlertFromApi);
   },
 
   /**
