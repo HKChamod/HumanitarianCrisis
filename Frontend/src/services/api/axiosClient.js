@@ -5,7 +5,7 @@ import {
   getAuthHeaders,
   handleUnauthorizedResponse,
   normalizeApiError,
-} from './apiConfig';
+} from './apiConfig.js';
 
 export { USE_MOCK_API };
 

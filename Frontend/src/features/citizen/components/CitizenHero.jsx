@@ -1,4 +1,4 @@
-import { ShieldCheck, ArrowRight, Search, HeartHandshake, MapPin } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Search } from 'lucide-react';
 
 export function CitizenHero({ onOpenSubmitModal, onOpenTrackModal, district = 'Kalutara District' }) {
   return (

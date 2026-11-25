@@ -1,5 +1,8 @@
-import { AlertTriangle, ShieldCheck, ArrowRight, MapPin, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ShieldCheck, ArrowRight, MapPin, Clock, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { USE_MOCK_API } from '../../../services/api/apiConfig';
+import { citizenApi } from '../../../services/api/citizenApi';
 
 const SAMPLE_ALERTS = [
   {
@@ -23,6 +26,29 @@ const SAMPLE_ALERTS = [
 ];
 
 export function VerifiedAlertsWidget() {
+  const [alerts, setAlerts] = useState(USE_MOCK_API ? SAMPLE_ALERTS : []);
+  const [loading, setLoading] = useState(!USE_MOCK_API);
+  const [error, setError] = useState('');
+
+  const loadAlerts = useCallback(async () => {
+    if (USE_MOCK_API) return;
+    setLoading(true);
+    setError('');
+    try {
+      const items = await citizenApi.getActiveCrisisAlerts();
+      setAlerts(items.slice(0, 4));
+    } catch (err) {
+      setError(err?.detail || err?.message || 'Unable to load verified crisis advisories.');
+      setAlerts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
+
   return (
     <div className="widget-card" aria-label="Verified Local Alerts">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
@@ -37,35 +63,63 @@ export function VerifiedAlertsWidget() {
         </Link>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {SAMPLE_ALERTS.map((alert) => (
-          <div
-            key={alert.id}
-            className={`alert-item-box ${alert.severity === 'Critical' ? 'critical' : ''}`}
+      {loading ? (
+        <div style={{ padding: '1.25rem 0', fontSize: '0.82rem', color: '#64748B' }}>
+          Loading live verified crisis alerts...
+        </div>
+      ) : error ? (
+        <div style={{ padding: '0.85rem', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={loadAlerts}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#FFFFFF', border: '1px solid #FCA5A5', color: '#991B1B', borderRadius: '6px', padding: '0.25rem 0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
           >
-            <div className="alert-top">
-              <span className={`alert-severity-badge ${alert.severity === 'Critical' ? 'badge-critical' : 'badge-high'}`}>
-                {alert.severity} Alert
-              </span>
-              <span className="alert-verified-tag">
-                <ShieldCheck size={13} /> {alert.verifiedBy}
-              </span>
-            </div>
-            <p className="alert-title">{alert.title}</p>
-            <p style={{ fontSize: '0.8125rem', color: '#475569', margin: '0 0 0.4rem' }}>
-              {alert.instructions}
-            </p>
-            <div className="alert-meta">
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <MapPin size={12} /> {alert.location}
-              </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Clock size={12} /> Updated {alert.updatedAgo}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      ) : alerts.length === 0 ? (
+        <div style={{ padding: '1.25rem 0', fontSize: '0.82rem', color: '#64748B' }}>
+          No active crisis advisories are currently in effect.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {alerts.map((alert) => {
+            const timeLabel = alert.updatedAgo
+              ? `Updated ${alert.updatedAgo}`
+              : alert.startDate
+                ? `Active since ${new Date(alert.startDate).toLocaleDateString()}`
+                : 'Active';
+            return (
+              <div
+                key={alert.id}
+                className={`alert-item-box ${alert.severity === 'Critical' ? 'critical' : ''}`}
+              >
+                <div className="alert-top">
+                  <span className={`alert-severity-badge ${alert.severity === 'Critical' ? 'badge-critical' : 'badge-high'}`}>
+                    {alert.severity} Alert
+                  </span>
+                  <span className="alert-verified-tag">
+                    <ShieldCheck size={13} /> {alert.verifiedBy}
+                  </span>
+                </div>
+                <p className="alert-title">{alert.title}</p>
+                <p style={{ fontSize: '0.8125rem', color: '#475569', margin: '0 0 0.4rem' }}>
+                  {alert.instructions}
+                </p>
+                <div className="alert-meta">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <MapPin size={12} /> {alert.location}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Clock size={12} /> {timeLabel}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

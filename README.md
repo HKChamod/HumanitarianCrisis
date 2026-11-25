@@ -350,6 +350,7 @@ VITE_USE_MOCK_API=false
   - **Unit & Provider Tests:** `AiTextPrivacySanitizerTests.cs`, `GeminiAiAnalysisProviderTests.cs`, `GroqAiAnalysisProviderTests.cs`, `OperationalModuleValidationTests.cs`
   - **Persistence Integration Tests (SQLite in-memory):** `AiRecommendationReviewPersistenceTests.cs`
   - **API E2E Integration Tests (`WebApplicationFactory` + SQLite in-memory):** `AiRecommendationApiIntegrationTests.cs`, `OperationalWorkflowIntegrationTests.cs`, `EndToEndHumanitarianWorkflowTests.cs`
+  - **Concurrency, Citizen Data Isolation & Organization Scoping Tests:** `ConcurrencyAndSecurityIsolationTests.cs` (isolated file-backed SQLite contention tests + opt-in SQL Server staging guard; see [DEPLOYMENT.md](DEPLOYMENT.md))
   - **Opt-In Live AI Synthetic Harness:** `LiveGroqSyntheticValidationTests.cs` + `SyntheticGroqScenarios.cs` (opt-in; requires configured Groq key)
 
 ### Frontend Tests & Quality Scripts (`Frontend/`)

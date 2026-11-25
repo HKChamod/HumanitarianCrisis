@@ -6,6 +6,7 @@ import {
   IconAlertTriangle,
   IconHandHeart,
   IconUsers,
+  IconPackage,
   IconMapPin,
   IconSettings,
   IconShieldCheck
@@ -39,6 +40,7 @@ export const Sidebar = ({ activeTab = 'dashboard', onSelectTab = () => {}, mobil
     { id: 'requests', label: t('sidebar.aidRequests', { defaultValue: 'Aid Requests' }), icon: IconHandHeart, badge: USE_MOCK_API ? '38' : null },
     { id: 'teams', label: t('sidebar.responseTeams', { defaultValue: 'Response Teams' }), icon: IconUsers, badge: USE_MOCK_API ? '12' : null },
     { id: 'areas', label: t('sidebar.assignedAreas', { defaultValue: 'Assigned Areas' }), icon: IconMapPin, badge: null },
+    { id: 'members', label: t('sidebar.membersAndLogistics', { defaultValue: 'Members & Logistics' }), icon: IconPackage, badge: null },
     { id: 'settings', label: t('sidebar.orgSettings', { defaultValue: 'Org Settings' }), icon: IconSettings, badge: null },
   ];
 
