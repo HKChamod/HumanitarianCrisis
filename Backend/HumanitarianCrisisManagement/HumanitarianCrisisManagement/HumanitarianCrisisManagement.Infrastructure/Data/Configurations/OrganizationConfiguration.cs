@@ -39,6 +39,40 @@ public class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
         builder.Property(o => o.Longitude)
             .HasPrecision(9, 6);
 
+        builder.Property(o => o.Website)
+            .HasMaxLength(300);
+
+        builder.Property(o => o.PrimaryContactName)
+            .HasMaxLength(150);
+
+        builder.Property(o => o.EmergencyContactPhone)
+            .HasMaxLength(30);
+
+        builder.Property(o => o.PreferredLanguage)
+            .IsRequired()
+            .HasMaxLength(10)
+            .HasDefaultValue("en");
+
+        builder.Property(o => o.EmailAlertsEnabled)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(o => o.CrisisAlertsEnabled)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(o => o.RequestAlertsEnabled)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(o => o.AutoAssignNotifications)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(o => o.CompactTables)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(o => o.IsActive)
             .IsRequired()
             .HasDefaultValue(true);

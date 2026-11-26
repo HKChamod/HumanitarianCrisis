@@ -22,6 +22,24 @@ public class OrganizationResponse
 
     public decimal? Longitude { get; set; }
 
+    public string? Website { get; set; }
+
+    public string? PrimaryContactName { get; set; }
+
+    public string? EmergencyContactPhone { get; set; }
+
+    public string PreferredLanguage { get; set; } = "en";
+
+    public bool EmailAlertsEnabled { get; set; } = true;
+
+    public bool CrisisAlertsEnabled { get; set; } = true;
+
+    public bool RequestAlertsEnabled { get; set; } = true;
+
+    public bool AutoAssignNotifications { get; set; } = true;
+
+    public bool CompactTables { get; set; } = false;
+
     public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }

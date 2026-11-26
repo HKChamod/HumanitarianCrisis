@@ -35,5 +35,27 @@ public class UpdateOrganizationRequest
     [Range(-180, 180)]
     public decimal? Longitude { get; set; }
 
+    [StringLength(300)]
+    public string? Website { get; set; }
+
+    [StringLength(150)]
+    public string? PrimaryContactName { get; set; }
+
+    [StringLength(30)]
+    public string? EmergencyContactPhone { get; set; }
+
+    [RegularExpression("^(en|si|ta)$", ErrorMessage = "PreferredLanguage must be 'en', 'si', or 'ta'.")]
+    public string PreferredLanguage { get; set; } = "en";
+
+    public bool EmailAlertsEnabled { get; set; } = true;
+
+    public bool CrisisAlertsEnabled { get; set; } = true;
+
+    public bool RequestAlertsEnabled { get; set; } = true;
+
+    public bool AutoAssignNotifications { get; set; } = true;
+
+    public bool CompactTables { get; set; } = false;
+
     public bool IsActive { get; set; } = true;
 }

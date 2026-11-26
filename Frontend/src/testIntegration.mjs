@@ -67,6 +67,8 @@ import {
   mapOrgAllocationFromApi,
   mapOrgInventoryFromApi,
 } from './organization/services/organizationOperationsService.js';
+import { mapResponseTeamFromApi } from './organization/services/responseTeamsService.js';
+import { mapAssignedAreaFromApi } from './organization/services/assignedAreasService.js';
 import {
   getDefaultRouteForUser,
   canAccessPath,
@@ -525,6 +527,47 @@ async function runTests() {
       Array.isArray(mappedPerm.assignedRoles) &&
       mappedPerm.assignedRoles.length === 0,
     'mapPermissionFromApi provides code, category, and safe empty assignedRoles array'
+  );
+
+  const mappedTeam = mapResponseTeamFromApi({
+    responseTeamId: 12,
+    organizationId: 4,
+    teamName: 'Colombo Rapid Medical',
+    teamType: 'Medical',
+    leaderName: 'Dr. Perera',
+    areaName: 'Colombo',
+    status: 'Deployed',
+    membersCount: 5,
+    specializedEquipment: 'Trauma Kits, Stretchers',
+    activeDeployment: { deploymentId: 9, missionTitle: 'Flood Aid #10', status: 'Active' },
+  });
+  assert(
+    mappedTeam.teamId === 12 &&
+      mappedTeam.teamLeader === 'Dr. Perera' &&
+      mappedTeam.status === 'Deployed' &&
+      mappedTeam.specializedEquipment.length === 2 &&
+      mappedTeam.deployedIncident === 'Flood Aid #10',
+    'mapResponseTeamFromApi maps backend ResponseTeamDto fields and active deployment'
+  );
+
+  const mappedOrgArea = mapAssignedAreaFromApi({
+    organizationAreaId: 7,
+    areaId: 3,
+    areaName: 'Colombo',
+    areaType: 'District',
+    parentAreaName: 'Western',
+    latitude: 6.9271,
+    longitude: 79.8612,
+    assignmentStatus: 'Active',
+    openRequestsCount: 4,
+    assignedTeamsCount: 2,
+  });
+  assert(
+    mappedOrgArea.organizationAreaId === 7 &&
+      mappedOrgArea.latitude === 6.9271 &&
+      mappedOrgArea.openRequestsCount === 4 &&
+      mappedOrgArea.isActive === true,
+    'mapAssignedAreaFromApi maps OrganizationAreaDto coordinates and live counts'
   );
 
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---

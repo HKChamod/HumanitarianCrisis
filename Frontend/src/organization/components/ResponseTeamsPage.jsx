@@ -9,13 +9,28 @@ import { ResponseTeamsTable } from './ResponseTeamsTable';
 import { TeamDetailsModal } from './TeamDetailsModal';
 import { CreateEditTeamModal } from './CreateEditTeamModal';
 import { responseTeamsService } from '../services/responseTeamsService';
+import { assignedAreasService } from '../services/assignedAreasService';
+import { organizationOperationsService } from '../services/organizationOperationsService';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { USE_MOCK_API } from '../../services/api/axiosClient';
-import { IconUsers, IconPlus, IconAlertTriangle } from './Icons';
+import { IconUsers, IconPlus } from './Icons';
 
 export const ResponseTeamsPage = () => {
   const { t } = useTranslation();
+  const { activeOrganizationId, hasOrgPermission } = useOrganization();
+  const { isAdmin } = useAuth();
+
+  const canManageTeams =
+    USE_MOCK_API ||
+    isAdmin ||
+    hasOrgPermission('Organizations.Manage') ||
+    hasOrgPermission('Volunteers.Manage') ||
+    hasOrgPermission('Resources.Manage');
 
   const [teams, setTeams] = useState([]);
+  const [orgMembers, setOrgMembers] = useState([]);
+  const [availableAreas, setAvailableAreas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,7 +52,7 @@ export const ResponseTeamsPage = () => {
 
   // Load Teams Data
   const loadData = useCallback(async (stateMode = simState) => {
-    if (!USE_MOCK_API) {
+    if (!USE_MOCK_API && !activeOrganizationId) {
       setTeams([]);
       setError(null);
       setIsLoading(false);
@@ -52,11 +67,23 @@ export const ResponseTeamsPage = () => {
         return;
       }
 
-      const data = await responseTeamsService.getAllTeams({
-        simulateError: stateMode === 'error',
-        simulateEmpty: stateMode === 'empty'
-      });
-      setTeams(data);
+      const [teamsData, membersRes, areasRes] = await Promise.all([
+        responseTeamsService.getAllTeams({
+          organizationId: activeOrganizationId,
+          simulateError: stateMode === 'error',
+          simulateEmpty: stateMode === 'empty',
+        }),
+        USE_MOCK_API
+          ? Promise.resolve({ items: [] })
+          : organizationOperationsService.getOrganizationMembers(activeOrganizationId).catch(() => ({ items: [] })),
+        USE_MOCK_API
+          ? Promise.resolve([])
+          : assignedAreasService.getAvailableAreas().catch(() => []),
+      ]);
+
+      setTeams(teamsData);
+      setOrgMembers((membersRes?.items || []).filter((m) => m.membershipStatus === 'Approved'));
+      setAvailableAreas(Array.isArray(areasRes) ? areasRes : []);
     } catch (err) {
       setError(err?.detail || err?.message || 'Failed to fetch response teams.');
       setTeams([]);
@@ -65,7 +92,7 @@ export const ResponseTeamsPage = () => {
         setIsLoading(false);
       }
     }
-  }, [simState]);
+  }, [simState, activeOrganizationId]);
 
   useEffect(() => {
     loadData(simState);
@@ -163,7 +190,7 @@ export const ResponseTeamsPage = () => {
   // Save Create or Edit Team
   const handleSaveTeam = async (formData, editId) => {
     if (editId) {
-      const updated = await responseTeamsService.updateTeam(editId, formData);
+      const updated = await responseTeamsService.updateTeam(activeOrganizationId, editId, formData);
 
       setTeams(prev =>
         prev.map(t => (t.teamId === editId ? updated : t))
@@ -173,19 +200,51 @@ export const ResponseTeamsPage = () => {
         setSelectedTeamForDetails(updated);
       }
     } else {
-      const created = await responseTeamsService.createTeam(formData);
+      const created = await responseTeamsService.createTeam(activeOrganizationId, formData);
       setTeams(prev => [created, ...prev]);
     }
   };
 
   // Quick Deploy Team
-  const handleDeployTeam = async (teamId, target = 'Emergency Crisis Deployment') => {
-    const updated = await responseTeamsService.deployTeam(teamId, target);
+  const handleDeployTeam = async (teamId, deploymentInput = 'Emergency Crisis Deployment') => {
+    await responseTeamsService.deployTeam(activeOrganizationId, teamId, deploymentInput);
+    const refreshed = await responseTeamsService.getTeamById(activeOrganizationId, teamId);
 
     setTeams(prev =>
-      prev.map(t => (t.teamId === teamId ? updated : t))
+      prev.map(t => (t.teamId === teamId ? refreshed : t))
     );
 
+    if (selectedTeamForDetails && selectedTeamForDetails.teamId === teamId) {
+      setSelectedTeamForDetails(refreshed);
+    }
+  };
+
+  // Complete Deployment
+  const handleCompleteDeployment = async (teamId, deploymentId, status = 'Completed') => {
+    await responseTeamsService.completeDeployment(activeOrganizationId, teamId, deploymentId, status);
+    const refreshed = await responseTeamsService.getTeamById(activeOrganizationId, teamId);
+
+    setTeams(prev =>
+      prev.map(t => (t.teamId === teamId ? refreshed : t))
+    );
+
+    if (selectedTeamForDetails && selectedTeamForDetails.teamId === teamId) {
+      setSelectedTeamForDetails(refreshed);
+    }
+  };
+
+  // Add / Remove Team Member
+  const handleAddMember = async (teamId, membershipId, roleInTeam = 'Member') => {
+    const updated = await responseTeamsService.addTeamMember(activeOrganizationId, teamId, membershipId, roleInTeam);
+    setTeams(prev => prev.map(t => (t.teamId === teamId ? updated : t)));
+    if (selectedTeamForDetails && selectedTeamForDetails.teamId === teamId) {
+      setSelectedTeamForDetails(updated);
+    }
+  };
+
+  const handleRemoveMember = async (teamId, membershipId) => {
+    const updated = await responseTeamsService.removeTeamMember(activeOrganizationId, teamId, membershipId);
+    setTeams(prev => prev.map(t => (t.teamId === teamId ? updated : t)));
     if (selectedTeamForDetails && selectedTeamForDetails.teamId === teamId) {
       setSelectedTeamForDetails(updated);
     }
@@ -193,7 +252,7 @@ export const ResponseTeamsPage = () => {
 
   // Update Status
   const handleUpdateStatus = async (teamId, newStatus) => {
-    const updated = await responseTeamsService.updateStatus(teamId, newStatus);
+    const updated = await responseTeamsService.updateStatus(activeOrganizationId, teamId, newStatus);
 
     setTeams(prev =>
       prev.map(t => (t.teamId === teamId ? updated : t))
@@ -203,55 +262,6 @@ export const ResponseTeamsPage = () => {
       setSelectedTeamForDetails(updated);
     }
   };
-
-  if (!USE_MOCK_API) {
-    return (
-      <div className="org-teams-page">
-        <div className="org-page-header">
-          <div className="org-page-title-wrap">
-            <h1 className="org-page-title">
-              <IconUsers size={24} color="#10756F" />
-              <span>
-                {t('responseTeamPage.title', {
-                  defaultValue: 'Response Teams Management'
-                })}
-              </span>
-            </h1>
-            <p className="org-page-subtitle">
-              {t('responseTeamPage.description', {
-                defaultValue: 'Manage emergency response teams, monitor availability, and coordinate field deployments.'
-              })}
-            </p>
-          </div>
-        </div>
-
-        <div className="org-incidents-table-card">
-          <div className="org-state-box" style={{ padding: '48px 24px' }}>
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: '#FFFBEB',
-                color: '#B45309',
-                border: '1px solid #FDE68A',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '8px',
-              }}
-            >
-              <IconAlertTriangle size={26} color="#B45309" />
-            </div>
-            <h3 className="org-state-title">Response Teams API Not Yet Available</h3>
-            <p className="org-state-desc" style={{ maxWidth: '520px' }}>
-              Response Teams management (creating teams, updating team status, and recording field deployments) is not currently supported by the HCMS backend API. No fabricated or local-only team records are displayed in live mode.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="org-teams-page">
@@ -275,20 +285,22 @@ export const ResponseTeamsPage = () => {
           </p>
         </div>
 
-        <div className="org-header-action-group">
-          <button
-            className="org-btn-primary"
-            onClick={handleOpenCreateModal}
-            type="button"
-          >
-            <IconPlus size={16} />
-            <span>
-              {t('responseTeamPage.createTeam', {
-                defaultValue: 'Create Team'
-              })}
-            </span>
-          </button>
-        </div>
+        {canManageTeams && (
+          <div className="org-header-action-group">
+            <button
+              className="org-btn-primary"
+              onClick={handleOpenCreateModal}
+              type="button"
+            >
+              <IconPlus size={16} />
+              <span>
+                {t('responseTeamPage.createTeam', {
+                  defaultValue: 'Create Team'
+                })}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -317,8 +329,8 @@ export const ResponseTeamsPage = () => {
         isLoading={isLoading}
         error={error}
         onViewDetails={handleOpenDetails}
-        onEditTeam={handleOpenEditModal}
-        onQuickDeploy={(team) => handleDeployTeam(team.teamId, `${team.assignedArea} Rapid Response`)}
+        onEditTeam={canManageTeams ? handleOpenEditModal : undefined}
+        onQuickDeploy={canManageTeams ? (team) => handleDeployTeam(team.teamId, `${team.assignedArea || team.teamName} Rapid Response`) : undefined}
         onRetry={() => loadData(simState)}
         onResetFilters={handleResetFilters}
       />
@@ -330,6 +342,11 @@ export const ResponseTeamsPage = () => {
         onClose={handleCloseDetails}
         onUpdateStatus={handleUpdateStatus}
         onDeploy={handleDeployTeam}
+        onCompleteDeployment={handleCompleteDeployment}
+        onAddMember={handleAddMember}
+        onRemoveMember={handleRemoveMember}
+        orgMembers={orgMembers}
+        canManageTeams={canManageTeams}
         onEdit={(team) => handleOpenEditModal(team)}
       />
 
@@ -337,6 +354,8 @@ export const ResponseTeamsPage = () => {
       <CreateEditTeamModal
         isOpen={isCreateEditOpen}
         teamToEdit={teamToEdit}
+        orgMembers={orgMembers}
+        availableAreas={availableAreas}
         onClose={handleCloseCreateEditModal}
         onSave={handleSaveTeam}
       />

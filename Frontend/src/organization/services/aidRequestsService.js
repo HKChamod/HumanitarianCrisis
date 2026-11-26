@@ -51,19 +51,21 @@ function mapCitizenRequestFromApi(item) {
     longitude: item?.longitude ?? null,
     requestedDate: item?.createdAt ?? null,
     updatedAt: item?.updatedAt ?? null,
-    // Frontend-only fields with no backend equivalent (non-fabricated safe defaults)
+    isInAssignedArea: Boolean(item?.isInAssignedArea),
+    assignedTeamId: item?.assignedTeamId ?? null,
+    assignedTeam: item?.assignedTeamName ?? null,
+    activeDeploymentId: item?.activeDeploymentId ?? null,
     phone: '',
     nic: '',
-    assignedTeam: null,
     notes: '',
   };
 }
 
 export const aidRequestsService = {
   /**
-   * Fetch all citizen/aid requests (GET /api/CitizenRequests)
+   * Fetch organization-scoped citizen/aid requests (GET /api/organizations/{orgId}/aid-requests)
    */
-  async getAllAidRequests({ simulateLoading: _simulateLoading = false, simulateError = false, simulateEmpty = false } = {}) {
+  async getAllAidRequests({ organizationId, simulateLoading: _simulateLoading = false, simulateError = false, simulateEmpty = false } = {}) {
     if (simulateError) {
       throw new Error('Network error: Unable to connect to Aid Requests Management Service.');
     }
@@ -76,7 +78,10 @@ export const aidRequestsService = {
       return mockRequestsStore.map((item) => ({ ...item }));
     }
 
-    const response = await axiosClient.get('/CitizenRequests');
+    const endpoint = organizationId
+      ? `/organizations/${Number(organizationId)}/aid-requests`
+      : '/CitizenRequests';
+    const response = await axiosClient.get(endpoint);
     const items = Array.isArray(response.data) ? response.data : [];
     return items.map(mapCitizenRequestFromApi);
   },
@@ -96,9 +101,9 @@ export const aidRequestsService = {
   },
 
   /**
-   * Update request status (PATCH /api/CitizenRequests/{id}/status)
+   * Update request status (PATCH /api/organizations/{orgId}/aid-requests/{id}/status)
    */
-  async updateStatus(id, newStatus) {
+  async updateStatus(id, newStatus, organizationId = null) {
     if (USE_MOCK_API) {
       const item = mockRequestsStore.find((r) => String(r.requestId) === String(id));
       if (item) {
@@ -117,34 +122,46 @@ export const aidRequestsService = {
       };
     }
 
-    const response = await axiosClient.patch(`/CitizenRequests/${id}/status`, {
+    const endpoint = organizationId
+      ? `/organizations/${Number(organizationId)}/aid-requests/${Number(id)}/status`
+      : `/CitizenRequests/${Number(id)}/status`;
+    const response = await axiosClient.patch(endpoint, {
       status: newStatus,
     });
     return mapCitizenRequestFromApi(response.data);
   },
 
   /**
-   * Assign Response Team (mock-only; no backend endpoint exists)
+   * Assign Response Team (POST /api/organizations/{orgId}/aid-requests/{id}/assign-team)
    */
-  async assignTeam(id, teamName) {
+  async assignTeam(id, teamIdOrName, organizationId = null, notes = '') {
     if (USE_MOCK_API) {
       const item = mockRequestsStore.find((r) => String(r.requestId) === String(id));
       if (item) {
-        item.assignedTeam = teamName;
-        if (item.status === 'Pending Review' && teamName !== 'Unassigned') {
+        item.assignedTeam = teamIdOrName;
+        if (item.status === 'Pending Review' && teamIdOrName !== 'Unassigned') {
           item.status = 'In Progress';
         }
       }
-      return { requestId: id, assignedTeam: teamName };
+      return { requestId: id, assignedTeam: teamIdOrName };
     }
 
-    const detail =
-      'Response team assignment is not supported by the backend CitizenRequests API.';
-    throw {
-      status: 501,
-      title: 'Not Supported',
-      detail,
-      message: detail,
-    };
+    if (!organizationId) {
+      throw {
+        status: 400,
+        title: 'No Active Organization',
+        detail: 'An active organization is required to assign a response team.',
+        message: 'An active organization is required to assign a response team.',
+      };
+    }
+
+    const response = await axiosClient.post(
+      `/organizations/${Number(organizationId)}/aid-requests/${Number(id)}/assign-team`,
+      {
+        responseTeamId: Number(teamIdOrName),
+        notes: notes?.trim() || null,
+      }
+    );
+    return mapCitizenRequestFromApi(response.data);
   },
 };

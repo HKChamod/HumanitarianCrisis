@@ -22,6 +22,24 @@ public class Organization
 
     public decimal? Longitude { get; set; }
 
+    public string? Website { get; set; }
+
+    public string? PrimaryContactName { get; set; }
+
+    public string? EmergencyContactPhone { get; set; }
+
+    public string PreferredLanguage { get; set; } = "en";
+
+    public bool EmailAlertsEnabled { get; set; } = true;
+
+    public bool CrisisAlertsEnabled { get; set; } = true;
+
+    public bool RequestAlertsEnabled { get; set; } = true;
+
+    public bool AutoAssignNotifications { get; set; } = true;
+
+    public bool CompactTables { get; set; } = false;
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -32,4 +50,10 @@ public class Organization
 
     public ICollection<OrganizationMembership> Memberships { get; set; }
         = new List<OrganizationMembership>();
+
+    public ICollection<ResponseTeam> ResponseTeams { get; set; }
+        = new List<ResponseTeam>();
+
+    public ICollection<OrganizationArea> OrganizationAreas { get; set; }
+        = new List<OrganizationArea>();
 }

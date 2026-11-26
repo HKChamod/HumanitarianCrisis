@@ -44,4 +44,9 @@ public interface IOrganizationMembershipService
     Task<MyOrganizationAccessResponse?> GetMyOrganizationAccessAsync(
         int organizationId,
         int userId);
+
+    Task RemoveMemberAsync(
+        int organizationId,
+        int membershipId,
+        int actorUserId);
 }

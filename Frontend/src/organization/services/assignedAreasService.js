@@ -1,18 +1,16 @@
 /**
  * Geographic Areas / Assigned Areas Service for ReliefLink Organization Portal
  *
- * Connected to .NET 10 ASP.NET Core Web API via centralized axiosClient:
- *  - GET /api/Areas
- *  - GET /api/Areas/{id}
- *
- * Note: The backend Areas API stores geographical hierarchy records (Province, District,
- * DS Division, GN Division, Custom), not organization-level operational assignments.
- * Unsupported operational mutations fail cleanly with a normalized 501 error in live mode.
- * Mock operational behavior is strictly isolated to USE_MOCK_API === true.
+ * Live Mode (USE_MOCK_API === false):
+ *  - GET    /api/Areas (global area catalog for selection)
+ *  - GET    /api/organizations/{orgId}/areas
+ *  - POST   /api/organizations/{orgId}/areas
+ *  - PUT    /api/organizations/{orgId}/areas/{organizationAreaId}
+ *  - DELETE /api/organizations/{orgId}/areas/{organizationAreaId}
  */
 
-import { initialAssignedAreas } from '../data/mockAssignedAreas';
-import { axiosClient, USE_MOCK_API } from '../../services/api/axiosClient';
+import { initialAssignedAreas } from '../data/mockAssignedAreas.js';
+import { axiosClient, USE_MOCK_API } from '../../services/api/axiosClient.js';
 
 function cloneMockAreas() {
   return initialAssignedAreas.map((area) => ({
@@ -24,7 +22,33 @@ function cloneMockAreas() {
 
 let inMemoryAreas = cloneMockAreas();
 
-function mapAreaFromApi(item) {
+export function mapAssignedAreaFromApi(item) {
+  const lat = item?.latitude != null ? Number(item.latitude) : null;
+  const lng = item?.longitude != null ? Number(item.longitude) : null;
+  return {
+    organizationAreaId: item?.organizationAreaId ?? null,
+    areaId: item?.areaId,
+    areaName: item?.areaName ?? '',
+    areaType: item?.areaType ?? '',
+    district: item?.parentAreaName || item?.areaName || '',
+    parentAreaName: item?.parentAreaName ?? null,
+    code: item?.code ?? null,
+    latitude: Number.isFinite(lat) ? lat : null,
+    longitude: Number.isFinite(lng) ? lng : null,
+    coordinates: Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null,
+    assignmentStatus: item?.assignmentStatus ?? 'Active',
+    responseStatus: item?.assignmentStatus ?? 'Active',
+    primaryContact: item?.primaryContact ?? '',
+    notes: item?.notes ?? '',
+    assignedAt: item?.assignedAt ?? null,
+    activeCrisesCount: Number(item?.activeCrisesCount ?? 0),
+    openRequestsCount: Number(item?.openRequestsCount ?? 0),
+    assignedTeamsCount: Number(item?.assignedTeamsCount ?? 0),
+    isActive: item?.assignmentStatus === 'Active',
+  };
+}
+
+function mapCatalogAreaFromApi(item) {
   return {
     areaId: item?.areaId,
     areaName: item?.areaName ?? '',
@@ -32,32 +56,42 @@ function mapAreaFromApi(item) {
     parentAreaId: item?.parentAreaId ?? null,
     parentAreaName: item?.parentAreaName ?? null,
     code: item?.code ?? null,
+    latitude: item?.latitude ?? null,
+    longitude: item?.longitude ?? null,
     isActive: Boolean(item?.isActive),
   };
 }
 
-function createUnsupportedError(detail) {
-  return {
-    status: 501,
-    title: 'Not Supported',
-    detail,
-    message: detail,
-  };
+function requireOrgId(organizationId) {
+  const id = Number(organizationId);
+  if (!id || Number.isNaN(id)) {
+    throw {
+      status: 400,
+      title: 'No Active Organization',
+      detail: 'Select an active organization before managing assigned areas.',
+      message: 'Select an active organization before managing assigned areas.',
+    };
+  }
+  return id;
 }
 
 export const assignedAreasService = {
-  /**
-   * Fetch all geographic areas (GET /api/Areas)
-   */
-  async getAllAssignedAreas({ simulateLoading: _simulateLoading = false, simulateError = false, simulateEmpty = false } = {}) {
+  async getAvailableAreas() {
+    if (USE_MOCK_API) {
+      return [];
+    }
+    const response = await axiosClient.get('/Areas');
+    const items = Array.isArray(response.data) ? response.data : [];
+    return items.map(mapCatalogAreaFromApi).filter((a) => a.isActive);
+  },
+
+  async getAllAssignedAreas({ organizationId, simulateError = false, simulateEmpty = false } = {}) {
     if (simulateError) {
       throw new Error('Network error: Unable to connect to Geographic Areas Service.');
     }
-
     if (simulateEmpty) {
       return [];
     }
-
     if (USE_MOCK_API) {
       return inMemoryAreas.map((a) => ({
         ...a,
@@ -65,143 +99,74 @@ export const assignedAreasService = {
       }));
     }
 
-    const response = await axiosClient.get('/Areas');
+    const orgId = requireOrgId(organizationId);
+    const response = await axiosClient.get(`/organizations/${orgId}/areas`);
     const items = Array.isArray(response.data) ? response.data : [];
-    return items.map(mapAreaFromApi);
+    return items.map(mapAssignedAreaFromApi);
   },
 
-  /**
-   * Get single area by ID (GET /api/Areas/{id})
-   */
-  async getAreaById(id) {
+  async assignNewArea(organizationId, areaData) {
     if (USE_MOCK_API) {
-      const found = inMemoryAreas.find((a) => String(a.areaId) === String(id));
-      if (!found) throw new Error(`Area ${id} not found.`);
-      return {
-        ...found,
-        assignedTeams: Array.isArray(found.assignedTeams) ? [...found.assignedTeams] : [],
+      const nextNum = 100 + inMemoryAreas.length + 1;
+      const newArea = {
+        areaId: `AREA-${nextNum}`,
+        areaName: areaData.areaName?.trim() || 'Assigned Zone',
+        district: areaData.district || '',
+        assignmentStatus: areaData.assignmentStatus || 'Active',
+        responseStatus: areaData.assignmentStatus || 'Active',
+        primaryContact: areaData.primaryContact?.trim() || '',
+        notes: areaData.notes?.trim() || '',
+        assignedAt: new Date().toISOString(),
       };
+      inMemoryAreas = [newArea, ...inMemoryAreas];
+      return { ...newArea };
     }
 
-    const response = await axiosClient.get(`/Areas/${id}`);
-    return mapAreaFromApi(response.data);
-  },
-
-  /**
-   * Assign a new area record (mock-only; no backend organization assignment endpoint exists)
-   */
-  async assignNewArea(areaData) {
-    if (!USE_MOCK_API) {
-      throw createUnsupportedError(
-        'Organization area assignment is not supported by the backend Areas API. Backend Areas stores geographical hierarchy records only.'
-      );
-    }
-
-    const nextNum = 100 + inMemoryAreas.length + 1;
-    const newArea = {
-      areaId: `AREA-${nextNum}`,
-      areaName: areaData.areaName.trim(),
-      district: areaData.district,
-      province: areaData.province || 'Western',
-      coordinates: areaData.coordinates || [6.9271, 79.8612],
-      crisisType: areaData.crisisType || 'Flood',
-      riskLevel: areaData.riskLevel || 'Medium',
-      affectedCitizens: Number(areaData.affectedCitizens) || 0,
-      assignedTeams: Array.isArray(areaData.assignedTeams) ? [...areaData.assignedTeams] : [],
-      responseStatus: areaData.responseStatus || 'Awaiting Assignment',
-      primaryContact: areaData.primaryContact?.trim() || 'District Disaster Officer (+94 11 269 4487)',
-      shelterCount: Number(areaData.shelterCount) || 1,
-      shelterCapacity: Number(areaData.shelterCapacity) || 500,
-      linkedIncident: areaData.linkedIncident?.trim() || 'Active Humanitarian Operation',
-      notes: areaData.notes?.trim() || 'Initial field coverage registration.',
-      lastAssessmentDate: new Date().toISOString()
+    const orgId = requireOrgId(organizationId);
+    const payload = {
+      areaId: Number(areaData.areaId),
+      assignmentStatus: areaData.assignmentStatus || 'Active',
+      primaryContact: areaData.primaryContact?.trim() || null,
+      notes: areaData.notes?.trim() || null,
     };
-
-    inMemoryAreas = [newArea, ...inMemoryAreas];
-    return { ...newArea };
+    const response = await axiosClient.post(`/organizations/${orgId}/areas`, payload);
+    return mapAssignedAreaFromApi(response.data);
   },
 
-  /**
-   * Update operational area details (mock-only; operational fields are not stored in backend Areas)
-   */
-  async updateArea(id, updateData) {
-    if (!USE_MOCK_API) {
-      throw createUnsupportedError(
-        'Updating operational area assignments is not supported by the backend Areas API.'
-      );
+  async updateArea(organizationId, organizationAreaId, updateData) {
+    if (USE_MOCK_API) {
+      const idx = inMemoryAreas.findIndex((a) => String(a.areaId) === String(organizationAreaId));
+      if (idx === -1) throw new Error(`Area ${organizationAreaId} not found.`);
+      inMemoryAreas[idx] = { ...inMemoryAreas[idx], ...updateData };
+      return { ...inMemoryAreas[idx] };
     }
 
-    const idx = inMemoryAreas.findIndex((a) => String(a.areaId) === String(id));
-    if (idx === -1) throw new Error(`Area ${id} not found.`);
-
-    const updated = {
-      ...inMemoryAreas[idx],
-      ...updateData,
-      affectedCitizens: Number(updateData.affectedCitizens) || inMemoryAreas[idx].affectedCitizens,
-      lastAssessmentDate: new Date().toISOString()
+    const orgId = requireOrgId(organizationId);
+    const payload = {
+      assignmentStatus: updateData.assignmentStatus || 'Active',
+      primaryContact: updateData.primaryContact?.trim() || null,
+      notes: updateData.notes?.trim() || null,
     };
-
-    inMemoryAreas[idx] = updated;
-    return { ...updated };
+    const response = await axiosClient.put(
+      `/organizations/${orgId}/areas/${Number(organizationAreaId)}`,
+      payload
+    );
+    return mapAssignedAreaFromApi(response.data);
   },
 
-  /**
-   * Assign teams to an area (mock-only; unsupported in backend)
-   */
-  async assignTeamsToArea(id, teamNames) {
-    if (!USE_MOCK_API) {
-      throw createUnsupportedError(
-        'Assigning response teams to areas is not supported by the backend Areas API.'
-      );
+  async removeArea(organizationId, organizationAreaId) {
+    if (USE_MOCK_API) {
+      inMemoryAreas = inMemoryAreas.filter((a) => String(a.areaId) !== String(organizationAreaId));
+      return { success: true };
     }
 
-    const idx = inMemoryAreas.findIndex((a) => String(a.areaId) === String(id));
-    if (idx === -1) throw new Error(`Area ${id} not found.`);
-
-    inMemoryAreas[idx] = {
-      ...inMemoryAreas[idx],
-      assignedTeams: [...teamNames],
-      responseStatus: teamNames.length > 0 ? 'Active Response' : 'Awaiting Assignment',
-      lastAssessmentDate: new Date().toISOString()
-    };
-
-    return { ...inMemoryAreas[idx] };
+    const orgId = requireOrgId(organizationId);
+    await axiosClient.delete(`/organizations/${orgId}/areas/${Number(organizationAreaId)}`);
+    return { success: true };
   },
 
-  /**
-   * Update operational status & risk level (mock-only; unsupported in backend)
-   */
-  async updateStatusAndRisk(id, newStatus, newRiskLevel) {
-    if (!USE_MOCK_API) {
-      throw createUnsupportedError(
-        'Updating operational response status and risk levels is not supported by the backend Areas API.'
-      );
-    }
-
-    const idx = inMemoryAreas.findIndex((a) => String(a.areaId) === String(id));
-    if (idx === -1) throw new Error(`Area ${id} not found.`);
-
-    inMemoryAreas[idx] = {
-      ...inMemoryAreas[idx],
-      responseStatus: newStatus || inMemoryAreas[idx].responseStatus,
-      riskLevel: newRiskLevel || inMemoryAreas[idx].riskLevel,
-      lastAssessmentDate: new Date().toISOString()
-    };
-
-    return { ...inMemoryAreas[idx] };
-  },
-
-  /**
-   * Reset in-memory mock data (mock-only)
-   */
   resetToDefaults() {
-    if (!USE_MOCK_API) {
-      throw createUnsupportedError(
-        'Resetting default mock areas is only available when mock mode is enabled.'
-      );
-    }
-
     inMemoryAreas = cloneMockAreas();
     return inMemoryAreas.map((a) => ({ ...a }));
-  }
+  },
 };
