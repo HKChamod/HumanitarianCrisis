@@ -18,6 +18,8 @@ public class ShelterConfiguration : IEntityTypeConfiguration<Shelter>
 
         builder.Property(s => s.ShelterName).IsRequired().HasMaxLength(200);
         builder.Property(s => s.Address).IsRequired().HasMaxLength(500);
+        builder.Property(s => s.Latitude).HasPrecision(9, 6);
+        builder.Property(s => s.Longitude).HasPrecision(9, 6);
         builder.Property(s => s.Status).IsRequired().HasMaxLength(30).HasDefaultValue("Open");
         builder.Property(s => s.ContactName).HasMaxLength(150);
         builder.Property(s => s.ContactPhone).HasMaxLength(40);

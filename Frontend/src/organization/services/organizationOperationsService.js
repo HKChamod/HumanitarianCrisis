@@ -163,6 +163,46 @@ export const organizationOperationsService = {
     return response.data;
   },
 
+  async addMemberByEmail(organizationId, email) {
+    const response = await axiosClient.post(
+      `/Organizations/${Number(organizationId)}/members`,
+      { email: String(email || '').trim().toLowerCase() }
+    );
+    return response.data;
+  },
+
+  async getOrganizationRoles(organizationId) {
+    if (!organizationId || USE_MOCK_API) {
+      return { items: [], forbidden: false };
+    }
+    try {
+      const response = await axiosClient.get(`/Organizations/${Number(organizationId)}/roles`);
+      const items = Array.isArray(response.data) ? response.data : [];
+      return { items, forbidden: false };
+    } catch (err) {
+      if (err?.status === 403) {
+        return { items: [], forbidden: true };
+      }
+      throw err;
+    }
+  },
+
+  async createOrganizationRole(organizationId, payload) {
+    const response = await axiosClient.post(
+      `/Organizations/${Number(organizationId)}/roles`,
+      payload
+    );
+    return response.data;
+  },
+
+  async assignMemberRoles(organizationId, membershipId, roleIds) {
+    const response = await axiosClient.put(
+      `/Organizations/${Number(organizationId)}/members/${Number(membershipId)}/roles`,
+      { roleIds }
+    );
+    return response.data;
+  },
+
   async getResourceAllocations() {
     if (USE_MOCK_API) {
       return { items: [], forbidden: false, scope: 'mock' };

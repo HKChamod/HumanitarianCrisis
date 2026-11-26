@@ -32,6 +32,8 @@ public class OrganizationService : IOrganizationService
             Email = Normalize(request.Email),
             PhoneNumber = Normalize(request.PhoneNumber),
             Address = Normalize(request.Address),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -57,6 +59,8 @@ public class OrganizationService : IOrganizationService
                 Email = o.Email,
                 PhoneNumber = o.PhoneNumber,
                 Address = o.Address,
+                Latitude = o.Latitude,
+                Longitude = o.Longitude,
                 IsActive = o.IsActive,
                 CreatedAt = o.CreatedAt,
                 MemberCount = o.Memberships.Count()
@@ -79,6 +83,8 @@ public class OrganizationService : IOrganizationService
                 Email = o.Email,
                 PhoneNumber = o.PhoneNumber,
                 Address = o.Address,
+                Latitude = o.Latitude,
+                Longitude = o.Longitude,
                 IsActive = o.IsActive,
                 CreatedAt = o.CreatedAt,
                 MemberCount = o.Memberships.Count()
@@ -114,6 +120,8 @@ public class OrganizationService : IOrganizationService
         organization.Email = Normalize(request.Email);
         organization.PhoneNumber = Normalize(request.PhoneNumber);
         organization.Address = Normalize(request.Address);
+        organization.Latitude = request.Latitude;
+        organization.Longitude = request.Longitude;
         organization.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync();
@@ -188,6 +196,8 @@ public class OrganizationService : IOrganizationService
             Email = organization.Email,
             PhoneNumber = organization.PhoneNumber,
             Address = organization.Address,
+            Latitude = organization.Latitude,
+            Longitude = organization.Longitude,
             IsActive = organization.IsActive,
             CreatedAt = organization.CreatedAt,
             MemberCount = memberCount

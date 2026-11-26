@@ -33,7 +33,10 @@ public class CrisisEventService : ICrisisEventService
             Description = request.Description.Trim(),
             SeverityLevel = request.SeverityLevel.Trim(),
             StartDate = request.StartDate,
-            Status = "Active"
+            Status = "Active",
+            LocationName = string.IsNullOrWhiteSpace(request.LocationName) ? null : request.LocationName.Trim(),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude
         };
 
         _context.CrisisEvents.Add(crisis);
@@ -102,6 +105,9 @@ public class CrisisEventService : ICrisisEventService
         crisis.Description = request.Description.Trim();
         crisis.SeverityLevel = request.SeverityLevel.Trim();
         crisis.StartDate = request.StartDate;
+        crisis.LocationName = string.IsNullOrWhiteSpace(request.LocationName) ? null : request.LocationName.Trim();
+        crisis.Latitude = request.Latitude;
+        crisis.Longitude = request.Longitude;
 
         await _context.SaveChangesAsync();
 
@@ -147,7 +153,10 @@ public class CrisisEventService : ICrisisEventService
             Description = crisis.Description,
             SeverityLevel = crisis.SeverityLevel,
             StartDate = crisis.StartDate,
-            Status = crisis.Status
+            Status = crisis.Status,
+            LocationName = crisis.LocationName,
+            Latitude = crisis.Latitude,
+            Longitude = crisis.Longitude
         };
     }
 }

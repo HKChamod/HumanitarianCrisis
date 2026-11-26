@@ -28,7 +28,7 @@ public class AuthService : IAuthService
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var existingUser = await _context.Users
-            .AnyAsync(u => u.Email == normalizedEmail);
+            .AnyAsync(u => u.Email.ToLower() == normalizedEmail);
 
         if (existingUser)
         {
@@ -66,7 +66,8 @@ public class AuthService : IAuthService
         user.UserRoles.Add(new UserRole
         {
             User = user,
-            RoleId = citizenRole.RoleId
+            RoleId = citizenRole.RoleId,
+            Role = citizenRole
         });
 
         _context.Users.Add(user);
@@ -81,11 +82,11 @@ public class AuthService : IAuthService
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var user = await _context.Users
-    .Include(u => u.UserRoles)
-        .ThenInclude(ur => ur.Role)
-    .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
-        if (user == null || !user.IsActive)
+        if (user == null || !user.IsActive || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             throw new UnauthorizedAccessException(
                 "Invalid email or password.");

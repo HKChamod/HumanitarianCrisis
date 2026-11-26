@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Home, MapPin, Phone } from 'lucide-react';
+import { Home, Map as MapIcon, MapPin, Phone } from 'lucide-react';
 import { shelterService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { FilterPanel, SearchBar } from '../../../components/forms/FormControls';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { ErrorState, LoadingState } from '../../../components/common/States';
+import { MapView, adaptCollectionToMapItems, adaptShelterToMapItem } from '../../../shared/maps';
 
 export function SheltersPage({ mode = 'all' }) {
   const [shelters, setShelters] = useState([]);
@@ -12,6 +13,7 @@ export function SheltersPage({ mode = 'all' }) {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showMap, setShowMap] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -89,7 +91,37 @@ export function SheltersPage({ mode = 'all' }) {
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+            showMap
+              ? 'bg-[#0F766E] text-white border-[#0F766E]'
+              : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          {showMap ? 'Hide Map' : 'Map Overview'}
+        </button>
       </FilterPanel>
+
+      {showMap && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3">
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filtered, adaptShelterToMapItem);
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                heightClass="h-[360px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="No shelter records in the current view have valid coordinates."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       {loading ? (
         <LoadingState message="Loading shelter records..." />

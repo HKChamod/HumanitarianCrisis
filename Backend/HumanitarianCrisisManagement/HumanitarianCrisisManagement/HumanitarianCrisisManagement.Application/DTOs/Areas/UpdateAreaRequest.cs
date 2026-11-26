@@ -20,5 +20,11 @@ public class UpdateAreaRequest
     [StringLength(50)]
     public string? Code { get; set; }
 
+    [Range(-90, 90)]
+    public decimal? Latitude { get; set; }
+
+    [Range(-180, 180)]
+    public decimal? Longitude { get; set; }
+
     public bool IsActive { get; set; } = true;
 }

@@ -6,6 +6,7 @@ import {
   Copy,
   Edit3,
   Eye,
+  Map as MapIcon,
   Package,
   RefreshCw,
   ShieldCheck,
@@ -27,6 +28,11 @@ import { SeverityBadge, StatusBadge } from '../../../components/common/StatusBad
 import { Drawer } from '../../../components/common/Modal';
 import { ErrorState, LoadingState } from '../../../components/common/States';
 import { PermissionGate, useAuth } from '../../../app/providers/AuthProvider';
+import {
+  MapView,
+  adaptAiRecommendationToMapItem,
+  adaptCollectionToMapItems,
+} from '../../../shared/maps';
 
 const URGENCY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 
@@ -44,6 +50,7 @@ export function AiDecisionSupportPage({ mode = 'overview' }) {
   const [recommendations, setRecommendations] = useState([]);
   const [citizenRequests, setCitizenRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showMap, setShowMap] = useState(false);
   const [error, setError] = useState(null);
   const loadSeqRef = useRef(0);
 
@@ -431,7 +438,37 @@ export function AiDecisionSupportPage({ mode = 'overview' }) {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+            showMap
+              ? 'bg-[#0F766E] text-white border-[#0F766E]'
+              : 'bg-white text-[#0F172A] border-[#CBD5E1] hover:bg-slate-50'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          {showMap ? 'Hide Map' : 'Advisory Map'}
+        </button>
       </FilterPanel>
+
+      {showMap && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3">
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filtered, adaptAiRecommendationToMapItem);
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                heightClass="h-[360px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="No AI recommendations in the current view have geo-located citizen requests."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       {loading ? (
         <LoadingState message="Loading AI recommendations..." />

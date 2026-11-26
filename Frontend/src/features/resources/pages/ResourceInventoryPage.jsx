@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, ArrowLeftRight, Building2, History, Package, Plus, SlidersHorizontal } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Building2, History, Map as MapIcon, Package, Plus, SlidersHorizontal } from 'lucide-react';
 import {
   areaService,
   inventoryTransactionService,
@@ -17,6 +17,13 @@ import { FilterPanel, FormField, SearchBar } from '../../../components/forms/For
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Modal } from '../../../components/common/Modal';
 import { PermissionGate, useAuth } from '../../../app/providers/AuthProvider';
+import {
+  LocationPickerField,
+  MAP_ENTITY_TYPES,
+  MapView,
+  adaptCollectionToMapItems,
+  adaptWarehouseToMapItem,
+} from '../../../shared/maps';
 
 const resourceSchema = z.object({
   name: z.string().min(3, 'Resource name is required'),
@@ -52,6 +59,7 @@ export function ResourceInventoryPage() {
   // Modals
   const [createResourceOpen, setCreateResourceOpen] = useState(false);
   const [createWarehouseOpen, setCreateWarehouseOpen] = useState(false);
+  const [showWarehouseMap, setShowWarehouseMap] = useState(false);
   const [createInventoryOpen, setCreateInventoryOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -63,6 +71,8 @@ export function ResourceInventoryPage() {
     warehouseName: '',
     warehouseCode: '',
     address: '',
+    latitude: null,
+    longitude: null,
     areaId: '',
     contactPerson: '',
     contactNumber: '',
@@ -697,7 +707,39 @@ export function ResourceInventoryPage() {
             Low-stock only
           </label>
         )}
+        {activeTab === 'warehouses' && !USE_MOCK_API && (
+          <button
+            type="button"
+            onClick={() => setShowWarehouseMap((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+              showWarehouseMap
+                ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+            }`}
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            {showWarehouseMap ? 'Hide Map' : 'Warehouse Map'}
+          </button>
+        )}
       </FilterPanel>
+
+      {activeTab === 'warehouses' && showWarehouseMap && !USE_MOCK_API && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3">
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filteredWarehouses, adaptWarehouseToMapItem);
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                heightClass="h-[340px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="No warehouses in the current view have valid coordinates."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       {activeTab === 'stock' && !USE_MOCK_API && (
         <DataTable data={filteredInventories} columns={inventoryColumns} loading={loading} error={error} onRetry={loadData} emptyTitle="No warehouse stock records yet" />
@@ -821,6 +863,15 @@ export function ResourceInventoryPage() {
               className="w-full px-3 py-2 text-sm border border-[#E2E8F0] rounded-lg"
             />
           </FormField>
+          <LocationPickerField
+            label="Warehouse Coordinates (Optional)"
+            latitude={whForm.latitude}
+            longitude={whForm.longitude}
+            onChange={({ latitude, longitude }) => setWhForm((p) => ({ ...p, latitude, longitude }))}
+            onAddressSuggested={(addr) => setWhForm((p) => ({ ...p, address: p.address || addr }))}
+            entityType={MAP_ENTITY_TYPES.WAREHOUSE}
+            heightClass="h-[190px]"
+          />
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Contact Person">
               <input

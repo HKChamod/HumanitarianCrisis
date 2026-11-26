@@ -1,4 +1,4 @@
-﻿using HumanitarianCrisisManagement.Domain.Entities;
+using HumanitarianCrisisManagement.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -33,6 +33,15 @@ public class CrisisEventConfiguration : IEntityTypeConfiguration<CrisisEvent>
             .IsRequired()
             .HasMaxLength(30)
             .HasDefaultValue("Active");
+
+        builder.Property(c => c.LocationName)
+            .HasMaxLength(250);
+
+        builder.Property(c => c.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(c => c.Longitude)
+            .HasPrecision(9, 6);
 
         builder.HasIndex(c => c.Status);
 

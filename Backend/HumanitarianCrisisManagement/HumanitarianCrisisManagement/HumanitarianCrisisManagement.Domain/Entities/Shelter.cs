@@ -7,6 +7,8 @@ public class Shelter
     public int AreaId { get; set; }
     public Area Area { get; set; } = null!;
     public string Address { get; set; } = string.Empty;
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
     public int Capacity { get; set; }
     public int CurrentOccupancy { get; set; }
     public string Status { get; set; } = "Open"; // Open, Full, Closed, Maintenance

@@ -22,6 +22,8 @@ var connectionString = builder.Configuration
 
 builder.Services.Configure<AiProviderOptions>(
     builder.Configuration.GetSection(AiProviderOptions.SectionName));
+builder.Services.Configure<DevelopmentSeedOptions>(
+    builder.Configuration.GetSection(DevelopmentSeedOptions.SectionName));
 builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
 {
     // Timeout is enforced per request via AiProviderOptions.GetEffectiveTimeout()
@@ -244,6 +246,9 @@ if (app.Environment.IsDevelopment())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Database.Migrate();
+
+        var devSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentUserSeeder>();
+        await devSeeder.SeedAsync();
     }
 
     app.UseSwagger();

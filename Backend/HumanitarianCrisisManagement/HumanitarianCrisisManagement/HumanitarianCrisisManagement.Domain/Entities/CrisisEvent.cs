@@ -21,6 +21,12 @@ namespace HumanitarianCrisisManagement.Domain.Entities
 
         public string Status { get; set; } = "Active";
 
+        public string? LocationName { get; set; }
+
+        public decimal? Latitude { get; set; }
+
+        public decimal? Longitude { get; set; }
+
         public ICollection<CitizenRequest> CitizenRequests { get; set; }
             = new List<CitizenRequest>();
     }

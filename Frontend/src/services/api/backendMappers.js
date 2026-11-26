@@ -16,11 +16,16 @@ export function mapCrisisFromApi(dto) {
     status: dto.status || 'Active',
     startDate: dto.startDate || new Date().toISOString(),
     reportedDate: dto.startDate || new Date().toISOString(),
+    locationName: dto.locationName ?? null,
+    latitude: dto.latitude ?? null,
+    longitude: dto.longitude ?? null,
     location: dto.location || {
       provinceId: '',
       provinceName: 'Sri Lanka',
       districtId: '',
-      districtName: 'National',
+      districtName: dto.locationName || 'National',
+      latitude: dto.latitude ?? undefined,
+      longitude: dto.longitude ?? undefined,
     },
     relatedRequestCount: dto.relatedRequestCount ?? 0,
     assignedOrganizations: dto.assignedOrganizations ?? [],
@@ -35,6 +40,9 @@ export function mapCrisisCreateToApi(payload) {
     severityLevel: payload.severity,
     startDate: payload.startDate,
     status: payload.status || 'Active',
+    locationName: payload.locationName || payload.location?.districtName || null,
+    latitude: payload.latitude ?? payload.location?.latitude ?? null,
+    longitude: payload.longitude ?? payload.location?.longitude ?? null,
   };
 }
 
@@ -78,6 +86,8 @@ export function mapOrganizationFromApi(dto) {
     contactPhone: dto.phoneNumber || dto.contactPhone || '—',
     province: dto.province || 'Sri Lanka',
     district: dto.address || dto.district || '—',
+    latitude: dto.latitude ?? null,
+    longitude: dto.longitude ?? null,
     memberCount: dto.memberCount ?? 0,
     activeCrisisCount: dto.activeCrisisCount ?? 0,
     registeredAt: dto.createdAt || new Date().toISOString(),
@@ -131,6 +141,8 @@ export function mapOrganizationCreateToApi(payload) {
     email: payload.contactEmail || null,
     phoneNumber: payload.contactPhone || null,
     address: payload.district || payload.address || null,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
   };
 }
 
@@ -143,6 +155,8 @@ export function mapOrganizationUpdateToApi(org, isActive) {
     email: org.contactEmail === '—' ? null : org.contactEmail,
     phoneNumber: org.contactPhone === '—' ? null : org.contactPhone,
     address: org.district === '—' ? null : org.district,
+    latitude: org.latitude ?? null,
+    longitude: org.longitude ?? null,
     isActive,
   };
 }
@@ -155,15 +169,18 @@ export function mapRequestStatusToApi(status) {
 }
 
 export function mapMemberFromApi(dto, orgId, orgName) {
+  const roles = Array.isArray(dto.roles) ? dto.roles : [];
   return {
     id: String(dto.membershipId ?? dto.id),
+    membershipId: Number(dto.membershipId ?? dto.id),
     userId: String(dto.userId ?? ''),
     userName: dto.fullName || dto.userName || 'Member',
     userEmail: dto.email || dto.userEmail || '—',
     organizationId: String(orgId),
     organizationName: orgName,
-    scopedRole: Array.isArray(dto.roles) && dto.roles.length > 0 ? dto.roles.join(', ') : dto.scopedRole || 'Member',
-    status: dto.status || 'Active',
+    roles,
+    scopedRole: roles.length > 0 ? roles.join(', ') : dto.scopedRole || 'Member',
+    status: dto.membershipStatus || dto.status || 'Pending',
     joinedAt: dto.joinedAt || dto.createdAt || new Date().toISOString(),
   };
 }
@@ -194,6 +211,8 @@ export function mapWarehouseFromApi(dto) {
     warehouseCode: dto.warehouseCode ?? '',
     description: dto.description ?? '',
     address: dto.address ?? '',
+    latitude: dto.latitude ?? null,
+    longitude: dto.longitude ?? null,
     areaId: Number(dto.areaId ?? 0),
     areaName: dto.areaName ?? '',
     contactPerson: dto.contactPerson ?? '',
@@ -209,6 +228,8 @@ export function mapWarehouseCreateToApi(payload) {
     warehouseCode: (payload.warehouseCode ?? '').trim(),
     description: (payload.description ?? '').trim() || null,
     address: (payload.address ?? '').trim(),
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
     areaId: Number(payload.areaId),
     contactPerson: (payload.contactPerson ?? '').trim() || null,
     contactNumber: (payload.contactNumber ?? '').trim() || null,
@@ -305,10 +326,17 @@ export function mapResourceAllocationFromApi(dto) {
     allocationId: Number(dto.allocationId ?? dto.id),
     inventoryId: Number(dto.inventoryId ?? 0),
     warehouseName: dto.warehouseName ?? '',
+    warehouseLatitude: dto.warehouseLatitude ?? null,
+    warehouseLongitude: dto.warehouseLongitude ?? null,
     resourceId: Number(dto.resourceId ?? 0),
     resourceName: dto.resourceName ?? '',
     crisisId: Number(dto.crisisId ?? 0),
     crisisName: dto.crisisName ?? '',
+    crisisLatitude: dto.crisisLatitude ?? null,
+    crisisLongitude: dto.crisisLongitude ?? null,
+    citizenRequestId: dto.citizenRequestId ?? null,
+    citizenRequestLatitude: dto.citizenRequestLatitude ?? null,
+    citizenRequestLongitude: dto.citizenRequestLongitude ?? null,
     quantityRequested: Number(dto.quantityRequested ?? 0),
     quantityAllocated: Number(dto.quantityAllocated ?? 0),
     quantity: Number(dto.quantityAllocated > 0 ? dto.quantityAllocated : dto.quantityRequested ?? 0),
@@ -393,6 +421,8 @@ export function mapAiRecommendationFromApi(dto) {
     currentUrgencyLevel: dto?.currentUrgencyLevel ?? '',
     currentRequestStatus: dto?.currentRequestStatus ?? '',
     areaName: dto?.areaName ?? '',
+    latitude: dto?.latitude ?? null,
+    longitude: dto?.longitude ?? null,
     crisisId: dto?.crisisId ?? null,
     crisisName: dto?.crisisName ?? null,
     suggestedCategory: dto?.suggestedCategory ?? '',
@@ -468,6 +498,8 @@ export function mapShelterFromApi(dto) {
     dsDivision: dto?.areaName ?? '',
     operatorOrganization: dto?.contactName || dto?.areaName || 'ReliefLink Operations',
     address: dto?.address ?? '',
+    latitude: dto?.latitude ?? null,
+    longitude: dto?.longitude ?? null,
     capacity,
     currentOccupancy,
     availableCapacity: Number(dto?.availableCapacity ?? Math.max(0, capacity - currentOccupancy)),
@@ -590,6 +622,9 @@ export function mapDonationFromApi(dto) {
 
 export function mapUserFromApi(dto) {
   const roles = Array.isArray(dto?.roles) ? dto.roles : [];
+  const organizations = Array.isArray(dto?.organizations) ? dto.organizations : [];
+  const organizationRoles = Array.isArray(dto?.organizationRoles) ? dto.organizationRoles : [];
+  const department = dto?.department || (organizations.length > 0 ? organizations.join(', ') : '');
   return {
     id: String(dto?.userId ?? dto?.id ?? ''),
     userId: Number(dto?.userId ?? dto?.id ?? 0),
@@ -597,6 +632,9 @@ export function mapUserFromApi(dto) {
     email: dto?.email ?? '',
     phone: dto?.phoneNumber ?? '',
     phoneNumber: dto?.phoneNumber ?? '',
+    department,
+    organizations,
+    organizationRoles,
     isActive: dto?.isActive ?? true,
     status: dto?.isActive ? 'Active' : 'Inactive',
     roles,
@@ -623,14 +661,18 @@ export function mapRoleFromApi(dto) {
 export function mapPermissionFromApi(dto) {
   const name = dto?.permissionName ?? dto?.name ?? '';
   const modulePart = name.includes('.') ? name.split('.')[0] : 'General';
+  const assignedRoles = Array.isArray(dto?.assignedRoles) ? dto.assignedRoles : [];
   return {
     id: String(dto?.permissionId ?? dto?.id ?? ''),
     permissionId: Number(dto?.permissionId ?? dto?.id ?? 0),
     key: name,
+    code: dto?.code ?? name,
     name,
     permissionName: name,
     module: modulePart,
+    category: dto?.category ?? modulePart,
     description: dto?.description ?? '',
+    assignedRoles,
   };
 }
 
