@@ -67,6 +67,11 @@ import {
   mapOrgAllocationFromApi,
   mapOrgInventoryFromApi,
 } from './organization/services/organizationOperationsService.js';
+import {
+  getDefaultRouteForUser,
+  canAccessPath,
+  resolvePostLoginRoute,
+} from './app/authRouting.js';
 // Simplified admin check matching AuthProvider.jsx logic
 const ADMIN_PORTAL_ENTRY_PERMISSIONS = [
   'Users.View',
@@ -532,9 +537,101 @@ async function runTests() {
 
   const adminUser = {
     roles: ['Administrator'],
-    permissions: ['CrisisEvents.Create', 'CrisisEvents.Manage', 'Users.Manage'],
+    permissions: ['CrisisEvents.Create', 'CrisisEvents.Manage', 'Users.Manage', 'Users.View', 'CitizenRequests.View'],
   };
   assert(isAdminUser(adminUser), 'Administrator user with administrative permissions is granted access (isAdminUser === true)');
+
+  const crisisManagerUser = {
+    roles: ['CrisisManager'],
+    permissions: ['CrisisEvents.View', 'CrisisEvents.Create', 'CrisisEvents.Manage', 'CitizenRequests.View', 'Organizations.View'],
+  };
+  const responderUser = {
+    roles: ['Responder'],
+    permissions: ['CrisisEvents.View', 'CitizenRequests.View', 'CitizenRequests.Manage', 'Resources.View', 'ResourceAllocations.View'],
+  };
+  const orgAdminUser = {
+    roles: ['Citizen'],
+    permissions: ['Areas.View', 'CrisisEvents.View', 'Notifications.View'],
+  };
+  const approvedOrgMemberships = [
+    { membershipId: 1, organizationId: 10, membershipStatus: 'Approved', isOrganizationActive: true, roles: ['OrganizationAdmin'] },
+  ];
+  const pendingOrgMemberships = [
+    { membershipId: 2, organizationId: 11, membershipStatus: 'Pending', isOrganizationActive: true, roles: ['Member'] },
+  ];
+  const multiRoleUser = {
+    roles: ['Citizen', 'Responder', 'CrisisManager'],
+    permissions: ['CrisisEvents.View', 'CrisisEvents.Manage', 'CitizenRequests.View'],
+  };
+
+  assert(getDefaultRouteForUser(adminUser) === '/admin', 'Administrator defaults to /admin');
+  assert(getDefaultRouteForUser(citizenUser) === '/citizen', 'Citizen defaults to /citizen');
+  assert(getDefaultRouteForUser(crisisManagerUser) === '/admin', 'CrisisManager defaults to /admin');
+  assert(getDefaultRouteForUser(responderUser) === '/admin', 'Responder defaults to /admin');
+  assert(
+    getDefaultRouteForUser(orgAdminUser, approvedOrgMemberships) === '/organization',
+    'Approved OrganizationAdmin member defaults to /organization'
+  );
+  assert(
+    getDefaultRouteForUser(orgAdminUser, pendingOrgMemberships) === '/citizen',
+    'User with only Pending org membership defaults to /citizen'
+  );
+  assert(
+    getDefaultRouteForUser(multiRoleUser) === '/admin',
+    'Multi-role user (Citizen + Responder + CrisisManager) prioritizes operational portal /admin'
+  );
+
+  // Requested protected path allowed only if authorized
+  assert(
+    resolvePostLoginRoute({ user: adminUser, requestedPath: '/admin/users' }) === '/admin/users',
+    'Admin requesting /admin/users before login is redirected to /admin/users'
+  );
+  assert(
+    resolvePostLoginRoute({ user: responderUser, requestedPath: '/admin/requests' }) === '/admin/requests',
+    'Responder requesting authorized /admin/requests before login is redirected to /admin/requests'
+  );
+  assert(
+    resolvePostLoginRoute({ user: orgAdminUser, requestedPath: '/organization/dashboard', memberships: approvedOrgMemberships }) === '/organization/dashboard',
+    'Approved org member requesting /organization/dashboard before login is redirected there'
+  );
+
+  // Unauthorized requested path falls back to role default dashboard
+  assert(
+    resolvePostLoginRoute({ user: citizenUser, requestedPath: '/admin/users' }) === '/citizen',
+    'Citizen requesting unauthorized /admin/users falls back to /citizen'
+  );
+  assert(
+    resolvePostLoginRoute({ user: responderUser, requestedPath: '/admin/users' }) === '/admin',
+    'Responder lacking Users.View requesting /admin/users falls back to /admin'
+  );
+  assert(
+    resolvePostLoginRoute({ user: citizenUser, requestedPath: '/organization', memberships: [] }) === '/citizen',
+    'Citizen without approved org requesting /organization falls back to /citizen'
+  );
+  assert(
+    resolvePostLoginRoute({ user: adminUser, requestedPath: '/citizen' }) === '/admin',
+    'Administrator previously on /citizen is never redirected to Citizen Portal'
+  );
+  assert(
+    resolvePostLoginRoute({ user: crisisManagerUser, requestedPath: '/citizen/dashboard' }) === '/admin',
+    'CrisisManager previously on /citizen/dashboard is never redirected to Citizen Portal'
+  );
+  assert(
+    resolvePostLoginRoute({ user: responderUser, requestedPath: '/citizen' }) === '/admin',
+    'Responder previously on /citizen is never redirected to Citizen Portal'
+  );
+  assert(
+    !canAccessPath('/login', adminUser) && !canAccessPath('//evil.example', adminUser),
+    'Auth/loop paths (/login) and external paths are rejected by canAccessPath'
+  );
+
+  // Role switch simulation (logout -> login as different role)
+  const firstSessionRoute = resolvePostLoginRoute({ user: citizenUser, requestedPath: null });
+  const switchedSessionRoute = resolvePostLoginRoute({ user: adminUser, requestedPath: firstSessionRoute });
+  assert(
+    firstSessionRoute === '/citizen' && switchedSessionRoute === '/admin',
+    'Switching from Citizen session to Admin login routes to /admin rather than stale /citizen'
+  );
 
   // --- TEST 4: BACKEND LIVE ENDPOINTS INTEGRATION ---
   // Requires HCMS_TEST_ADMIN_EMAIL and HCMS_TEST_ADMIN_PASSWORD in the environment.
