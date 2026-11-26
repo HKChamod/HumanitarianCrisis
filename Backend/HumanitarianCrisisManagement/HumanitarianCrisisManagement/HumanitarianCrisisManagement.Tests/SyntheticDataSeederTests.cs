@@ -147,6 +147,15 @@ public class SyntheticDataSeederTests
         // Password verification for synthetic users
         var synUser = await db.Users.FirstAsync(u => u.Email == "syn.user01@hcms.test.local");
         Assert.True(hasher.VerifyPassword(synUser, synUser.PasswordHash, "Hcms@TestSeed2026!"));
+
+        // Reconcile report counters directly against database state
+        Assert.Equal(await db.InventoryTransactions.CountAsync(), report.InsertedCounts["InventoryTransactions"]);
+        Assert.Equal(await db.UserRoles.CountAsync(), report.InsertedCounts["UserRoles"]);
+        Assert.Equal(
+            await db.RolePermissions.CountAsync(rp => rp.Role.OrganizationId != null),
+            report.InsertedCounts["OrganizationRolePermissions"]);
+        Assert.True(await db.InventoryTransactions.AnyAsync(t => t.ReferenceNumber != null && t.ReferenceNumber.StartsWith("SYN-TXN-ALLOC-")));
+        Assert.True(await db.InventoryTransactions.AnyAsync(t => t.ReferenceNumber != null && t.ReferenceNumber.StartsWith("SYN-TXN-DON-")));
     }
 
     [Fact]
@@ -171,12 +180,18 @@ public class SyntheticDataSeederTests
         var seeder = CreateSeeder(db, hasher);
         var first = await seeder.SeedAsync("Development");
         Assert.True(first.TotalInserted > 0);
+        Assert.Equal(await db.InventoryTransactions.CountAsync(), first.InsertedCounts["InventoryTransactions"]);
 
         var countAfterFirst = await db.Users.CountAsync();
         var second = await seeder.SeedAsync("Development");
 
         Assert.True(second.Succeeded);
         Assert.Equal(0, second.TotalInserted);
+        Assert.Equal(first.TotalInserted, second.TotalSkipped);
+        foreach (var kvp in first.InsertedCounts)
+        {
+            Assert.Equal(kvp.Value, second.SkippedCounts.GetValueOrDefault(kvp.Key));
+        }
         Assert.Equal(countAfterFirst, await db.Users.CountAsync());
         Assert.True(await db.Users.AnyAsync(u => u.Email == "real.existing@example.com" && u.FullName == "Existing Real Admin"));
     }

@@ -47,6 +47,7 @@ public class SyntheticSeedingReport
         sb.AppendLine($"Total Records Inserted:        {TotalInserted}");
         sb.AppendLine($"Total Existing Skipped:        {TotalSkipped}");
         sb.AppendLine($"Records Failed:                {RecordsFailed}");
+        sb.AppendLine("Note: Migration-seeded reference data (6 global Roles, 39 Permissions, 88 global RolePermissions) is excluded from synthetic inserted/skipped counters.");
         sb.AppendLine($"Inventory Consistency Check:   {(InventoryConsistencyPassed ? "PASSED" : "FAILED")}");
         sb.AppendLine($"Shelter Occupancy Check:       {(ShelterOccupancyConsistencyPassed ? "PASSED" : "FAILED")}");
         sb.AppendLine($"Foreign Key Verification:      {(ForeignKeyVerificationPassed ? "PASSED" : "FAILED")}");
@@ -224,6 +225,8 @@ public class SyntheticDataSeeder
 
         var inserted = 0;
         var skipped = 0;
+        var userRolesInserted = 0;
+        var userRolesSkipped = 0;
         var result = new List<User>(25);
 
         for (var i = 1; i <= 25; i++)
@@ -236,6 +239,7 @@ public class SyntheticDataSeeder
             if (existing != null)
             {
                 skipped++;
+                userRolesSkipped += existing.UserRoles.Count;
                 result.Add(existing);
                 continue;
             }
@@ -260,11 +264,14 @@ public class SyntheticDataSeeder
             _context.Users.Add(user);
             result.Add(user);
             inserted++;
+            userRolesInserted += user.UserRoles.Count;
         }
 
         await _context.SaveChangesAsync(ct);
         report.InsertedCounts["Users"] = inserted;
         report.SkippedCounts["Users"] = skipped;
+        report.InsertedCounts["UserRoles"] = userRolesInserted;
+        report.SkippedCounts["UserRoles"] = userRolesSkipped;
         return result;
     }
 
@@ -413,6 +420,8 @@ public class SyntheticDataSeeder
 
         var inserted = 0;
         var skipped = 0;
+        var rolePermInserted = 0;
+        var rolePermSkipped = 0;
         var result = new List<Role>();
 
         // 2 org-scoped roles for first 5 active organizations = 10 org-scoped roles
@@ -421,11 +430,13 @@ public class SyntheticDataSeeder
             foreach (var (roleName, desc) in roleSpecs)
             {
                 var existing = await _context.Roles
+                    .Include(r => r.RolePermissions)
                     .FirstOrDefaultAsync(r => r.OrganizationId == org.OrganizationId && r.RoleName == roleName, ct);
 
                 if (existing != null)
                 {
                     skipped++;
+                    rolePermSkipped += existing.RolePermissions.Count;
                     result.Add(existing);
                     continue;
                 }
@@ -450,12 +461,15 @@ public class SyntheticDataSeeder
                 _context.Roles.Add(role);
                 result.Add(role);
                 inserted++;
+                rolePermInserted += role.RolePermissions.Count;
             }
         }
 
         await _context.SaveChangesAsync(ct);
         report.InsertedCounts["OrganizationRoles"] = inserted;
         report.SkippedCounts["OrganizationRoles"] = skipped;
+        report.InsertedCounts["OrganizationRolePermissions"] = rolePermInserted;
+        report.SkippedCounts["OrganizationRolePermissions"] = rolePermSkipped;
         return result;
     }
 
@@ -1054,9 +1068,18 @@ public class SyntheticDataSeeder
         for (var i = 1; i <= 25; i++)
         {
             var refNo = $"SYN-ALLOC-{i:D3}";
-            if (await _context.ResourceAllocations.AnyAsync(a => a.ReferenceNumber == refNo, ct))
+            var existingAlloc = await _context.ResourceAllocations.FirstOrDefaultAsync(a => a.ReferenceNumber == refNo, ct);
+            if (existingAlloc != null)
             {
                 allocSkipped++;
+                if (existingAlloc.Status is ResourceAllocationStatus.Dispatched or ResourceAllocationStatus.Delivered)
+                {
+                    var existingTxnRef = $"SYN-TXN-ALLOC-{i:D3}";
+                    if (await _context.InventoryTransactions.AnyAsync(t => t.ReferenceNumber == existingTxnRef, ct))
+                    {
+                        txnSkipped++;
+                    }
+                }
                 continue;
             }
 
@@ -1137,13 +1160,21 @@ public class SyntheticDataSeeder
 
         var inserted = 0;
         var skipped = 0;
+        var donTxnInserted = 0;
+        var donTxnSkipped = 0;
 
         for (var i = 1; i <= 20; i++)
         {
             var refNo = $"SYN-DON-{i:D3}";
-            if (await _context.Donations.AnyAsync(d => d.ReferenceNumber == refNo, ct))
+            var existingDonation = await _context.Donations.FirstOrDefaultAsync(d => d.ReferenceNumber == refNo, ct);
+            if (existingDonation != null)
             {
                 skipped++;
+                var existingTxnRef = $"SYN-TXN-DON-{i:D3}";
+                if (await _context.InventoryTransactions.AnyAsync(t => t.ReferenceNumber == existingTxnRef, ct))
+                {
+                    donTxnSkipped++;
+                }
                 continue;
             }
 
@@ -1184,6 +1215,7 @@ public class SyntheticDataSeeder
                     _context.InventoryTransactions.Add(txn);
                     await _context.SaveChangesAsync(ct);
                     txnId = txn.InventoryTransactionId;
+                    donTxnInserted++;
                 }
             }
 
@@ -1213,6 +1245,10 @@ public class SyntheticDataSeeder
         }
 
         await _context.SaveChangesAsync(ct);
+        report.InsertedCounts["InventoryTransactions"] =
+            report.InsertedCounts.GetValueOrDefault("InventoryTransactions") + donTxnInserted;
+        report.SkippedCounts["InventoryTransactions"] =
+            report.SkippedCounts.GetValueOrDefault("InventoryTransactions") + donTxnSkipped;
         report.InsertedCounts["Donations"] = inserted;
         report.SkippedCounts["Donations"] = skipped;
     }
@@ -1680,8 +1716,10 @@ public class SyntheticDataSeeder
     private async Task PopulateFinalCountsAsync(SyntheticSeedingReport report, CancellationToken ct)
     {
         report.FinalCounts["Users"] = await _context.Users.CountAsync(ct);
+        report.FinalCounts["UserRoles"] = await _context.UserRoles.CountAsync(ct);
         report.FinalCounts["Organizations"] = await _context.Organizations.CountAsync(ct);
         report.FinalCounts["OrganizationRoles"] = await _context.Roles.CountAsync(r => r.OrganizationId != null, ct);
+        report.FinalCounts["OrganizationRolePermissions"] = await _context.RolePermissions.CountAsync(rp => rp.Role.OrganizationId != null, ct);
         report.FinalCounts["OrganizationMemberships"] = await _context.OrganizationMemberships.CountAsync(ct);
         report.FinalCounts["OrganizationMembershipRoles"] = await _context.OrganizationMembershipRoles.CountAsync(ct);
         report.FinalCounts["Areas"] = await _context.Areas.CountAsync(ct);
