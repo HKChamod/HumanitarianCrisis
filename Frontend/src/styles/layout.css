@@ -286,14 +286,21 @@
   gap: 0.75rem;
 }
 
-.footer-links a {
+.footer-links a,
+.footer-links button {
   font-size: 0.875rem;
   color: #94A3B8;
   transition: color var(--transition-fast);
 }
 
-.footer-links a:hover {
+.footer-links a:hover,
+.footer-links button:hover {
   color: #5EEAD4;
+}
+
+.footer-links button.active {
+  color: #5EEAD4 !important;
+  font-weight: 600;
 }
 
 .footer-contact-item {
