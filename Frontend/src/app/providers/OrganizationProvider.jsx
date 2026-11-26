@@ -627,7 +627,7 @@ function OrganizationSelectionScreen({
 }
 
 export function ProtectedOrganizationRoute({ children }) {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { authLoading, isAuthenticated, isAdmin, logout } = useAuth();
   const {
     memberships,
     approvedMemberships,
@@ -640,11 +640,21 @@ export function ProtectedOrganizationRoute({ children }) {
   } = useOrganization();
   const location = useLocation();
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <LoadingState message="Verifying session..." />
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <Navigate
         to="/login"
-        state={{ from: location.pathname }}
+        state={{ from: `${location.pathname}${location.search}` }}
         replace
       />
     );

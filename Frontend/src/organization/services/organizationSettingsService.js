@@ -34,6 +34,17 @@ function mapOrganizationProfileFromApi(item) {
     email: item?.email ?? '',
     phoneNumber: item?.phoneNumber ?? '',
     address: item?.address ?? '',
+    latitude: item?.latitude ?? null,
+    longitude: item?.longitude ?? null,
+    website: item?.website ?? '',
+    primaryContactName: item?.primaryContactName ?? '',
+    emergencyContactPhone: item?.emergencyContactPhone ?? '',
+    preferredLanguage: item?.preferredLanguage || 'en',
+    emailAlertsEnabled: typeof item?.emailAlertsEnabled === 'boolean' ? item.emailAlertsEnabled : true,
+    crisisAlertsEnabled: typeof item?.crisisAlertsEnabled === 'boolean' ? item.crisisAlertsEnabled : true,
+    requestAlertsEnabled: typeof item?.requestAlertsEnabled === 'boolean' ? item.requestAlertsEnabled : true,
+    autoAssignNotifications: typeof item?.autoAssignNotifications === 'boolean' ? item.autoAssignNotifications : true,
+    compactTables: typeof item?.compactTables === 'boolean' ? item.compactTables : false,
     isActive: typeof item?.isActive === 'boolean' ? item.isActive : true,
     createdAt: item?.createdAt ?? null,
     memberCount: typeof item?.memberCount === 'number' ? item.memberCount : 0,
@@ -102,6 +113,17 @@ export const organizationSettingsService = {
       email: normalizeOptionalString(profile.email),
       phoneNumber: normalizeOptionalString(profile.phoneNumber),
       address: normalizeOptionalString(profile.address),
+      latitude: profile.latitude !== '' && profile.latitude != null ? Number(profile.latitude) : null,
+      longitude: profile.longitude !== '' && profile.longitude != null ? Number(profile.longitude) : null,
+      website: normalizeOptionalString(profile.website),
+      primaryContactName: normalizeOptionalString(profile.primaryContactName),
+      emergencyContactPhone: normalizeOptionalString(profile.emergencyContactPhone),
+      preferredLanguage: profile.preferredLanguage || 'en',
+      emailAlertsEnabled: typeof profile.emailAlertsEnabled === 'boolean' ? profile.emailAlertsEnabled : true,
+      crisisAlertsEnabled: typeof profile.crisisAlertsEnabled === 'boolean' ? profile.crisisAlertsEnabled : true,
+      requestAlertsEnabled: typeof profile.requestAlertsEnabled === 'boolean' ? profile.requestAlertsEnabled : true,
+      autoAssignNotifications: typeof profile.autoAssignNotifications === 'boolean' ? profile.autoAssignNotifications : true,
+      compactTables: typeof profile.compactTables === 'boolean' ? profile.compactTables : false,
       isActive: typeof profile.isActive === 'boolean' ? profile.isActive : true,
     };
 
@@ -118,6 +140,15 @@ export const organizationSettingsService = {
       payload
     );
     return mapOrganizationProfileFromApi(response.data);
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    if (USE_MOCK_API) return { message: 'Password updated in mock mode.' };
+    const response = await axiosClient.post('/Auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
   },
 
   /**

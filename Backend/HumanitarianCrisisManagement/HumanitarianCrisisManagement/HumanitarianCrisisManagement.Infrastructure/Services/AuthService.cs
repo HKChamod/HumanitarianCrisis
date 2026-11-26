@@ -152,4 +152,28 @@ public class AuthService : IAuthService
                 .ToList()
         };
     }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            request.NewPassword.Length < 8)
+        {
+            throw new ArgumentException("Current password and a new password of at least 8 characters are required.");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User account was not found.");
+        }
+
+        if (!_passwordHasher.VerifyPassword(user, user.PasswordHash, request.CurrentPassword))
+        {
+            throw new UnauthorizedAccessException("Current password is incorrect.");
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        await _context.SaveChangesAsync();
+    }
 }

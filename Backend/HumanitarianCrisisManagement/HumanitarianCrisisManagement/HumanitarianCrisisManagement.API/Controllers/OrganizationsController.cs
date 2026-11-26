@@ -404,4 +404,27 @@ public class OrganizationsController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpDelete("{id:int}/members/{membershipId:int}")]
+    [Authorize]
+    public async Task<IActionResult> RemoveMember(int id, int membershipId)
+    {
+        if (!TryGetCurrentUserId(out var actorUserId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            actorUserId,
+            "Organizations.ApproveMembers");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
+        await _membershipService.RemoveMemberAsync(id, membershipId, actorUserId);
+        return NoContent();
+    }
 }

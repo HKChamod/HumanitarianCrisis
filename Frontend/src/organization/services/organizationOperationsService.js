@@ -203,6 +203,31 @@ export const organizationOperationsService = {
     return response.data;
   },
 
+  async getDashboard(organizationId) {
+    if (USE_MOCK_API || !organizationId) return null;
+    const response = await axiosClient.get(`/organizations/${Number(organizationId)}/dashboard`);
+    return response.data;
+  },
+
+  async getLogistics(organizationId) {
+    if (USE_MOCK_API || !organizationId) {
+      return { warehouses: [], inventories: [], allocations: [] };
+    }
+    const response = await axiosClient.get(`/organizations/${Number(organizationId)}/logistics`);
+    const data = response.data || {};
+    return {
+      warehouses: Array.isArray(data.warehouses) ? data.warehouses : [],
+      inventories: Array.isArray(data.inventories) ? data.inventories.map(mapOrgInventoryFromApi) : [],
+      allocations: Array.isArray(data.allocations) ? data.allocations.map(mapOrgAllocationFromApi) : [],
+    };
+  },
+
+  async removeOrganizationMember(organizationId, membershipId) {
+    if (USE_MOCK_API) return { success: true };
+    await axiosClient.delete(`/Organizations/${Number(organizationId)}/members/${Number(membershipId)}`);
+    return { success: true };
+  },
+
   async getResourceAllocations() {
     if (USE_MOCK_API) {
       return { items: [], forbidden: false, scope: 'mock' };

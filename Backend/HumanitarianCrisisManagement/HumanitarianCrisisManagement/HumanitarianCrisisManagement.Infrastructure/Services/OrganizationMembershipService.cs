@@ -617,4 +617,52 @@ public class OrganizationMembershipService : IOrganizationMembershipService
         };
     }
 
+    public async Task RemoveMemberAsync(int organizationId, int membershipId, int actorUserId)
+    {
+        var membership = await _context.OrganizationMemberships
+            .Include(m => m.MembershipRoles)
+                .ThenInclude(mr => mr.Role)
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.MembershipId == membershipId)
+            ?? throw new KeyNotFoundException("Organization membership was not found.");
+
+        if (membership.UserId == actorUserId)
+        {
+            var isOrgAdmin = membership.MembershipRoles.Any(mr =>
+                string.Equals(mr.Role.RoleName, "OrganizationAdmin", StringComparison.OrdinalIgnoreCase));
+
+            if (isOrgAdmin)
+            {
+                var otherAdmins = await _context.OrganizationMemberships
+                    .CountAsync(m =>
+                        m.OrganizationId == organizationId &&
+                        m.MembershipId != membershipId &&
+                        m.MembershipStatus == "Approved" &&
+                        m.MembershipRoles.Any(mr => mr.Role.RoleName == "OrganizationAdmin"));
+
+                if (otherAdmins == 0)
+                {
+                    throw new InvalidOperationException("Cannot remove the last OrganizationAdmin from this organization.");
+                }
+            }
+        }
+
+        var teamMemberships = await _context.ResponseTeamMembers
+            .Where(tm => tm.MembershipId == membershipId)
+            .ToListAsync();
+        if (teamMemberships.Count > 0)
+        {
+            _context.ResponseTeamMembers.RemoveRange(teamMemberships);
+        }
+
+        var ledTeams = await _context.ResponseTeams
+            .Where(t => t.LeaderMembershipId == membershipId)
+            .ToListAsync();
+        foreach (var team in ledTeams)
+        {
+            team.LeaderMembershipId = null;
+        }
+
+        _context.OrganizationMemberships.Remove(membership);
+        await _context.SaveChangesAsync();
+    }
 }

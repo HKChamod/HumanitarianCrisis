@@ -47,11 +47,10 @@ export const OrganizationMembersAndAllocationsPage = () => {
     setAllocationsState((prev) => ({ ...prev, loading: true, error: null }));
     setInventoryState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const [membersRes, rolesRes, allocRes, invRes] = await Promise.allSettled([
+    const [membersRes, rolesRes, logisticsRes] = await Promise.allSettled([
       organizationOperationsService.getOrganizationMembers(activeOrganizationId),
       organizationOperationsService.getOrganizationRoles(activeOrganizationId),
-      organizationOperationsService.getResourceAllocations(),
-      organizationOperationsService.getWarehouseInventories(),
+      organizationOperationsService.getLogistics(activeOrganizationId),
     ]);
 
     if (rolesRes.status === 'fulfilled') {
@@ -80,37 +79,34 @@ export const OrganizationMembersAndAllocationsPage = () => {
       });
     }
 
-    if (allocRes.status === 'fulfilled') {
+    if (logisticsRes.status === 'fulfilled') {
       setAllocationsState({
         loading: false,
-        items: allocRes.value.items,
-        forbidden: allocRes.value.forbidden,
-        scope: allocRes.value.scope,
+        items: logisticsRes.value.allocations || [],
+        forbidden: false,
+        scope: 'organization',
+        error: null,
+      });
+      setInventoryState({
+        loading: false,
+        items: logisticsRes.value.inventories || [],
+        forbidden: false,
         error: null,
       });
     } else {
+      const errMsg = logisticsRes.reason?.detail || logisticsRes.reason?.message || 'Unable to load organization logistics.';
       setAllocationsState({
         loading: false,
         items: [],
-        forbidden: false,
+        forbidden: logisticsRes.reason?.status === 403,
         scope: 'none',
-        error: allocRes.reason?.detail || allocRes.reason?.message || 'Unable to load resource allocations.',
+        error: logisticsRes.reason?.status === 403 ? null : errMsg,
       });
-    }
-
-    if (invRes.status === 'fulfilled') {
-      setInventoryState({
-        loading: false,
-        items: invRes.value.items,
-        forbidden: invRes.value.forbidden,
-        error: null,
-      });
-    } else {
       setInventoryState({
         loading: false,
         items: [],
-        forbidden: false,
-        error: invRes.reason?.detail || invRes.reason?.message || 'Unable to load warehouse inventory.',
+        forbidden: logisticsRes.reason?.status === 403,
+        error: logisticsRes.reason?.status === 403 ? null : errMsg,
       });
     }
   }, [activeOrganizationId]);
@@ -490,6 +486,36 @@ export const OrganizationMembersAndAllocationsPage = () => {
                                 }}
                               >
                                 Assign
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busyMembershipId === m.membershipId}
+                                onClick={async () => {
+                                  if (!window.confirm(`Remove ${m.fullName} from this organization?`)) return;
+                                  setBusyMembershipId(m.membershipId);
+                                  setActionFeedback(null);
+                                  try {
+                                    await organizationOperationsService.removeOrganizationMember(activeOrganizationId, m.membershipId);
+                                    setActionFeedback({ type: 'success', message: `Removed ${m.fullName} from organization.` });
+                                    await loadData();
+                                  } catch (err) {
+                                    setActionFeedback({ type: 'error', message: err?.detail || err?.message || 'Unable to remove member.' });
+                                  } finally {
+                                    setBusyMembershipId(null);
+                                  }
+                                }}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  borderRadius: '6px',
+                                  border: '1px solid #FECACA',
+                                  backgroundColor: '#FEF2F2',
+                                  color: '#DC2626',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Remove
                               </button>
                             </div>
                           ) : (

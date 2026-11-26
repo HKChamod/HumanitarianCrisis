@@ -4,9 +4,9 @@ import { StatCards } from './StatCards';
 import { RecentActivity } from './RecentActivity';
 import { QuickAlerts } from './QuickAlerts';
 import { USE_MOCK_API } from '../../services/api/apiConfig';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
 import { crisisEventsService } from '../services/crisisEventsService';
-import { aidRequestsService } from '../services/aidRequestsService';
-import { assignedAreasService } from '../services/assignedAreasService';
+import { organizationOperationsService } from '../services/organizationOperationsService';
 
 export const DashboardView = ({
   onNavigateToIncidents = () => {},
@@ -14,18 +14,17 @@ export const DashboardView = ({
   onNavigateToTeams = () => {},
   onNavigateToAreas = () => {}
 }) => {
+  const { activeOrganizationId } = useOrganization();
   const [liveSummary, setLiveSummary] = useState({
     loading: !USE_MOCK_API,
+    dashboard: null,
+    dashboardError: null,
     crises: [],
     crisesError: null,
-    requests: [],
-    requestsError: null,
-    areas: [],
-    areasError: null
   });
 
   useEffect(() => {
-    if (USE_MOCK_API) return undefined;
+    if (USE_MOCK_API || !activeOrganizationId) return undefined;
 
     let isCancelled = false;
 
@@ -33,21 +32,24 @@ export const DashboardView = ({
       setLiveSummary((prev) => ({
         ...prev,
         loading: true,
+        dashboardError: null,
         crisesError: null,
-        requestsError: null,
-        areasError: null
       }));
 
-      const [crisesResult, requestsResult, areasResult] = await Promise.allSettled([
+      const [dashResult, crisesResult] = await Promise.allSettled([
+        organizationOperationsService.getDashboard(activeOrganizationId),
         crisisEventsService.getAllCrisisEvents(),
-        aidRequestsService.getAllAidRequests(),
-        assignedAreasService.getAllAssignedAreas()
       ]);
 
       if (isCancelled) return;
 
       setLiveSummary({
         loading: false,
+        dashboard: dashResult.status === 'fulfilled' ? dashResult.value : null,
+        dashboardError:
+          dashResult.status === 'rejected'
+            ? dashResult.reason?.detail || dashResult.reason?.message || 'Unable to load organization dashboard'
+            : null,
         crises:
           crisesResult.status === 'fulfilled' && Array.isArray(crisesResult.value)
             ? crisesResult.value
@@ -56,22 +58,6 @@ export const DashboardView = ({
           crisesResult.status === 'rejected'
             ? crisesResult.reason?.detail || crisesResult.reason?.message || 'Unable to load crisis events'
             : null,
-        requests:
-          requestsResult.status === 'fulfilled' && Array.isArray(requestsResult.value)
-            ? requestsResult.value
-            : [],
-        requestsError:
-          requestsResult.status === 'rejected'
-            ? requestsResult.reason?.detail || requestsResult.reason?.message || 'Unable to load citizen requests'
-            : null,
-        areas:
-          areasResult.status === 'fulfilled' && Array.isArray(areasResult.value)
-            ? areasResult.value
-            : [],
-        areasError:
-          areasResult.status === 'rejected'
-            ? areasResult.reason?.detail || areasResult.reason?.message || 'Unable to load geographic areas'
-            : null
       });
     };
 
@@ -80,43 +66,30 @@ export const DashboardView = ({
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [activeOrganizationId]);
 
   const liveMetrics = (() => {
     if (USE_MOCK_API) return null;
-
-    const activeCrisesCount = liveSummary.crises.filter(
-      (c) => String(c.status || '').toLowerCase() === 'active'
-    ).length;
-    const criticalCrisesCount = liveSummary.crises.filter(
-      (c) => String(c.severityLevel || '').toLowerCase() === 'critical'
-    ).length;
-
-    const pendingRequestsCount = liveSummary.requests.filter(
-      (r) => String(r.status || '').toLowerCase() === 'pending'
-    ).length;
-    const fulfilledRequestsCount = liveSummary.requests.filter(
-      (r) => String(r.status || '').toLowerCase() === 'fulfilled'
-    ).length;
+    const d = liveSummary.dashboard;
 
     return [
       {
         id: 'active-incidents',
-        title: 'Crisis Events',
-        value: liveSummary.loading ? '—' : liveSummary.crisesError ? 'N/A' : String(liveSummary.crises.length),
+        title: 'Active Crises',
+        value: liveSummary.loading ? '—' : liveSummary.dashboardError ? 'N/A' : String(d?.activeCrisesCount ?? 0),
         badge: liveSummary.loading
           ? 'Loading...'
-          : liveSummary.crisesError
+          : liveSummary.dashboardError
             ? 'Unavailable'
-            : `${criticalCrisesCount} Critical`,
+            : `${d?.criticalCrisesCount ?? 0} Critical`,
         change: liveSummary.loading
           ? 'Fetching live backend data'
-          : liveSummary.crisesError
-            ? liveSummary.crisesError
-            : `${activeCrisesCount} Active in directory`,
-        changeType: liveSummary.crisesError
+          : liveSummary.dashboardError
+            ? liveSummary.dashboardError
+            : `${d?.assignedAreasCount ?? 0} Assigned areas`,
+        changeType: liveSummary.dashboardError
           ? 'neutral'
-          : criticalCrisesCount > 0
+          : (d?.criticalCrisesCount ?? 0) > 0
             ? 'urgent'
             : 'positive',
         icon: 'alertTriangle',
@@ -124,40 +97,36 @@ export const DashboardView = ({
       },
       {
         id: 'aid-requests',
-        title: 'Citizen Requests',
-        value: liveSummary.loading ? '—' : liveSummary.requestsError ? 'N/A' : String(liveSummary.requests.length),
+        title: 'Open Aid Requests',
+        value: liveSummary.loading ? '—' : liveSummary.dashboardError ? 'N/A' : String(d?.scopedAidRequestsCount ?? 0),
         badge: liveSummary.loading
           ? 'Loading...'
-          : liveSummary.requestsError
+          : liveSummary.dashboardError
             ? 'Unavailable'
-            : `${fulfilledRequestsCount} Fulfilled`,
+            : `${d?.openAidRequestsCount ?? 0} Total Open`,
         change: liveSummary.loading
           ? 'Fetching live backend data'
-          : liveSummary.requestsError
-            ? liveSummary.requestsError
-            : `${pendingRequestsCount} Pending review`,
-        changeType: liveSummary.requestsError
-          ? 'neutral'
-          : pendingRequestsCount > 0
-            ? 'urgent'
-            : 'positive',
+          : liveSummary.dashboardError
+            ? liveSummary.dashboardError
+            : `${d?.assignedAllocationsCount ?? 0} Resource allocations`,
+        changeType: (d?.scopedAidRequestsCount ?? 0) > 0 ? 'urgent' : 'positive',
         icon: 'handHeart',
         accentColor: '#10756F'
       },
       {
         id: 'geographic-areas',
-        title: 'Geographic Areas',
-        value: liveSummary.loading ? '—' : liveSummary.areasError ? 'N/A' : String(liveSummary.areas.length),
+        title: 'Members & Areas',
+        value: liveSummary.loading ? '—' : liveSummary.dashboardError ? 'N/A' : String(d?.activeMembers ?? 0),
         badge: liveSummary.loading
           ? 'Loading...'
-          : liveSummary.areasError
+          : liveSummary.dashboardError
             ? 'Unavailable'
-            : 'Live Directory',
+            : `${d?.pendingMembers ?? 0} Pending`,
         change: liveSummary.loading
           ? 'Fetching live backend data'
-          : liveSummary.areasError
-            ? liveSummary.areasError
-            : 'Global backend Areas directory',
+          : liveSummary.dashboardError
+            ? liveSummary.dashboardError
+            : `${d?.totalMembers ?? 0} Total members · ${d?.assignedAreasCount ?? 0} Areas`,
         changeType: 'neutral',
         icon: 'package',
         accentColor: '#10756F'
@@ -165,10 +134,18 @@ export const DashboardView = ({
       {
         id: 'dispatched-teams',
         title: 'Response Teams',
-        value: 'N/A',
-        badge: 'Not Backend-Backed',
-        change: 'No live Response Teams API yet',
-        changeType: 'neutral',
+        value: liveSummary.loading ? '—' : liveSummary.dashboardError ? 'N/A' : String(d?.responseTeamsCount ?? 0),
+        badge: liveSummary.loading
+          ? 'Loading...'
+          : liveSummary.dashboardError
+            ? 'Unavailable'
+            : `${d?.deployedTeamsCount ?? 0} Deployed`,
+        change: liveSummary.loading
+          ? 'Fetching live backend data'
+          : liveSummary.dashboardError
+            ? liveSummary.dashboardError
+            : `${d?.availableTeamsCount ?? 0} Available for dispatch`,
+        changeType: (d?.deployedTeamsCount ?? 0) > 0 ? 'positive' : 'neutral',
         icon: 'users',
         accentColor: '#10756F'
       }

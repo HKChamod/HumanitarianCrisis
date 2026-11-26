@@ -88,4 +88,22 @@ public class AuthController : ControllerBase
 
         return Ok(currentUser);
     }
+
+    // POST: api/auth/change-password
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Invalid authentication token." });
+        }
+
+        await _authService.ChangePasswordAsync(userId, request);
+        return Ok(new { message = "Password updated successfully." });
+    }
 }
