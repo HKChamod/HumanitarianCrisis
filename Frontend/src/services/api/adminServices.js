@@ -1329,3 +1329,26 @@ export const reportService = {
     };
   },
 };
+
+export const systemSettingsService = {
+  async getSettings() {
+    const res = await axiosClient.get('/SystemSettings');
+    return res.data;
+  },
+  async updateSettings(payload) {
+    const res = await axiosClient.put('/SystemSettings', payload);
+    return res.data;
+  },
+  async getSystemInformation() {
+    const res = await axiosClient.get('/SystemSettings/system-info');
+    return res.data;
+  },
+  async getAiConfiguration() {
+    const res = await axiosClient.get('/SystemSettings/ai-config');
+    return res.data;
+  },
+  async runAiDiagnostic() {
+    const res = await axiosClient.post('/AiRecommendations/diagnostic');
+    return res.data;
+  },
+};

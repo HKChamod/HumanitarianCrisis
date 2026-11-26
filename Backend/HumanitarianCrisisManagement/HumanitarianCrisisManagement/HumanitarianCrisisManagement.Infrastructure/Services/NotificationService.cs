@@ -9,10 +9,14 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 public class NotificationService : INotificationService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ISystemSettingsService? _systemSettingsService;
 
-    public NotificationService(ApplicationDbContext context)
+    public NotificationService(
+        ApplicationDbContext context,
+        ISystemSettingsService? systemSettingsService = null)
     {
         _context = context;
+        _systemSettingsService = systemSettingsService;
     }
 
     public async Task<IReadOnlyList<NotificationResponse>> GetForUserAsync(
@@ -82,6 +86,24 @@ public class NotificationService : INotificationService
         string? relatedEntityType = null,
         int? relatedEntityId = null)
     {
+        if (_systemSettingsService != null)
+        {
+            var settings = await _systemSettingsService.GetSettingsAsync();
+            var notif = settings.Notification;
+            if (!notif.SystemNotificationsEnabled)
+                return;
+
+            var cat = category.Trim();
+            if (cat.Equals("Crisis", StringComparison.OrdinalIgnoreCase) && !notif.EnableCrisisAlerts)
+                return;
+            if (cat.Equals("Request", StringComparison.OrdinalIgnoreCase) && !notif.EnableRequestAlerts)
+                return;
+            if ((cat.Equals("Allocation", StringComparison.OrdinalIgnoreCase) || cat.Equals("Inventory", StringComparison.OrdinalIgnoreCase)) && !notif.EnableLowStockAlerts)
+                return;
+            if (cat.Equals("Shelter", StringComparison.OrdinalIgnoreCase) && !notif.EnableShelterAlerts)
+                return;
+        }
+
         var userIds = await _context.UserRoles
             .AsNoTracking()
             .Where(ur => ur.Role.RoleName == roleName && ur.User.IsActive)
