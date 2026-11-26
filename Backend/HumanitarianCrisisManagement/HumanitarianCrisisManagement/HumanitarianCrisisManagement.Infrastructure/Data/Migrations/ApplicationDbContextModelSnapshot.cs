@@ -1940,6 +1940,47 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<int>("SystemSettingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SystemSettingId"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SettingKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SystemSettingId");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("SettingKey")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("SystemSettings", (string)null);
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -2564,6 +2605,16 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("CitizenRequest");
 
                     b.Navigation("Shelter");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.SystemSetting", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.UserRole", b =>

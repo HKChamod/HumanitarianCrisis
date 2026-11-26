@@ -4,6 +4,7 @@ using HumanitarianCrisisManagement.Application.Options;
 using HumanitarianCrisisManagement.Infrastructure.Data;
 using HumanitarianCrisisManagement.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +19,9 @@ public static class DependencyInjection
     {
         // Database
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString)
+                .ConfigureWarnings(warnings =>
+                    warnings.Log(RelationalEventId.PendingModelChangesWarning)));
 
         // Authentication Services
         services.AddScoped<IAuthService, AuthService>();

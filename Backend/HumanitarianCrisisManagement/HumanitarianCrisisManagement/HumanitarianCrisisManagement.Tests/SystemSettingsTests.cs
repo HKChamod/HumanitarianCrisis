@@ -256,4 +256,97 @@ public class SystemSettingsTests
         var badRes = await adminClient.PutAsJsonAsync("/api/SystemSettings", invalidReq);
         Assert.Equal(HttpStatusCode.BadRequest, badRes.StatusCode);
     }
+
+    [Fact]
+    public async Task GetSettingsAsync_ImportsFileSettingsOnceWhenTableIsEmpty_WithoutOverwritingExistingDbRows()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "hcms-settings-import-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, "system-settings.json");
+
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, """
+                {
+                  "general": {
+                    "systemDisplayName": "Imported HCMS Portal",
+                    "defaultLanguage": "si",
+                    "defaultCountry": "Sri Lanka",
+                    "defaultCurrency": "LKR",
+                    "contactEmail": "imported@hcms.test.local",
+                    "contactPhone": "119"
+                  },
+                  "organization": {
+                    "defaultOrganizationType": "Hospital",
+                    "allowOrganizationRegistration": false,
+                    "requireMembershipApproval": true,
+                    "defaultMembershipRoleName": "Coordinator"
+                  },
+                  "operational": {
+                    "allowCitizenRequestSubmission": true,
+                    "defaultRequestPriority": "High",
+                    "requireRequestReviewBeforeAllocation": true,
+                    "defaultAllocationBatchLimit": 250,
+                    "defaultShelterCapacityAlertPercent": 90,
+                    "requireVolunteerApprovalBeforeAssignment": true
+                  },
+                  "notification": {
+                    "systemNotificationsEnabled": false,
+                    "enableCrisisAlerts": true,
+                    "enableRequestAlerts": false,
+                    "enableLowStockAlerts": true,
+                    "enableShelterAlerts": true,
+                    "notificationRetentionDays": 60
+                  }
+                }
+                """);
+
+            await using var env = await SettingsTestEnv.CreateAsync();
+            using var scope = env.Factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var audit = scope.ServiceProvider.GetRequiredService<IAuditLogService>();
+            var ai = scope.ServiceProvider.GetRequiredService<IAiDecisionSupportService>();
+            var aiOpts = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<HumanitarianCrisisManagement.Application.Options.AiProviderOptions>>();
+            var config = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+
+            var service = new SystemSettingsService(db, audit, ai, aiOpts, config, tempFile);
+
+            var imported = await service.GetSettingsAsync();
+            Assert.Equal("Database", imported.PersistenceMode);
+            Assert.Equal("Imported HCMS Portal", imported.General.SystemDisplayName);
+            Assert.Equal("si", imported.General.DefaultLanguage);
+            Assert.Equal(250, imported.Operational.DefaultAllocationBatchLimit);
+            Assert.Equal(60, imported.Notification.NotificationRetentionDays);
+            Assert.False(imported.Notification.SystemNotificationsEnabled);
+            Assert.True(File.Exists(tempFile));
+
+            var dbCount = await db.SystemSettings.CountAsync();
+            Assert.True(dbCount > 0);
+
+            // Modify the file on disk; subsequent read must keep DB values and not overwrite them.
+            await File.WriteAllTextAsync(tempFile, """
+                {
+                  "general": {
+                    "systemDisplayName": "Should Not Overwrite",
+                    "defaultLanguage": "ta",
+                    "defaultCountry": "Sri Lanka",
+                    "defaultCurrency": "LKR",
+                    "contactEmail": "overwrite@hcms.test.local",
+                    "contactPhone": "119"
+                  }
+                }
+                """);
+
+            var secondRead = await service.GetSettingsAsync();
+            Assert.Equal("Imported HCMS Portal", secondRead.General.SystemDisplayName);
+            Assert.Equal("si", secondRead.General.DefaultLanguage);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
 }

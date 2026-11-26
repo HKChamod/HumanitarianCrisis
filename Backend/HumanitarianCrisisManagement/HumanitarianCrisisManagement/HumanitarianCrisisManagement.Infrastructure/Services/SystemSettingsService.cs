@@ -258,6 +258,11 @@ public class SystemSettingsService : ISystemSettingsService
         var defaults = new SystemSettingsResponse { PersistenceMode = "Database" };
         if (rows.Count == 0)
         {
+            var imported = await TryImportFromFileOnceAsync(ct);
+            if (imported != null)
+            {
+                return imported;
+            }
             return defaults;
         }
 
@@ -314,6 +319,57 @@ public class SystemSettingsService : ISystemSettingsService
             Notification = request.Notification,
             UpdatedAt = now,
             UpdatedByEmail = actorEmail,
+            PersistenceMode = "Database"
+        };
+    }
+
+    private async Task<SystemSettingsResponse?> TryImportFromFileOnceAsync(CancellationToken ct)
+    {
+        if (!File.Exists(_settingsFilePath))
+        {
+            return null;
+        }
+
+        var fileSettings = await LoadFromFileAsync(ct);
+        var normalized = NormalizeRequest(new UpdateSystemSettingsRequest
+        {
+            General = fileSettings.General,
+            Organization = fileSettings.Organization,
+            Operational = fileSettings.Operational,
+            Notification = fileSettings.Notification
+        });
+
+        await using var tx = await _context.Database.BeginTransactionAsync(ct);
+        if (await _context.SystemSettings.AnyAsync(ct))
+        {
+            await tx.RollbackAsync(ct);
+            return null;
+        }
+
+        var now = fileSettings.UpdatedAt ?? DateTime.UtcNow;
+        foreach (var (key, category, value) in FlattenToEntries(normalized))
+        {
+            _context.SystemSettings.Add(new SystemSetting
+            {
+                SettingKey = key,
+                Category = category,
+                SettingValue = value,
+                UpdatedAt = now,
+                UpdatedByUserId = null
+            });
+        }
+
+        await _context.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        return new SystemSettingsResponse
+        {
+            General = normalized.General,
+            Organization = normalized.Organization,
+            Operational = normalized.Operational,
+            Notification = normalized.Notification,
+            UpdatedAt = now,
+            UpdatedByEmail = fileSettings.UpdatedByEmail,
             PersistenceMode = "Database"
         };
     }
