@@ -7,21 +7,46 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
-using HumanitarianCrisisManagement.API.Exceptions;
-using System.Security.Claims;
 using HumanitarianCrisisManagement.API.Authorization;
+using HumanitarianCrisisManagement.API.Exceptions;
+using HumanitarianCrisisManagement.API.Health;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Security.Claims;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Infrastructure Services
 var connectionString = builder.Configuration
-    .GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException(
-        "DefaultConnection connection string is not configured.");
+    .GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "DefaultConnection connection string is not configured. Configure ConnectionStrings__DefaultConnection via environment variables or Key Vault.");
+}
 
-builder.Services.Configure<AiProviderOptions>(
-    builder.Configuration.GetSection(AiProviderOptions.SectionName));
+var aiOptionsSection = builder.Configuration.GetSection(AiProviderOptions.SectionName);
+if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+{
+    var aiProvider = aiOptionsSection["Provider"]?.Trim();
+    if (string.Equals(aiProvider, AiProviderOptions.GeminiProviderName, StringComparison.OrdinalIgnoreCase) &&
+        string.IsNullOrWhiteSpace(aiOptionsSection["GeminiApiKey"]))
+    {
+        throw new InvalidOperationException(
+            "AiProvider:GeminiApiKey is required when AiProvider:Provider is set to 'Gemini' in Production.");
+    }
+
+    if (string.Equals(aiProvider, AiProviderOptions.GroqProviderName, StringComparison.OrdinalIgnoreCase) &&
+        string.IsNullOrWhiteSpace(aiOptionsSection["GroqApiKey"]))
+    {
+        throw new InvalidOperationException(
+            "AiProvider:GroqApiKey is required when AiProvider:Provider is set to 'Groq' in Production.");
+    }
+}
+
+builder.Services.Configure<AiProviderOptions>(aiOptionsSection);
 builder.Services.Configure<DevelopmentSeedOptions>(
     builder.Configuration.GetSection(DevelopmentSeedOptions.SectionName));
 builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
@@ -37,9 +62,12 @@ builder.Services.AddHttpClient<GroqAiAnalysisProvider>(client =>
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException(
-        "JWT signing key is not configured.");
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "JWT signing key is not configured. Configure Jwt__Key via environment variables or Key Vault.");
+}
 
 var keyBytes = Convert.FromBase64String(jwtKey);
 
@@ -163,11 +191,33 @@ builder.Services.AddScoped<
 
 // CORS Configuration
 const string FrontendCorsPolicy = "FrontendDevPolicy";
-var allowedOrigins = builder.Configuration
+var allowedOrigins = (builder.Configuration
     .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>();
+    .Get<string[]>() ?? Array.Empty<string>())
+    .Where(o => !string.IsNullOrWhiteSpace(o))
+    .Select(o => o.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
 
-if (allowedOrigins == null || allowedOrigins.Length == 0)
+if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+{
+    if (allowedOrigins.Length == 0)
+    {
+        throw new InvalidOperationException(
+            "Cors:AllowedOrigins must be explicitly configured with at least one HTTPS origin in Production (e.g. Cors__AllowedOrigins__0).");
+    }
+
+    foreach (var origin in allowedOrigins)
+    {
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri) ||
+            !string.Equals(originUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Invalid Production CORS origin '{origin}'. All Production CORS origins must use HTTPS.");
+        }
+    }
+}
+else if (allowedOrigins.Length == 0)
 {
     allowedOrigins = ["http://localhost:5173"];
 }
@@ -196,10 +246,12 @@ builder.Services.AddCors(options =>
 // API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseReadinessHealthCheck>("database", tags: ["ready"]);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 2;
 });
 
 builder.Services.AddSwaggerGen(options =>
@@ -296,13 +348,35 @@ app.UseCors(FrontendCorsPolicy);
 
 if (!app.Environment.IsDevelopment())
 {
+    app.UseHsts();
     app.UseHttpsRedirection();
 }
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/health");
+static Task WriteSafeHealthResponse(HttpContext context, HealthReport report)
+{
+    context.Response.ContentType = "application/json";
+    var payload = JsonSerializer.Serialize(new
+    {
+        status = report.Status.ToString(),
+        checks = report.Entries.ToDictionary(
+            e => e.Key,
+            e => e.Value.Status.ToString())
+    });
+    return context.Response.WriteAsync(payload);
+}
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready"),
+    ResponseWriter = WriteSafeHealthResponse
+});
 app.MapControllers();
 
 app.Run();
