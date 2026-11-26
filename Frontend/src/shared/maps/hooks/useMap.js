@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import maplibreglWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   SRI_LANKA_BOUNDS,
   SRI_LANKA_CENTER,
   SRI_LANKA_DEFAULT_ZOOM,
 } from '../constants/mapConstants.js';
+
+if (typeof maplibregl.setWorkerUrl === 'function' && maplibreglWorkerUrl) {
+  maplibregl.setWorkerUrl(maplibreglWorkerUrl);
+}
 
 export function useMap({
   containerRef,

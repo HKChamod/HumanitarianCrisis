@@ -123,7 +123,7 @@ export function MapView({
   const showEmptyOverlay = !loading && filteredItems.length === 0 && !hasPolygons;
 
   return (
-    <div className={`space-y-2.5 ${className}`}>
+    <div className={`w-full space-y-2.5 ${className}`}>
       {(showSearch || showLayerControl || showControls) && (
         <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-[#E2E8F0] rounded-xl p-2.5">
           <div className="flex flex-wrap items-center gap-2.5">
