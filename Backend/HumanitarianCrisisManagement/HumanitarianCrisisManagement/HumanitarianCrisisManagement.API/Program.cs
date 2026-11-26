@@ -239,6 +239,35 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+if (args.Any(a => string.Equals(a, "--seed-synthetic", StringComparison.OrdinalIgnoreCase)))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        Console.Error.WriteLine(
+            $"ERROR: --seed-synthetic is strictly restricted to Development environment (current: '{app.Environment.EnvironmentName}').");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+
+        var syntheticSeeder = scope.ServiceProvider.GetRequiredService<SyntheticDataSeeder>();
+        var report = await syntheticSeeder.SeedAsync(app.Environment.EnvironmentName);
+        Console.WriteLine(report.FormatSummary());
+        return;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"ERROR: Synthetic data seeding failed: {ex.Message}");
+        Environment.ExitCode = 1;
+        return;
+    }
+}
+
 // HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
