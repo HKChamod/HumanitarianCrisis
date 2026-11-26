@@ -48,11 +48,28 @@ public class SystemSettingsService : ISystemSettingsService
             : settingsFilePath;
     }
 
+    private bool IsStrictDatabaseOnlyEnvironment
+    {
+        get
+        {
+            var env = _configuration["ASPNETCORE_ENVIRONMENT"]
+                ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                ?? "Production";
+            return !string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(env, "Testing", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     public async Task<SystemSettingsResponse> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
+        if (IsStrictDatabaseOnlyEnvironment)
+        {
+            return await LoadFromDatabaseAsync(cancellationToken, allowFileImport: false);
+        }
+
         if (await CanUseDatabaseTableAsync(cancellationToken))
         {
-            return await LoadFromDatabaseAsync(cancellationToken);
+            return await LoadFromDatabaseAsync(cancellationToken, allowFileImport: true);
         }
 
         return await LoadFromFileAsync(cancellationToken);
@@ -74,7 +91,11 @@ public class SystemSettingsService : ISystemSettingsService
         var now = DateTime.UtcNow;
 
         SystemSettingsResponse saved;
-        if (await CanUseDatabaseTableAsync(cancellationToken))
+        if (IsStrictDatabaseOnlyEnvironment)
+        {
+            saved = await SaveToDatabaseAsync(normalized, actorUserId, actorEmail, now, cancellationToken);
+        }
+        else if (await CanUseDatabaseTableAsync(cancellationToken))
         {
             saved = await SaveToDatabaseAsync(normalized, actorUserId, actorEmail, now, cancellationToken);
         }
@@ -248,7 +269,9 @@ public class SystemSettingsService : ISystemSettingsService
         }
     }
 
-    private async Task<SystemSettingsResponse> LoadFromDatabaseAsync(CancellationToken ct)
+    private async Task<SystemSettingsResponse> LoadFromDatabaseAsync(
+        CancellationToken ct,
+        bool allowFileImport = true)
     {
         var rows = await _context.SystemSettings
             .AsNoTracking()
@@ -258,10 +281,13 @@ public class SystemSettingsService : ISystemSettingsService
         var defaults = new SystemSettingsResponse { PersistenceMode = "Database" };
         if (rows.Count == 0)
         {
-            var imported = await TryImportFromFileOnceAsync(ct);
-            if (imported != null)
+            if (allowFileImport)
             {
-                return imported;
+                var imported = await TryImportFromFileOnceAsync(ct);
+                if (imported != null)
+                {
+                    return imported;
+                }
             }
             return defaults;
         }

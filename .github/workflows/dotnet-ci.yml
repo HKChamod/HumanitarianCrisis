@@ -1,37 +1,62 @@
-name: Backend CI (.NET 10)
+name: HCMS CI (.NET 10 + React)
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, upgrade/dotnet-10 ]
     paths:
       - 'Backend/**'
+      - 'Frontend/**'
       - '.github/workflows/**'
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, upgrade/dotnet-10 ]
     paths:
       - 'Backend/**'
+      - 'Frontend/**'
       - '.github/workflows/**'
 
 jobs:
-  build:
+  backend:
     name: Build & Test Backend
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.0.x'
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln
+      - name: Restore dependencies
+        run: dotnet restore Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln
 
-    - name: Build solution
-      run: dotnet build Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-restore
 
-    - name: Run tests
-      run: dotnet test Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-build --verbosity normal || true
+      - name: Run tests
+        run: dotnet test Backend/HumanitarianCrisisManagement/HumanitarianCrisisManagement/HumanitarianCrisisManagement.sln --configuration Release --no-build --verbosity normal
 
+  frontend:
+    name: Lint & Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm --prefix Frontend ci
+
+      - name: Lint frontend
+        run: npm --prefix Frontend run lint
+
+      - name: Build frontend
+        run: npm --prefix Frontend run build

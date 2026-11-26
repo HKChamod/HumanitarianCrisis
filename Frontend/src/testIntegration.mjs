@@ -95,7 +95,11 @@ function isAdminUser(user) {
   return user.permissions.some((p) => ADMIN_PORTAL_ENTRY_PERMISSIONS.includes(p));
 }
 
-const API_BASE_URL = 'http://localhost:5107/api';
+const API_BASE_URL = (
+  process.env.HCMS_API_BASE_URL ||
+  process.env.VITE_API_BASE_URL ||
+  'http://localhost:5107/api'
+).replace(/\/+$/, '');
 
 async function runTests() {
   console.log('=====================================================');
@@ -678,7 +682,7 @@ async function runTests() {
 
   // --- TEST 4: BACKEND LIVE ENDPOINTS INTEGRATION ---
   // Requires HCMS_TEST_ADMIN_EMAIL and HCMS_TEST_ADMIN_PASSWORD in the environment.
-  console.log('\n--- TEST GROUP 4: Backend Live API Integration (http://localhost:5107) ---');
+  console.log(`\n--- TEST GROUP 4: Backend Live API Integration (${API_BASE_URL}) ---`);
   const testAdminEmail = process.env.HCMS_TEST_ADMIN_EMAIL?.trim();
   const testAdminPassword = process.env.HCMS_TEST_ADMIN_PASSWORD;
   const hasAdminEmail = Boolean(testAdminEmail);
