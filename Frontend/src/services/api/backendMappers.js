@@ -626,14 +626,18 @@ export function mapRoleFromApi(dto) {
 export function mapPermissionFromApi(dto) {
   const name = dto?.permissionName ?? dto?.name ?? '';
   const modulePart = name.includes('.') ? name.split('.')[0] : 'General';
+  const assignedRoles = Array.isArray(dto?.assignedRoles) ? dto.assignedRoles : [];
   return {
     id: String(dto?.permissionId ?? dto?.id ?? ''),
     permissionId: Number(dto?.permissionId ?? dto?.id ?? 0),
     key: name,
+    code: dto?.code ?? name,
     name,
     permissionName: name,
     module: modulePart,
+    category: dto?.category ?? modulePart,
     description: dto?.description ?? '',
+    assignedRoles,
   };
 }
 

@@ -14,6 +14,7 @@ import {
   mapRequestFromApi,
   mapOrganizationFromApi,
   mapMemberFromApi,
+  mapPermissionFromApi,
   mapResourceFromApi,
   mapWarehouseFromApi,
   mapWarehouseInventoryFromApi,
@@ -482,6 +483,19 @@ async function runTests() {
       mappedAdminMember.status === 'Pending' &&
       mappedAdminMember.userEmail === 'admin@test.com',
     'mapMemberFromApi maps backend membershipStatus Pending accurately'
+  );
+
+  const mappedPerm = mapPermissionFromApi({
+    permissionId: 3,
+    permissionName: 'Organizations.View',
+    description: 'View organizations',
+  });
+  assert(
+    mappedPerm.code === 'Organizations.View' &&
+      mappedPerm.category === 'Organizations' &&
+      Array.isArray(mappedPerm.assignedRoles) &&
+      mappedPerm.assignedRoles.length === 0,
+    'mapPermissionFromApi provides code, category, and safe empty assignedRoles array'
   );
 
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Building2, CheckCircle2, Eye, Mail, Phone, Plus, Shield, UserPlus, Users, XCircle } from 'lucide-react';
-import { organizationService, roleService } from '../../../services/api/adminServices';
+import { organizationService, permissionService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DataTable } from '../../../components/tables/DataTable';
 import { FilterPanel, SearchBar } from '../../../components/forms/FormControls';
@@ -125,7 +125,7 @@ export function OrganizationsPage({ mode = 'all' }) {
         organizationService.getRoles(org.id),
         permissionCatalog.length > 0
           ? Promise.resolve(permissionCatalog)
-          : roleService.listPermissions(),
+          : permissionService.list(),
       ]);
 
       setOrgMembers(membersRes.status === 'fulfilled' ? membersRes.value : []);
@@ -141,6 +141,8 @@ export function OrganizationsPage({ mode = 'all' }) {
         setDrawerError(membersRes.reason?.detail || membersRes.reason?.message || 'Unable to load organization members.');
       } else if (rolesRes.status === 'rejected') {
         setDrawerError(rolesRes.reason?.detail || rolesRes.reason?.message || 'Unable to load organization roles.');
+      } else if (permsRes.status === 'rejected') {
+        setDrawerError(permsRes.reason?.detail || permsRes.reason?.message || 'Unable to load permissions catalog.');
       }
     } finally {
       setDrawerLoading(false);
@@ -169,10 +171,17 @@ export function OrganizationsPage({ mode = 'all' }) {
       await organizationService.addMember(selectedOrg.id, addMemberEmail);
       setAddMemberEmail('');
       setDrawerSuccess('Member added with Pending status. Approve the membership to grant organization access.');
-      await loadOrgDetails(selectedOrg);
-      await loadData();
     } catch (err) {
       setDrawerError(err?.detail || err?.message || 'Unable to add member.');
+      setAddingMember(false);
+      return;
+    }
+
+    try {
+      await loadOrgDetails(selectedOrg);
+      await loadData();
+    } catch {
+      // Add Member already succeeded; refresh errors are handled inside loadOrgDetails
     } finally {
       setAddingMember(false);
     }
