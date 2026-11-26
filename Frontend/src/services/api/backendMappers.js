@@ -593,6 +593,9 @@ export function mapDonationFromApi(dto) {
 
 export function mapUserFromApi(dto) {
   const roles = Array.isArray(dto?.roles) ? dto.roles : [];
+  const organizations = Array.isArray(dto?.organizations) ? dto.organizations : [];
+  const organizationRoles = Array.isArray(dto?.organizationRoles) ? dto.organizationRoles : [];
+  const department = dto?.department || (organizations.length > 0 ? organizations.join(', ') : '');
   return {
     id: String(dto?.userId ?? dto?.id ?? ''),
     userId: Number(dto?.userId ?? dto?.id ?? 0),
@@ -600,6 +603,9 @@ export function mapUserFromApi(dto) {
     email: dto?.email ?? '',
     phone: dto?.phoneNumber ?? '',
     phoneNumber: dto?.phoneNumber ?? '',
+    department,
+    organizations,
+    organizationRoles,
     isActive: dto?.isActive ?? true,
     status: dto?.isActive ? 'Active' : 'Inactive',
     roles,

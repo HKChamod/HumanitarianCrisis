@@ -6,6 +6,7 @@ using System.Text.Json;
 using HumanitarianCrisisManagement.Application.DTOs.Auth;
 using HumanitarianCrisisManagement.Application.DTOs.OrganizationMemberships;
 using HumanitarianCrisisManagement.Application.DTOs.Organizations;
+using HumanitarianCrisisManagement.Application.DTOs.Users;
 using HumanitarianCrisisManagement.Application.Interfaces;
 using HumanitarianCrisisManagement.Domain.Entities;
 using HumanitarianCrisisManagement.Infrastructure.Data;
@@ -148,6 +149,22 @@ public class OrganizationAdminWorkflowTests
             $"/api/organizations/{testOrg.OrganizationId}/members/{membership.MembershipId}/roles",
             new AssignOrganizationRolesRequest { RoleIds = [orgAdminRole.RoleId] });
         Assert.Equal(HttpStatusCode.OK, assignRoleRes.StatusCode);
+
+        // 6b. Verify GET /api/roles reports UserCount = 1 for OrganizationAdmin (via OrganizationMembershipRoles)
+        var allRolesRes = await sysAdminClient.GetAsync("/api/roles");
+        Assert.Equal(HttpStatusCode.OK, allRolesRes.StatusCode);
+        var allRoles = await allRolesRes.Content.ReadFromJsonAsync<List<RoleDetailResponse>>(JsonOptions);
+        var orgAdminDetail = Assert.Single(allRoles!, r => r.RoleId == orgAdminRole.RoleId);
+        Assert.Equal(1, orgAdminDetail.UserCount);
+
+        // 6c. Verify GET /api/users reports Department/Organizations and OrganizationRoles for admin@test.com
+        var allUsersRes = await sysAdminClient.GetAsync("/api/users");
+        Assert.Equal(HttpStatusCode.OK, allUsersRes.StatusCode);
+        var allUsers = await allUsersRes.Content.ReadFromJsonAsync<List<UserAdminResponse>>(JsonOptions);
+        var orgAdminUser = Assert.Single(allUsers!, u => u.Email == OrgAdminEmail);
+        Assert.Equal("TEST", orgAdminUser.Department);
+        Assert.Contains("TEST", orgAdminUser.Organizations);
+        Assert.Contains("OrganizationAdmin (TEST)", orgAdminUser.OrganizationRoles);
 
         // 7. Verify effective organization access for admin@test.com
         var myAccessRes = await orgAdminClient.GetAsync($"/api/organizations/{testOrg.OrganizationId}/my-access");
