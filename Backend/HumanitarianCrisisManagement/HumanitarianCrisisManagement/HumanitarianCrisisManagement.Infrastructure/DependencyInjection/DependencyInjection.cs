@@ -48,6 +48,7 @@ public static class DependencyInjection
 
         services.AddAiAnalysisProviderSelection();
         services.AddScoped<IAiDecisionSupportService, AiDecisionSupportService>();
+        services.AddScoped<ISystemSettingsService, SystemSettingsService>();
 
         return services;
     }

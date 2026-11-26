@@ -195,15 +195,7 @@ export function renderAdminRoutes() {
       {/* ADM-18, ADM-19, ADM-20: System Management */}
       <Route path="notifications" element={withSuspense(<NotificationsPage />, 'Notifications.View')} />
       <Route path="audit-logs" element={withSuspense(<AuditLogsPage />, 'AuditLogs.View')} />
-      <Route
-        path="settings"
-        element={withLiveOrMockModule(
-          <SystemSettingsPage />,
-          'System Settings Unavailable in Live Mode',
-          'System configuration is managed via server environment variables and User Secrets.',
-          'Settings.Manage'
-        )}
-      />
+      <Route path="settings" element={withSuspense(<SystemSettingsPage />, 'Permissions.View')} />
     </Route>
   );
 }
