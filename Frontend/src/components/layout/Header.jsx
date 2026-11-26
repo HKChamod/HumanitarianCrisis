@@ -1,13 +1,28 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, Menu, X } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageSwitcher } from '../common/ProgressBar';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { getDefaultRouteForUser } from '../../app/authRouting';
 
 export function Header() {
   const { t } = useLanguage();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, authLoading, logout } = useAuth();
+  const { approvedMemberships } = useOrganization();
+
+  const portalRoute = isAuthenticated && user
+    ? getDefaultRouteForUser(user, approvedMemberships)
+    : '/login';
+  const portalLabel =
+    portalRoute === '/admin'
+      ? 'Admin Portal'
+      : portalRoute === '/organization'
+        ? 'Organization Portal'
+        : 'Citizen Portal';
 
   const navItems = [
     { label: t('navCrises'), path: '/crises' },
@@ -49,25 +64,68 @@ export function Header() {
           <div className="header-actions">
             <LanguageSwitcher />
 
-            <Link
-              to="/login"
-              className="header-login-link"
-            >
-              {t('login')}
-            </Link>
+            {!authLoading && isAuthenticated && user ? (
+              <>
+                <Link
+                  to={portalRoute}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.8125rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <LayoutDashboard size={14} />
+                  <span>{portalLabel}</span>
+                </Link>
 
-            <Link
-              to="/register"
-              className="btn btn-secondary btn-sm"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.35rem 0.8rem',
-                fontSize: '0.8125rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {t('register')}
-            </Link>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.8125rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    color: '#DC2626',
+                    borderColor: '#FECACA',
+                  }}
+                >
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </button>
+              </>
+            ) : !authLoading ? (
+              <>
+                <Link
+                  to="/login"
+                  className="header-login-link"
+                >
+                  {t('login')}
+                </Link>
+
+                <Link
+                  to="/register"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    padding: '0.35rem 0.8rem',
+                    fontSize: '0.8125rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {t('register')}
+                </Link>
+              </>
+            ) : null}
 
             {/* Mobile Hamburger Button */}
             <button
