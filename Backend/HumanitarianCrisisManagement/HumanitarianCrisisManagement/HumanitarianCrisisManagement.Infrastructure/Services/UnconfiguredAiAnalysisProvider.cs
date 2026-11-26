@@ -1,3 +1,4 @@
+using HumanitarianCrisisManagement.Application.DTOs.AiRecommendations;
 using HumanitarianCrisisManagement.Application.Exceptions;
 using HumanitarianCrisisManagement.Application.Interfaces;
 
@@ -19,5 +20,12 @@ public class UnconfiguredAiAnalysisProvider : IAiAnalysisProvider
     {
         throw new AiProviderUnavailableException(
             "No AI analysis provider is configured. Configure an AI provider to generate live citizen request recommendations.");
+    }
+
+    public Task<AiProviderDiagnosticResponse> RunConnectivityDiagnosticAsync(
+        CancellationToken cancellationToken = default)
+    {
+        throw new AiProviderUnavailableException(
+            "No AI analysis provider is configured. Configure an AI provider to run connectivity diagnostics.");
     }
 }

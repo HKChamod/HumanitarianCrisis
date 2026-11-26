@@ -117,19 +117,49 @@ public class OrganizationsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Policy = "Organizations.View")]
+    [Authorize]
     public async Task<IActionResult> GetById(int id)
     {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.View");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
         var result = await _organizationService.GetByIdAsync(id);
         return Ok(result);
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = "Organizations.Manage")]
+    [Authorize]
     public async Task<IActionResult> Update(
         int id,
         [FromBody] UpdateOrganizationRequest request)
     {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.Manage");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
         var result = await _organizationService.UpdateAsync(id, request);
         return Ok(result);
     }
@@ -183,11 +213,29 @@ public class OrganizationsController : ControllerBase
 
     [HttpPost("{id:int}/members")]
     [Authorize]
-    public async Task<IActionResult> RequestMembership(int id)
+    public async Task<IActionResult> RequestMembership(
+        int id,
+        [FromBody] AddOrganizationMemberRequest? request = null)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized();
+        }
+
+        if (request != null && (request.UserId.HasValue || !string.IsNullOrWhiteSpace(request.Email)))
+        {
+            var authFailure = await AuthorizeOrganizationActionAsync(
+                id,
+                userId,
+                "Organizations.ApproveMembers");
+
+            if (authFailure != null)
+            {
+                return authFailure;
+            }
+
+            var added = await _membershipService.AddMemberAsync(id, request);
+            return StatusCode(StatusCodes.Status201Created, added);
         }
 
         var result = await _membershipService.RequestMembershipAsync(
@@ -195,6 +243,54 @@ public class OrganizationsController : ControllerBase
             userId);
 
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpGet("{id:int}/roles")]
+    [Authorize]
+    public async Task<IActionResult> GetOrganizationRoles(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.View");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
+        var roles = await _membershipService.GetOrganizationRolesAsync(id);
+        return Ok(roles);
+    }
+
+    [HttpPost("{id:int}/roles")]
+    [Authorize]
+    public async Task<IActionResult> CreateOrganizationRole(
+        int id,
+        [FromBody] CreateOrganizationRoleRequest request)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var authFailure = await AuthorizeOrganizationActionAsync(
+            id,
+            userId,
+            "Organizations.Manage");
+
+        if (authFailure != null)
+        {
+            return authFailure;
+        }
+
+        var created = await _membershipService.CreateOrganizationRoleAsync(id, request, userId);
+        return StatusCode(StatusCodes.Status201Created, created);
     }
 
     [HttpGet("{id:int}/members")]

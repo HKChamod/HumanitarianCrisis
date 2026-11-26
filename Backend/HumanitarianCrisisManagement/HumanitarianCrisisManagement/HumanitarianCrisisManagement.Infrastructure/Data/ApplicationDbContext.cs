@@ -41,6 +41,16 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<AiRecommendation> AiRecommendations => Set<AiRecommendation>();
 
+    // Shelters, Volunteers, Donations, Notifications & Audit
+    public DbSet<Shelter> Shelters => Set<Shelter>();
+    public DbSet<ShelterPlacement> ShelterPlacements => Set<ShelterPlacement>();
+    public DbSet<Volunteer> Volunteers => Set<Volunteer>();
+    public DbSet<VolunteerAssignment> VolunteerAssignments => Set<VolunteerAssignment>();
+    public DbSet<Donation> Donations => Set<Donation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

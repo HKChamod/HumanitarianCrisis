@@ -148,6 +148,17 @@ export function CitizenDashboard() {
 
   // Open track modal by ref string (e.g. from notification)
   const handleTrackByReference = async (refNum) => {
+    if (!USE_MOCK_API) {
+      const match = requests.find(
+        (r) => String(r.referenceNumber || '').toLowerCase() === String(refNum || '').toLowerCase()
+      );
+      if (match) {
+        setSelectedRequestForTracking(match);
+        setIsTrackModalOpen(true);
+      }
+      return;
+    }
+
     try {
       const res = await citizenApi.trackRequest(refNum);
       setSelectedRequestForTracking(res.data);
@@ -157,10 +168,26 @@ export function CitizenDashboard() {
     }
   };
 
+  // Mark single notification read
+  const handleMarkNotificationRead = async (notifId) => {
+    try {
+      await citizenApi.markNotificationRead(notifId);
+      setNotifications((prev) =>
+        prev.map((n) => (String(n.id) === String(notifId) ? { ...n, read: true } : n))
+      );
+    } catch {
+      // keep existing read state if API call fails
+    }
+  };
+
   // Mark notifications read
   const handleMarkAllRead = async () => {
-    await citizenApi.markAllNotificationsRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await citizenApi.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      setActionError(err?.detail || err?.message || 'Unable to mark notifications as read.');
+    }
   };
 
   // Update profile
@@ -347,6 +374,7 @@ export function CitizenDashboard() {
         onClose={() => setIsNotifDrawerOpen(false)}
         notifications={notifications}
         onMarkAllRead={handleMarkAllRead}
+        onMarkRead={handleMarkNotificationRead}
         onSelectReference={handleTrackByReference}
       />
 

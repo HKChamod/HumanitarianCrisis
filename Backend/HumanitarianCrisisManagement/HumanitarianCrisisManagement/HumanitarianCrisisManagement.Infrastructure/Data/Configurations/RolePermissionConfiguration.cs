@@ -151,7 +151,31 @@ new RolePermission { RolePermissionId = 71, RoleId = 3, PermissionId = 32 },
 new RolePermission { RolePermissionId = 72, RoleId = 3, PermissionId = 33 },
 
 // Responder
-new RolePermission { RolePermissionId = 73, RoleId = 4, PermissionId = 32 }
+new RolePermission { RolePermissionId = 73, RoleId = 4, PermissionId = 32 },
+
+// Shelters, Notifications, AuditLogs, Roles & Permissions
+// Administrator
+new RolePermission { RolePermissionId = 74, RoleId = 2, PermissionId = 34 },
+new RolePermission { RolePermissionId = 75, RoleId = 2, PermissionId = 35 },
+new RolePermission { RolePermissionId = 76, RoleId = 2, PermissionId = 36 },
+new RolePermission { RolePermissionId = 77, RoleId = 2, PermissionId = 37 },
+new RolePermission { RolePermissionId = 78, RoleId = 2, PermissionId = 38 },
+new RolePermission { RolePermissionId = 79, RoleId = 2, PermissionId = 39 },
+
+// CrisisManager
+new RolePermission { RolePermissionId = 80, RoleId = 3, PermissionId = 34 },
+new RolePermission { RolePermissionId = 81, RoleId = 3, PermissionId = 35 },
+new RolePermission { RolePermissionId = 82, RoleId = 3, PermissionId = 36 },
+
+// Responder
+new RolePermission { RolePermissionId = 83, RoleId = 4, PermissionId = 34 },
+new RolePermission { RolePermissionId = 84, RoleId = 4, PermissionId = 36 },
+
+// Citizen, Donor, Volunteer
+new RolePermission { RolePermissionId = 85, RoleId = 1, PermissionId = 34 },
+new RolePermission { RolePermissionId = 86, RoleId = 1, PermissionId = 36 },
+new RolePermission { RolePermissionId = 87, RoleId = 5, PermissionId = 36 },
+new RolePermission { RolePermissionId = 88, RoleId = 6, PermissionId = 36 }
         );
     }
 }

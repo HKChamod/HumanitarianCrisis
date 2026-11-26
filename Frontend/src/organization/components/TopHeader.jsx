@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { organizationSettingsService } from '../services/organizationSettingsService';
+import { organizationOperationsService } from '../services/organizationOperationsService';
 import {
   IconBell,
   IconSearch,
@@ -66,6 +67,23 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
     }
   }, [notifications]);
 
+  // Load live personal notifications from GET /api/Notifications/my in live mode
+  useEffect(() => {
+    if (USE_MOCK_API) return undefined;
+    let cancelled = false;
+    organizationOperationsService
+      .getMyNotifications(30)
+      .then((items) => {
+        if (!cancelled) setNotifications(items);
+      })
+      .catch(() => {
+        if (!cancelled) setNotifications([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.userId]);
+
   // Click outside to close notifications, profile, and search dropdowns
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -89,12 +107,26 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
-  const handleMarkAllAsRead = (e) => {
+  const handleMarkAllAsRead = async (e) => {
     e.stopPropagation();
+    if (!USE_MOCK_API) {
+      try {
+        await organizationOperationsService.markAllNotificationsRead();
+      } catch {
+        return;
+      }
+    }
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
 
-  const handleNotificationClick = (id) => {
+  const handleNotificationClick = async (id) => {
+    if (!USE_MOCK_API) {
+      try {
+        await organizationOperationsService.markNotificationRead(id);
+      } catch {
+        // ignore
+      }
+    }
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, unread: false } : n))
     );
@@ -764,9 +796,7 @@ export const TopHeader = ({ onToggleMobile = () => { }, onNavigateTab = () => { 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '16px 0', fontSize: '12px', color: '#64748B' }}>
-                      {USE_MOCK_API
-                        ? 'No notifications'
-                        : 'Live notifications are not available from the backend API yet.'}
+                      No notifications at this time.
                     </div>
                   ) : (
                     notifications.map(item => (

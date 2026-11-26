@@ -9,10 +9,17 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 public class CitizenRequestService : ICitizenRequestService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService? _auditLogService;
+    private readonly INotificationService? _notificationService;
 
-    public CitizenRequestService(ApplicationDbContext context)
+    public CitizenRequestService(
+        ApplicationDbContext context,
+        IAuditLogService? auditLogService = null,
+        INotificationService? notificationService = null)
     {
         _context = context;
+        _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     public async Task<CitizenRequestResponse> CreateAsync(
@@ -62,6 +69,31 @@ public class CitizenRequestService : ICitizenRequestService
         _context.CitizenRequests.Add(citizenRequest);
 
         await _context.SaveChangesAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                userId,
+                null,
+                "CitizenRequest.Created",
+                "CitizenRequest",
+                citizenRequest.RequestId.ToString(),
+                $"Submitted citizen request #{citizenRequest.RequestId} ({citizenRequest.RequestType}, urgency {citizenRequest.UrgencyLevel}).");
+        }
+
+        if (_notificationService != null)
+        {
+            await _notificationService.CreateAsync(new Application.DTOs.Notifications.CreateNotificationRequest
+            {
+                UserId = userId,
+                Title = $"Assistance Request #{citizenRequest.RequestId} Submitted",
+                Message = $"Your {citizenRequest.RequestType} assistance request (REQ-{citizenRequest.RequestId}) has been registered and is pending coordinator verification.",
+                Category = "CitizenRequest",
+                Severity = "Info",
+                RelatedEntityType = "CitizenRequest",
+                RelatedEntityId = citizenRequest.RequestId
+            });
+        }
 
         return await GetByIdAsync(citizenRequest.RequestId);
     }
@@ -189,10 +221,43 @@ public class CitizenRequestService : ICitizenRequestService
                 $"Cannot change request status from {citizenRequest.Status} to {request.Status}.");
         }
 
+        var previousStatus = citizenRequest.Status;
         citizenRequest.Status = request.Status;
         citizenRequest.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                null,
+                null,
+                "CitizenRequest.StatusUpdated",
+                "CitizenRequest",
+                citizenRequest.RequestId.ToString(),
+                $"Updated citizen request #{citizenRequest.RequestId} status from {previousStatus} to {citizenRequest.Status}.");
+        }
+
+        if (_notificationService != null)
+        {
+            var severity = citizenRequest.Status switch
+            {
+                "Fulfilled" => "Success",
+                "Rejected" => "Warning",
+                _ => "Info"
+            };
+
+            await _notificationService.CreateAsync(new Application.DTOs.Notifications.CreateNotificationRequest
+            {
+                UserId = citizenRequest.UserId,
+                Title = $"Request REQ-{citizenRequest.RequestId}: {citizenRequest.Status}",
+                Message = $"Your {citizenRequest.RequestType} assistance request (REQ-{citizenRequest.RequestId}) status has changed from {previousStatus} to {citizenRequest.Status}.",
+                Category = "CitizenRequest",
+                Severity = severity,
+                RelatedEntityType = "CitizenRequest",
+                RelatedEntityId = citizenRequest.RequestId
+            });
+        }
 
         return await GetByIdAsync(id);
     }

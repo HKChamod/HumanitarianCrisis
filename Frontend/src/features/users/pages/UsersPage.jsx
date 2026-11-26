@@ -36,16 +36,21 @@ export function UsersPage() {
     loadData();
   }, []);
 
-  const allRoles = useMemo(() => Array.from(new Set(users.flatMap((u) => u.roles))), [users]);
+  const allRoles = useMemo(
+    () => Array.from(new Set(users.flatMap((u) => [...(u.roles || []), ...(u.organizationRoles || [])]))),
+    [users]
+  );
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
+      const userRoles = Array.isArray(u.roles) ? u.roles : [];
+      const orgRoles = Array.isArray(u.organizationRoles) ? u.organizationRoles : [];
       if (statusFilter === 'Active' && !u.isActive) return false;
       if (statusFilter === 'Inactive' && u.isActive) return false;
-      if (roleFilter && !u.roles.includes(roleFilter)) return false;
+      if (roleFilter && !userRoles.includes(roleFilter) && !orgRoles.includes(roleFilter)) return false;
       if (q) {
-        const hay = `${u.fullName} ${u.email} ${u.department || ''} ${u.roles.join(' ')}`.toLowerCase();
+        const hay = `${u.fullName} ${u.email} ${u.department || ''} ${userRoles.join(' ')} ${orgRoles.join(' ')}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -56,7 +61,7 @@ export function UsersPage() {
     if (!toggleTarget) return;
     setSaving(true);
     try {
-      const updated = await userService.toggleActive(toggleTarget.id);
+      const updated = await userService.toggleActive(toggleTarget.id, toggleTarget.isActive);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setToggleTarget(null);
@@ -84,18 +89,28 @@ export function UsersPage() {
       },
       {
         id: 'roles',
-        header: 'System Roles',
-        accessorFn: (row) => row.roles.join(', '),
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.original.roles.map((r) => (
-              <span key={r} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#F0FDFA] border border-teal-200 text-[11px] font-medium text-[#0F766E]">
-                <Shield className="w-3 h-3" />
-                {r}
-              </span>
-            ))}
-          </div>
-        ),
+        header: 'Roles & Org Scope',
+        accessorFn: (row) => [...(row.roles || []), ...(row.organizationRoles || [])].join(', '),
+        cell: ({ row }) => {
+          const sysRoles = Array.isArray(row.original.roles) ? row.original.roles : [];
+          const orgRoles = Array.isArray(row.original.organizationRoles) ? row.original.organizationRoles : [];
+          return (
+            <div className="flex flex-wrap gap-1">
+              {sysRoles.map((r) => (
+                <span key={`sys-${r}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#F0FDFA] border border-teal-200 text-[11px] font-medium text-[#0F766E]">
+                  <Shield className="w-3 h-3" />
+                  {r}
+                </span>
+              ))}
+              {orgRoles.map((r) => (
+                <span key={`org-${r}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] font-medium text-amber-800">
+                  <Shield className="w-3 h-3" />
+                  {r}
+                </span>
+              ))}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'isActive',
@@ -213,6 +228,18 @@ export function UsersPage() {
                 ))}
               </div>
             </div>
+            {Array.isArray(selectedUser.organizationRoles) && selectedUser.organizationRoles.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-[#0F172A] mb-2">Organization-Scoped Roles</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedUser.organizationRoles.map((r) => (
+                    <span key={r} className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-medium">
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Drawer>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Eye, Send, XCircle } from 'lucide-react';
+import { CheckCircle2, Eye, Map as MapIcon, Send, XCircle } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { assistanceRequestService, organizationService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -8,6 +8,7 @@ import { FilterPanel, SearchBar } from '../../../components/forms/FormControls';
 import { SeverityBadge, StatusBadge } from '../../../components/common/StatusBadge';
 import { Drawer, Modal } from '../../../components/common/Modal';
 import { PermissionGate } from '../../../app/providers/AuthProvider';
+import { MapView, adaptCitizenRequestToMapItem, adaptCollectionToMapItems } from '../../../shared/maps';
 
 const REQUEST_STATUSES = ['Pending', 'Under Review', 'Approved', 'Assigned', 'In Progress', 'Completed', 'Rejected'];
 const REQUEST_URGENCIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -26,6 +27,7 @@ export function AssistanceRequestsPage({ initialStatusFilter = '' }) {
   const [categoryFilter, setCategoryFilter] = useState('');
 
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showMap, setShowMap] = useState(false);
   const [actionModal, setActionModal] = useState(null); // { type: 'Approve' | 'Reject' | 'Assign', request }
   const [reviewNote, setReviewNote] = useState('');
   const [selectedOrg, setSelectedOrg] = useState('');
@@ -238,7 +240,38 @@ export function AssistanceRequestsPage({ initialStatusFilter = '' }) {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+            showMap
+              ? 'bg-[#0F766E] text-white border-[#0F766E]'
+              : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          {showMap ? 'Hide Map' : 'Map Overview'}
+        </button>
       </FilterPanel>
+
+      {showMap && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3">
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filteredRequests, adaptCitizenRequestToMapItem);
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                onSelectItem={(item) => setSelectedRequest(item?.properties?.raw || null)}
+                heightClass="h-[380px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="No assistance requests in the current filter have valid coordinates."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       <DataTable
         data={filteredRequests}

@@ -159,6 +159,14 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
                     b.Property<int?>("ParentAreaId")
                         .HasColumnType("int");
 
@@ -175,6 +183,63 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasIndex("ParentAreaId");
 
                     b.ToTable("Areas");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<long>("AuditLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AuditLogId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ActorEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Success");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("AuditLogId");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("EntityType");
+
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", b =>
@@ -281,6 +346,18 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<string>("LocationName")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
                     b.Property<string>("SeverityLevel")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -303,6 +380,121 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("CrisisEvents");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Donation", b =>
+                {
+                    b.Property<int>("DonationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DonationId"));
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CrisisId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasDefaultValue("LKR");
+
+                    b.Property<string>("DonationType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Monetary");
+
+                    b.Property<string>("DonorEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DonorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DonorPhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int?>("DonorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InventoryTransactionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("ResourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WarehouseId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DonationId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CrisisId");
+
+                    b.HasIndex("DonationType");
+
+                    b.HasIndex("DonorUserId");
+
+                    b.HasIndex("InventoryTransactionId");
+
+                    b.HasIndex("ReferenceNumber");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("Donations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Donations_Amount", "[Amount] IS NULL OR [Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Donations_Quantity", "[Quantity] IS NULL OR [Quantity] > 0");
+                        });
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.InventoryTransaction", b =>
@@ -370,6 +562,68 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Notification", b =>
+                {
+                    b.Property<int>("NotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("System");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Info");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("NotificationId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId", "IsRead");
+
+                    b.ToTable("Notifications", (string)null);
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Organization", b =>
                 {
                     b.Property<int>("OrganizationId")
@@ -397,6 +651,14 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
 
                     b.Property<string>("OrganizationName")
                         .IsRequired()
@@ -732,6 +994,42 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             PermissionId = 33,
                             Description = "Trigger AI analysis and approve, override, or reject AI recommendations",
                             PermissionName = "AI.Review"
+                        },
+                        new
+                        {
+                            PermissionId = 34,
+                            Description = "View shelters and occupancy status",
+                            PermissionName = "Shelters.View"
+                        },
+                        new
+                        {
+                            PermissionId = 35,
+                            Description = "Register, update shelters and manage resident placements",
+                            PermissionName = "Shelters.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 36,
+                            Description = "View and manage operational notifications",
+                            PermissionName = "Notifications.View"
+                        },
+                        new
+                        {
+                            PermissionId = 37,
+                            Description = "View system audit logs",
+                            PermissionName = "AuditLogs.View"
+                        },
+                        new
+                        {
+                            PermissionId = 38,
+                            Description = "Manage roles and role permission assignments",
+                            PermissionName = "Roles.Manage"
+                        },
+                        new
+                        {
+                            PermissionId = 39,
+                            Description = "View system permissions registry",
+                            PermissionName = "Permissions.View"
                         });
                 });
 
@@ -797,6 +1095,9 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Property<int?>("ApprovedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("CitizenRequestId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -840,6 +1141,8 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.HasKey("AllocationId");
 
                     b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("CitizenRequestId");
 
                     b.HasIndex("CreatedAt");
 
@@ -1405,7 +1708,277 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                             RolePermissionId = 73,
                             PermissionId = 32,
                             RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 74,
+                            PermissionId = 34,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 75,
+                            PermissionId = 35,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 76,
+                            PermissionId = 36,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 77,
+                            PermissionId = 37,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 78,
+                            PermissionId = 38,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 79,
+                            PermissionId = 39,
+                            RoleId = 2
+                        },
+                        new
+                        {
+                            RolePermissionId = 80,
+                            PermissionId = 34,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 81,
+                            PermissionId = 35,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 82,
+                            PermissionId = 36,
+                            RoleId = 3
+                        },
+                        new
+                        {
+                            RolePermissionId = 83,
+                            PermissionId = 34,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 84,
+                            PermissionId = 36,
+                            RoleId = 4
+                        },
+                        new
+                        {
+                            RolePermissionId = 85,
+                            PermissionId = 34,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 86,
+                            PermissionId = 36,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            RolePermissionId = 87,
+                            PermissionId = 36,
+                            RoleId = 5
+                        },
+                        new
+                        {
+                            RolePermissionId = 88,
+                            PermissionId = 36,
+                            RoleId = 6
                         });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Shelter", b =>
+                {
+                    b.Property<int>("ShelterId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShelterId"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentOccupancy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Facilities")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<string>("ShelterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Open");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ShelterId");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Shelters", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Shelters_Capacity", "[Capacity] > 0");
+
+                            t.HasCheckConstraint("CK_Shelters_Occupancy", "[CurrentOccupancy] >= 0 AND [CurrentOccupancy] <= [Capacity]");
+                        });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.ShelterPlacement", b =>
+                {
+                    b.Property<int>("PlacementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlacementId"));
+
+                    b.Property<int?>("AssignedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CheckedInAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CheckedOutAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CitizenRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("PeopleCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResidentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ShelterId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Active");
+
+                    b.HasKey("PlacementId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("CitizenRequestId");
+
+                    b.HasIndex("ShelterId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ShelterPlacements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ShelterPlacements_PeopleCount", "[PeopleCount] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<int>("SystemSettingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SystemSettingId"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SettingKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SystemSettingId");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("SettingKey")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("SystemSettings", (string)null);
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
@@ -1475,6 +2048,136 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.ToTable("UserRoles");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Volunteer", b =>
+                {
+                    b.Property<int>("VolunteerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VolunteerId"));
+
+                    b.Property<string>("ApprovalStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AvailabilityStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Available");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Skills")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("VolunteerId");
+
+                    b.HasIndex("ApprovalStatus");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("AvailabilityStatus");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Volunteers", (string)null);
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.VolunteerAssignment", b =>
+                {
+                    b.Property<int>("AssignmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("AssignedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CrisisId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RoleTitle")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Assigned");
+
+                    b.Property<string>("TaskDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("VolunteerId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AssignmentId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("CrisisId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("VolunteerId", "CrisisId");
+
+                    b.ToTable("VolunteerAssignments", (string)null);
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Warehouse", b =>
                 {
                     b.Property<int>("WarehouseId")
@@ -1510,6 +2213,14 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
 
                     b.Property<string>("WarehouseCode")
                         .IsRequired()
@@ -1626,6 +2337,16 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("ParentArea");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ActorUser");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "Area")
@@ -1652,6 +2373,51 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Donation", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "Crisis")
+                        .WithMany()
+                        .HasForeignKey("CrisisId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "DonorUser")
+                        .WithMany()
+                        .HasForeignKey("DonorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.InventoryTransaction", "InventoryTransaction")
+                        .WithMany()
+                        .HasForeignKey("InventoryTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Crisis");
+
+                    b.Navigation("DonorUser");
+
+                    b.Navigation("InventoryTransaction");
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("VerifiedByUser");
+
+                    b.Navigation("Warehouse");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.InventoryTransaction", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.WarehouseInventory", "Inventory")
@@ -1669,6 +2435,17 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Inventory");
 
                     b.Navigation("PerformedByUser");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.OrganizationMembership", b =>
@@ -1731,6 +2508,11 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .HasForeignKey("ApprovedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", "CitizenRequest")
+                        .WithMany()
+                        .HasForeignKey("CitizenRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "Crisis")
                         .WithMany()
                         .HasForeignKey("CrisisId")
@@ -1750,6 +2532,8 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ApprovedByUser");
+
+                    b.Navigation("CitizenRequest");
 
                     b.Navigation("Crisis");
 
@@ -1787,6 +2571,52 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Shelter", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.ShelterPlacement", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CitizenRequest", "CitizenRequest")
+                        .WithMany()
+                        .HasForeignKey("CitizenRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Shelter", "Shelter")
+                        .WithMany("Placements")
+                        .HasForeignKey("ShelterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("CitizenRequest");
+
+                    b.Navigation("Shelter");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.SystemSetting", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("UpdatedByUser");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Role", "Role")
@@ -1804,6 +2634,50 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Volunteer", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Area");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.VolunteerAssignment", b =>
+                {
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.CrisisEvent", "Crisis")
+                        .WithMany()
+                        .HasForeignKey("CrisisId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HumanitarianCrisisManagement.Domain.Entities.Volunteer", "Volunteer")
+                        .WithMany("Assignments")
+                        .HasForeignKey("VolunteerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Crisis");
+
+                    b.Navigation("Volunteer");
                 });
 
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Warehouse", b =>
@@ -1874,6 +2748,11 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("UserRoles");
                 });
 
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Shelter", b =>
+                {
+                    b.Navigation("Placements");
+                });
+
             modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.User", b =>
                 {
                     b.Navigation("CitizenRequests");
@@ -1881,6 +2760,11 @@ namespace HumanitarianCrisisManagement.Infrastructure.Data.Migrations
                     b.Navigation("OrganizationMemberships");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("HumanitarianCrisisManagement.Domain.Entities.Volunteer", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 #pragma warning restore 612, 618
         }

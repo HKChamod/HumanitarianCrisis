@@ -6,4 +6,9 @@ public class AiProviderUnavailableException : Exception
         : base(message)
     {
     }
+
+    public AiProviderUnavailableException(string message, Exception? innerException)
+        : base(message, innerException)
+    {
+    }
 }

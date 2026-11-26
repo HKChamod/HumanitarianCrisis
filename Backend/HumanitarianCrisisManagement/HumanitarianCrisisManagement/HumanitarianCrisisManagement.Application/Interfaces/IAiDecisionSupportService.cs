@@ -6,6 +6,9 @@ public interface IAiDecisionSupportService
 {
     AiProviderStatusResponse GetProviderStatus();
 
+    Task<AiProviderDiagnosticResponse> RunProviderDiagnosticAsync(
+        CancellationToken cancellationToken = default);
+
     Task<AiRecommendationResponse> AnalyzeCitizenRequestAsync(
         int citizenRequestId,
         CancellationToken cancellationToken = default);

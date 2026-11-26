@@ -1,3 +1,5 @@
+using HumanitarianCrisisManagement.Application.DTOs.AiRecommendations;
+
 namespace HumanitarianCrisisManagement.Application.Interfaces;
 
 public class AiAnalysisContext
@@ -63,5 +65,8 @@ public interface IAiAnalysisProvider
 
     Task<AiAnalysisResult> AnalyzeCitizenRequestAsync(
         AiAnalysisContext context,
+        CancellationToken cancellationToken = default);
+
+    Task<AiProviderDiagnosticResponse> RunConnectivityDiagnosticAsync(
         CancellationToken cancellationToken = default);
 }

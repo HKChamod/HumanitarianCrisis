@@ -12,10 +12,14 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 public class InventoryTransactionService : IInventoryTransactionService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService? _auditLogService;
 
-    public InventoryTransactionService(ApplicationDbContext context)
+    public InventoryTransactionService(
+        ApplicationDbContext context,
+        IAuditLogService? auditLogService = null)
     {
         _context = context;
+        _auditLogService = auditLogService;
     }
 
     // Stock In, Stock Out and Adjustment
@@ -125,6 +129,17 @@ public class InventoryTransactionService : IInventoryTransactionService
         // Commit only when this method created the transaction.
         if (dbTransaction != null)
             await dbTransaction.CommitAsync();
+
+        if (_auditLogService != null && dbTransaction != null)
+        {
+            await _auditLogService.RecordAsync(
+                performedByUserId,
+                null,
+                $"Inventory.{transaction.TransactionType}",
+                "InventoryTransaction",
+                transaction.InventoryTransactionId.ToString(),
+                $"{transaction.TransactionType} of {transaction.Quantity} on inventory #{transaction.InventoryId} ({previousQuantity} -> {newQuantity}).");
+        }
 
         return MapToResponse(transaction);
     }
@@ -319,6 +334,17 @@ public class InventoryTransactionService : IInventoryTransactionService
 
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                performedByUserId,
+                null,
+                "Inventory.Transfer",
+                "InventoryTransaction",
+                transferGroupId.ToString(),
+                $"Transferred {request.Quantity} unit(s) from inventory #{source.InventoryId} to #{destination.InventoryId}.");
+        }
 
         return new List<InventoryTransactionResponse>
         {

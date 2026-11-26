@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { crisisService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { CascadingAreaSelector, FormField } from '../../../components/forms/FormControls';
+import { LocationPickerField, MAP_ENTITY_TYPES } from '../../../shared/maps';
 
 const crisisSchema = z.object({
   crisisName: z.string().min(5, 'Crisis name must be at least 5 characters'),
@@ -35,6 +36,7 @@ export function CreateCrisisEventPage() {
     village: '',
   });
   const [locationError, setLocationError] = useState('');
+  const [pickedCoords, setPickedCoords] = useState({ latitude: null, longitude: null });
   const [submitting, setSubmitting] = useState(false);
   const [createdEvent, setCreatedEvent] = useState(null);
 
@@ -70,10 +72,13 @@ export function CreateCrisisEventPage() {
         startDate: new Date(values.startDate).toISOString(),
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         affectedPeopleEstimate: values.affectedPeopleEstimate ? Number(values.affectedPeopleEstimate) : undefined,
+        locationName: [location.districtName, location.dsDivisionName, location.provinceName].filter(Boolean).join(', ') || undefined,
+        latitude: pickedCoords.latitude ?? undefined,
+        longitude: pickedCoords.longitude ?? undefined,
         location: {
           ...location,
-          latitude: values.latitude ? Number(values.latitude) : 7.8731,
-          longitude: values.longitude ? Number(values.longitude) : 80.7718,
+          latitude: pickedCoords.latitude ?? undefined,
+          longitude: pickedCoords.longitude ?? undefined,
         },
       });
       setCreatedEvent(created);
@@ -227,25 +232,14 @@ export function CreateCrisisEventPage() {
           <CascadingAreaSelector value={location} onChange={setLocation} />
           {locationError && <p className="text-xs text-[#DC2626]">{locationError}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <FormField label="Latitude (Optional)" hint="e.g., 6.5854 for Kalutara">
-              <input
-                type="number"
-                step="any"
-                {...register('latitude')}
-                placeholder="6.5854"
-                className="w-full px-3 py-2 text-sm bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#0F766E]"
-              />
-            </FormField>
-            <FormField label="Longitude (Optional)" hint="e.g., 79.9607 for Kalutara">
-              <input
-                type="number"
-                step="any"
-                {...register('longitude')}
-                placeholder="79.9607"
-                className="w-full px-3 py-2 text-sm bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#0F766E]"
-              />
-            </FormField>
+          <div className="pt-2">
+            <LocationPickerField
+              label="Crisis Epicenter / Map Coordinates (Optional)"
+              latitude={pickedCoords.latitude}
+              longitude={pickedCoords.longitude}
+              onChange={setPickedCoords}
+              entityType={MAP_ENTITY_TYPES.CRISIS}
+            />
           </div>
         </div>
 

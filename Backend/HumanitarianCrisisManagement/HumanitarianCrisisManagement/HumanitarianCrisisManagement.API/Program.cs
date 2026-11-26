@@ -1,8 +1,11 @@
 
+using HumanitarianCrisisManagement.Application.Options;
 using HumanitarianCrisisManagement.Infrastructure.DependencyInjection;
 using HumanitarianCrisisManagement.Infrastructure.Data;
+using HumanitarianCrisisManagement.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using HumanitarianCrisisManagement.API.Exceptions;
 using System.Security.Claims;
@@ -17,6 +20,20 @@ var connectionString = builder.Configuration
     ?? throw new InvalidOperationException(
         "DefaultConnection connection string is not configured.");
 
+builder.Services.Configure<AiProviderOptions>(
+    builder.Configuration.GetSection(AiProviderOptions.SectionName));
+builder.Services.Configure<DevelopmentSeedOptions>(
+    builder.Configuration.GetSection(DevelopmentSeedOptions.SectionName));
+builder.Services.AddHttpClient<GeminiAiAnalysisProvider>(client =>
+{
+    // Timeout is enforced per request via AiProviderOptions.GetEffectiveTimeout()
+    // using a linked CancellationTokenSource so HttpClient's 100s default never cuts off longer configured timeouts.
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
+builder.Services.AddHttpClient<GroqAiAnalysisProvider>(client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 builder.Services.AddInfrastructure(connectionString);
 
 // JWT Configuration
@@ -85,7 +102,16 @@ var permissionNames = new[]
     "Reports.Generate",
 
     "AI.View",
-    "AI.Review"
+    "AI.Review",
+
+    "Shelters.View",
+    "Shelters.Manage",
+
+    "Notifications.View",
+    "AuditLogs.View",
+
+    "Roles.Manage",
+    "Permissions.View"
 };
 
 builder.Services.AddAuthorization(options =>
@@ -170,6 +196,11 @@ builder.Services.AddCors(options =>
 // API Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -208,6 +239,35 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+if (args.Any(a => string.Equals(a, "--seed-synthetic", StringComparison.OrdinalIgnoreCase)))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        Console.Error.WriteLine(
+            $"ERROR: --seed-synthetic is strictly restricted to Development environment (current: '{app.Environment.EnvironmentName}').");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        db.Database.Migrate();
+
+        var syntheticSeeder = scope.ServiceProvider.GetRequiredService<SyntheticDataSeeder>();
+        var report = await syntheticSeeder.SeedAsync(app.Environment.EnvironmentName);
+        Console.WriteLine(report.FormatSummary());
+        return;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"ERROR: Synthetic data seeding failed: {ex.Message}");
+        Environment.ExitCode = 1;
+        return;
+    }
+}
+
 // HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
@@ -215,6 +275,9 @@ if (app.Environment.IsDevelopment())
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Database.Migrate();
+
+        var devSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentUserSeeder>();
+        await devSeeder.SeedAsync();
     }
 
     app.UseSwagger();
@@ -226,6 +289,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 app.UseCors(FrontendCorsPolicy);
@@ -238,6 +302,9 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

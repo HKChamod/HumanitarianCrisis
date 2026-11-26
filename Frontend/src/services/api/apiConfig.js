@@ -3,17 +3,20 @@
  * Ensures consistent base URL, token handling, organization context, 401 handling, and error normalization.
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5107/api';
+const metaEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+
+export const API_BASE_URL = metaEnv.VITE_API_BASE_URL || 'http://localhost:5107/api';
 
 export const USE_MOCK_API =
-  import.meta.env.VITE_USE_MOCK_API !== undefined
-    ? import.meta.env.VITE_USE_MOCK_API === 'true'
+  metaEnv.VITE_USE_MOCK_API !== undefined
+    ? metaEnv.VITE_USE_MOCK_API === 'true'
     : false;
 
 export const TOKEN_STORAGE_KEY = 'hcms_access_token';
 export const ORG_STORAGE_KEY = 'hcms_active_org_id';
 
 export function getAuthHeaders() {
+  if (typeof localStorage === 'undefined') return {};
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const orgId = localStorage.getItem(ORG_STORAGE_KEY);
 
@@ -24,9 +27,13 @@ export function getAuthHeaders() {
 }
 
 export function handleUnauthorizedResponse() {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-  localStorage.removeItem(ORG_STORAGE_KEY);
-  window.dispatchEvent(new CustomEvent('hcms:unauthorized'));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(ORG_STORAGE_KEY);
+  }
+  if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hcms:unauthorized'));
+  }
 }
 
 export function normalizeApiError(status, data, fallbackMessage) {

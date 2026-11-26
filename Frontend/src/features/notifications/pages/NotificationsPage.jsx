@@ -4,19 +4,29 @@ import { Link } from 'react-router-dom';
 import { notificationService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { FilterPanel } from '../../../components/forms/FormControls';
-import { EmptyState, LoadingState } from '../../../components/common/States';
+import { EmptyState, ErrorState, LoadingState } from '../../../components/common/States';
 
 export function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [readFilter, setReadFilter] = useState('');
 
-  useEffect(() => {
-    notificationService.list().then((data) => {
-      setNotifications(data);
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setNotifications(await notificationService.list());
+    } catch (err) {
+      setError(err);
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const filtered = useMemo(() => {
@@ -66,7 +76,7 @@ export function NotificationsPage() {
           className="px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg"
         >
           <option value="">All Categories</option>
-          {['Crisis', 'Request', 'Organization', 'Resource', 'AI', 'System'].map((c) => (
+          {['Crisis', 'Request', 'Allocation', 'Shelter', 'Volunteer', 'Donation', 'System'].map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
@@ -83,6 +93,8 @@ export function NotificationsPage() {
 
       {loading ? (
         <LoadingState message="Loading notifications..." />
+      ) : error ? (
+        <ErrorState message={error.detail || error.message} onRetry={loadData} />
       ) : filtered.length === 0 ? (
         <EmptyState title="No notifications" description="You are all caught up on operational alerts." />
       ) : (

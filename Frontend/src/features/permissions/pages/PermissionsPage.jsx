@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Lock, ShieldCheck } from 'lucide-react';
-import { permissionService } from '../../../services/api/adminServices';
+import { permissionService, roleService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DataTable } from '../../../components/tables/DataTable';
 import { FilterPanel, SearchBar } from '../../../components/forms/FormControls';
@@ -16,9 +16,52 @@ export function PermissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      setPermissions(await permissionService.list());
+      const [permsResult, rolesResult] = await Promise.allSettled([
+        permissionService.list(),
+        roleService.list(),
+      ]);
+
+      if (permsResult.status === 'rejected') {
+        throw permsResult.reason;
+      }
+
+      const rawPerms = Array.isArray(permsResult.value) ? permsResult.value : [];
+      const roles = rolesResult.status === 'fulfilled' && Array.isArray(rolesResult.value)
+        ? rolesResult.value
+        : [];
+
+      const rolesByPermission = new Map();
+      roles.forEach((role) => {
+        const roleName = role?.name || role?.roleName;
+        if (!roleName) return;
+        const rolePerms = Array.isArray(role?.permissions) ? role.permissions : [];
+        rolePerms.forEach((permName) => {
+          if (!rolesByPermission.has(permName)) {
+            rolesByPermission.set(permName, []);
+          }
+          rolesByPermission.get(permName).push(roleName);
+        });
+      });
+
+      const enriched = rawPerms.map((p) => {
+        const code = p?.code || p?.permissionName || p?.name || '';
+        const existingRoles = Array.isArray(p?.assignedRoles) ? p.assignedRoles : [];
+        const derivedRoles = rolesByPermission.get(code) || [];
+        const assignedRoles = Array.from(new Set([...existingRoles, ...derivedRoles]));
+        return {
+          ...p,
+          code,
+          name: p?.name || code,
+          category: p?.category || p?.module || 'General',
+          description: p?.description || '',
+          assignedRoles,
+        };
+      });
+
+      setPermissions(enriched);
     } catch (err) {
       setError(err);
+      setPermissions([]);
     } finally {
       setLoading(false);
     }
@@ -28,7 +71,10 @@ export function PermissionsPage() {
     loadData();
   }, []);
 
-  const categories = useMemo(() => Array.from(new Set(permissions.map((p) => p.category))), [permissions]);
+  const categories = useMemo(
+    () => Array.from(new Set(permissions.map((p) => p.category || 'General'))),
+    [permissions]
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -57,7 +103,7 @@ export function PermissionsPage() {
         cell: ({ row }) => (
           <div>
             <div className="font-semibold text-[#0F172A]">{row.original.name}</div>
-            <div className="text-[11px] text-[#64748B]">{row.original.description}</div>
+            <div className="text-[11px] text-[#64748B]">{row.original.description || '—'}</div>
           </div>
         ),
       },
@@ -65,22 +111,28 @@ export function PermissionsPage() {
         accessorKey: 'category',
         header: 'Category',
         cell: ({ getValue }) => (
-          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-xs font-medium text-[#475569]">{getValue()}</span>
+          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-xs font-medium text-[#475569]">{getValue() || 'General'}</span>
         ),
       },
       {
         id: 'assignedRoles',
         header: 'Assigned Roles',
-        accessorFn: (row) => row.assignedRoles.join(', '),
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.original.assignedRoles.map((r) => (
-              <span key={r} className="px-2 py-0.5 rounded-full bg-[#F0FDFA] border border-teal-200 text-[11px] text-[#0F766E] font-medium">
-                {r}
-              </span>
-            ))}
-          </div>
-        ),
+        accessorFn: (row) => (Array.isArray(row?.assignedRoles) ? row.assignedRoles : []).join(', '),
+        cell: ({ row }) => {
+          const rolesList = Array.isArray(row.original?.assignedRoles) ? row.original.assignedRoles : [];
+          if (rolesList.length === 0) {
+            return <span className="text-[11px] text-[#94A3B8]">—</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {rolesList.map((r) => (
+                <span key={r} className="px-2 py-0.5 rounded-full bg-[#F0FDFA] border border-teal-200 text-[11px] text-[#0F766E] font-medium">
+                  {r}
+                </span>
+              ))}
+            </div>
+          );
+        },
       },
     ],
     []

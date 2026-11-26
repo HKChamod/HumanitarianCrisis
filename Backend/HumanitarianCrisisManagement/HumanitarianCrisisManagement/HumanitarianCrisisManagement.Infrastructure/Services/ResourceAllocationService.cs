@@ -13,13 +13,19 @@ public class ResourceAllocationService : IResourceAllocationService
 {
     private readonly ApplicationDbContext _context;
     private readonly IInventoryTransactionService _inventoryTransactionService;
+    private readonly IAuditLogService? _auditLogService;
+    private readonly INotificationService? _notificationService;
 
     public ResourceAllocationService(
         ApplicationDbContext context,
-        IInventoryTransactionService inventoryTransactionService)
+        IInventoryTransactionService inventoryTransactionService,
+        IAuditLogService? auditLogService = null,
+        INotificationService? notificationService = null)
     {
         _context = context;
         _inventoryTransactionService = inventoryTransactionService;
+        _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     public async Task<ResourceAllocationResponse> CreateAsync(
@@ -63,10 +69,18 @@ public class ResourceAllocationService : IResourceAllocationService
         if (user == null)
             throw new UnauthorizedAccessException("Active user not found.");
 
+        if (request.CitizenRequestId.HasValue)
+        {
+            var reqExists = await _context.CitizenRequests.AnyAsync(r => r.RequestId == request.CitizenRequestId.Value);
+            if (!reqExists)
+                throw new KeyNotFoundException("Linked citizen request not found.");
+        }
+
         var allocation = new ResourceAllocation
         {
             InventoryId = request.InventoryId,
             CrisisId = request.CrisisId,
+            CitizenRequestId = request.CitizenRequestId,
             QuantityRequested = request.QuantityRequested,
             QuantityAllocated = 0,
             Status = ResourceAllocationStatus.Pending,
@@ -80,6 +94,17 @@ public class ResourceAllocationService : IResourceAllocationService
 
         await _context.SaveChangesAsync();
 
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                requestedByUserId,
+                null,
+                "ResourceAllocation.Created",
+                "ResourceAllocation",
+                allocation.AllocationId.ToString(),
+                $"Created allocation #{allocation.AllocationId} for Crisis #{allocation.CrisisId} (qty {allocation.QuantityRequested}).");
+        }
+
         return await GetByIdAsync(allocation.AllocationId);
     }
 
@@ -92,6 +117,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .FirstOrDefaultAsync(a => a.AllocationId == id);
@@ -105,12 +131,19 @@ public class ResourceAllocationService : IResourceAllocationService
 
             InventoryId = allocation.InventoryId,
             WarehouseName = allocation.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = allocation.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = allocation.Inventory.Warehouse.Longitude,
 
             ResourceId = allocation.Inventory.ResourceId,
             ResourceName = allocation.Inventory.Resource.ResourceName,
 
             CrisisId = allocation.CrisisId,
             CrisisName = allocation.Crisis.CrisisName,
+            CrisisLatitude = allocation.Crisis.Latitude,
+            CrisisLongitude = allocation.Crisis.Longitude,
+            CitizenRequestId = allocation.CitizenRequestId,
+            CitizenRequestLatitude = allocation.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = allocation.CitizenRequest?.Longitude,
 
             QuantityRequested = allocation.QuantityRequested,
             QuantityAllocated = allocation.QuantityAllocated,
@@ -140,6 +173,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .OrderByDescending(a => a.CreatedAt)
@@ -150,10 +184,17 @@ public class ResourceAllocationService : IResourceAllocationService
             AllocationId = a.AllocationId,
             InventoryId = a.InventoryId,
             WarehouseName = a.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = a.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = a.Inventory.Warehouse.Longitude,
             ResourceId = a.Inventory.ResourceId,
             ResourceName = a.Inventory.Resource.ResourceName,
             CrisisId = a.CrisisId,
             CrisisName = a.Crisis.CrisisName,
+            CrisisLatitude = a.Crisis.Latitude,
+            CrisisLongitude = a.Crisis.Longitude,
+            CitizenRequestId = a.CitizenRequestId,
+            CitizenRequestLatitude = a.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = a.CitizenRequest?.Longitude,
             QuantityRequested = a.QuantityRequested,
             QuantityAllocated = a.QuantityAllocated,
             Status = a.Status.ToString(),
@@ -179,6 +220,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .OrderByDescending(a => a.CreatedAt)
@@ -189,10 +231,17 @@ public class ResourceAllocationService : IResourceAllocationService
             AllocationId = a.AllocationId,
             InventoryId = a.InventoryId,
             WarehouseName = a.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = a.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = a.Inventory.Warehouse.Longitude,
             ResourceId = a.Inventory.ResourceId,
             ResourceName = a.Inventory.Resource.ResourceName,
             CrisisId = a.CrisisId,
             CrisisName = a.Crisis.CrisisName,
+            CrisisLatitude = a.Crisis.Latitude,
+            CrisisLongitude = a.Crisis.Longitude,
+            CitizenRequestId = a.CitizenRequestId,
+            CitizenRequestLatitude = a.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = a.CitizenRequest?.Longitude,
             QuantityRequested = a.QuantityRequested,
             QuantityAllocated = a.QuantityAllocated,
             Status = a.Status.ToString(),
@@ -267,6 +316,15 @@ public class ResourceAllocationService : IResourceAllocationService
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
 
+        await RecordAllocationEventAsync(
+            approvedByUserId,
+            "ResourceAllocation.Approved",
+            allocation,
+            $"Approved allocation #{allocation.AllocationId} (qty {allocation.QuantityAllocated}).",
+            $"Allocation #{allocation.AllocationId} Approved",
+            $"Your resource allocation #{allocation.AllocationId} has been approved for {allocation.QuantityAllocated} units.",
+            "Success");
+
         return await GetByIdAsync(id);
     }
 
@@ -298,6 +356,15 @@ public class ResourceAllocationService : IResourceAllocationService
 
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
+
+        await RecordAllocationEventAsync(
+            null,
+            "ResourceAllocation.Rejected",
+            allocation,
+            $"Rejected allocation #{allocation.AllocationId}.",
+            $"Allocation #{allocation.AllocationId} Rejected",
+            $"Your resource allocation #{allocation.AllocationId} was rejected.",
+            "Warning");
 
         return await GetByIdAsync(id);
     }
@@ -353,6 +420,15 @@ public class ResourceAllocationService : IResourceAllocationService
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
 
+        await RecordAllocationEventAsync(
+            performedByUserId,
+            "ResourceAllocation.Dispatched",
+            allocation,
+            $"Dispatched allocation #{allocation.AllocationId} (qty {allocation.QuantityAllocated}) for Crisis #{allocation.CrisisId}.",
+            $"Allocation #{allocation.AllocationId} Dispatched",
+            $"Your resource allocation #{allocation.AllocationId} ({allocation.QuantityAllocated} units) has been dispatched.",
+            "Info");
+
         return await GetByIdAsync(id);
     }
 
@@ -384,6 +460,15 @@ public class ResourceAllocationService : IResourceAllocationService
 
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
+
+        await RecordAllocationEventAsync(
+            null,
+            "ResourceAllocation.Delivered",
+            allocation,
+            $"Marked allocation #{allocation.AllocationId} as delivered.",
+            $"Allocation #{allocation.AllocationId} Delivered",
+            $"Resource allocation #{allocation.AllocationId} ({allocation.QuantityAllocated} units) has been delivered.",
+            "Success");
 
         return await GetByIdAsync(id);
     }
@@ -440,7 +525,51 @@ public class ResourceAllocationService : IResourceAllocationService
         await _context.SaveChangesAsync();
         await dbTransaction.CommitAsync();
 
+        await RecordAllocationEventAsync(
+            performedByUserId,
+            "ResourceAllocation.Cancelled",
+            allocation,
+            $"Cancelled allocation #{allocation.AllocationId}.",
+            $"Allocation #{allocation.AllocationId} Cancelled",
+            $"Resource allocation #{allocation.AllocationId} has been cancelled.",
+            "Warning");
+
         return await GetByIdAsync(id);
+    }
+
+    private async Task RecordAllocationEventAsync(
+        int? actorUserId,
+        string action,
+        ResourceAllocation allocation,
+        string auditSummary,
+        string notificationTitle,
+        string notificationMessage,
+        string severity)
+    {
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                actorUserId,
+                null,
+                action,
+                "ResourceAllocation",
+                allocation.AllocationId.ToString(),
+                auditSummary);
+        }
+
+        if (_notificationService != null)
+        {
+            await _notificationService.CreateAsync(new Application.DTOs.Notifications.CreateNotificationRequest
+            {
+                UserId = allocation.RequestedByUserId,
+                Title = notificationTitle,
+                Message = notificationMessage,
+                Category = "Allocation",
+                Severity = severity,
+                RelatedEntityType = "ResourceAllocation",
+                RelatedEntityId = allocation.AllocationId
+            });
+        }
     }
 
 }

@@ -10,6 +10,8 @@ public class CreateResourceAllocationRequest
     [Range(1, int.MaxValue)]
     public int CrisisId { get; set; }
 
+    public int? CitizenRequestId { get; set; }
+
     [Range(typeof(decimal), "0.01", "9999999999999999")]
     public decimal QuantityRequested { get; set; }
 

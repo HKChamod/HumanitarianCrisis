@@ -54,6 +54,13 @@ public class ResourceAllocationConfiguration
             .HasForeignKey(a => a.CrisisId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(a => a.CitizenRequest)
+            .WithMany()
+            .HasForeignKey(a => a.CitizenRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(a => a.CitizenRequestId);
+
         builder.HasOne(a => a.RequestedByUser)
             .WithMany()
             .HasForeignKey(a => a.RequestedByUserId)
