@@ -88,4 +88,42 @@ public class AuthController : ControllerBase
 
         return Ok(currentUser);
     }
+
+    // POST: api/auth/change-password
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { message = "Invalid authentication token." });
+        }
+
+        await _authService.ChangePasswordAsync(userId, request);
+        return Ok(new { message = "Password updated successfully." });
+    }
+
+    public class ForgotPasswordInput
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    // POST: api/auth/forgot-password
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordInput request)
+    {
+        await _authService.RequestPasswordResetAsync(request.Email);
+        return Ok(new
+        {
+            message = "If an account with that email exists, a password reset request has been recorded. Contact your system administrator if you need immediate account recovery."
+        });
+    }
 }

@@ -2,30 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { ORG_STORAGE_KEY, TOKEN_STORAGE_KEY, USE_MOCK_API } from '../../services/api/apiConfig';
 import { authService } from '../../services/api/adminServices';
+import { LoadingState } from '../../components/common/States';
+import { isAdminUser } from '../authRouting';
 
-/**
- * Operational/administrative permissions that grant entry into the Central Administration Portal.
- * Citizens (who typically only have CrisisEvents.View / Areas.View) will not satisfy this check.
- */
-const ADMIN_PORTAL_ENTRY_PERMISSIONS = [
-  'Users.View',
-  'Users.Manage',
-  'Organizations.View',
-  'Organizations.Manage',
-  'CrisisEvents.Create',
-  'CrisisEvents.Update',
-  'CrisisEvents.Manage',
-  'CitizenRequests.View',
-  'CitizenRequests.Manage',
-  'Resources.View',
-  'Resources.Manage',
-  'Reports.View',
-];
-
-export function isAdminUser(user) {
-  if (!user || !Array.isArray(user.permissions)) return false;
-  return user.permissions.some((p) => ADMIN_PORTAL_ENTRY_PERMISSIONS.includes(p));
-}
+export { isAdminUser };
 
 function buildInitials(fullName, email) {
   const source = (fullName || email || 'US').trim();
@@ -159,14 +139,29 @@ export function AuthProvider({ children }) {
     }
     return USE_MOCK_API ? DEMO_PROFILES.central_admin : null;
   });
+  const [authLoading, setAuthLoading] = useState(() => {
+    if (USE_MOCK_API) return false;
+    try {
+      return Boolean(localStorage.getItem(TOKEN_STORAGE_KEY));
+    } catch {
+      return false;
+    }
+  });
 
   // Refresh live user roles & effective permissions from GET /api/auth/me on page reload
   useEffect(() => {
-    if (USE_MOCK_API) return;
+    if (USE_MOCK_API) {
+      setAuthLoading(false);
+      return;
+    }
     const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (!token) return;
+    if (!token) {
+      setAuthLoading(false);
+      return;
+    }
 
     let cancelled = false;
+    setAuthLoading(true);
     authService
       .getMe()
       .then((me) => {
@@ -177,6 +172,9 @@ export function AuthProvider({ children }) {
       })
       .catch(() => {
         // 401 is handled by axios interceptor (dispatches hcms:unauthorized)
+      })
+      .finally(() => {
+        if (!cancelled) setAuthLoading(false);
       });
 
     return () => {
@@ -268,6 +266,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
+      authLoading,
       isAuthenticated: Boolean(user),
       isAdmin: isAdminUser(user),
       isMockAuth: USE_MOCK_API,
@@ -290,7 +289,7 @@ export function AuthProvider({ children }) {
         return user.roles.includes(role);
       },
     }),
-    [user]
+    [user, authLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -303,11 +302,21 @@ export function useAuth() {
 }
 
 export function ProtectedAdminRoute({ children, requiredPermission, requiredRole }) {
-  const { isAuthenticated, isAdmin, hasPermission, hasRole } = useAuth();
+  const { authLoading, isAuthenticated, isAdmin, hasPermission, hasRole } = useAuth();
   const location = useLocation();
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <LoadingState message="Verifying session..." />
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
   }
 
   // Block authenticated users who lack administrative permissions from /admin routes
@@ -327,11 +336,21 @@ export function ProtectedAdminRoute({ children, requiredPermission, requiredRole
 }
 
 export function ProtectedCitizenRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { authLoading, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <LoadingState message="Verifying session..." />
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
   }
 
   return children;

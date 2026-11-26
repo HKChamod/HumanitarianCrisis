@@ -150,7 +150,147 @@ erDiagram
 
 ---
 
-## 6. Primary End-to-End Workflow Sequence Diagram
+## 6. Use Case, Domain Class, Activity & Sequence Diagrams
+
+### 6.1 Use Case Overview Diagram
+
+```mermaid
+flowchart LR
+    Pub["Public Visitor"]
+    Cit["Registered Citizen"]
+    Org["Organization Member / Coordinator"]
+    Adm["Crisis Manager / System Admin"]
+    LLM["External LLM (Groq / Gemini)"]
+
+    UC1["Browse Active Crises, Map & Open Shelters"]
+    UC2["Register as Volunteer or View Donations"]
+    UC3["Submit & Track Personal Assistance Request"]
+    UC4["View Personal Status Notifications"]
+    UC5["Manage Org Profile, Memberships & Aid Requests"]
+    UC6["Trigger AI Triage & Submit Human Review Decision"]
+    UC7["Manage Warehouses, Stock & Dispatch Allocations"]
+    UC8["Manage Shelter Placements & Volunteer Assignments"]
+    UC9["Inspect Audit Logs, Roles & System Dashboard"]
+
+    Pub --> UC1
+    Pub --> UC2
+    Cit --> UC1
+    Cit --> UC3
+    Cit --> UC4
+    Org --> UC5
+    Adm --> UC6
+    Adm --> UC7
+    Adm --> UC8
+    Adm --> UC9
+    UC6 -->|Sanitized Advisory Call| LLM
+```
+
+### 6.2 Core Operational Domain Class Diagram
+
+```mermaid
+classDiagram
+    class CitizenRequest {
+        +int RequestId
+        +int UserId
+        +int AreaId
+        +int? CrisisId
+        +string RequestType
+        +string UrgencyLevel
+        +int PeopleCount
+        +string Status
+    }
+    class AiRecommendation {
+        +int RecommendationId
+        +int CitizenRequestId
+        +string SuggestedCategory
+        +string SuggestedUrgencyLevel
+        +decimal ConfidenceScore
+        +AiRecommendationReviewStatus ReviewStatus
+        +int? ReviewedByUserId
+        +string? OverriddenCategory
+        +string? OverriddenUrgencyLevel
+    }
+    class WarehouseInventory {
+        +int InventoryId
+        +int WarehouseId
+        +int ResourceId
+        +decimal QuantityAvailable
+        +decimal ReorderLevel
+    }
+    class ResourceAllocation {
+        +int AllocationId
+        +int InventoryId
+        +int CrisisId
+        +int? CitizenRequestId
+        +decimal QuantityRequested
+        +decimal QuantityAllocated
+        +ResourceAllocationStatus Status
+    }
+    class InventoryTransaction {
+        +int InventoryTransactionId
+        +int InventoryId
+        +InventoryTransactionType TransactionType
+        +decimal Quantity
+        +decimal PreviousQuantity
+        +decimal NewQuantity
+    }
+    class Shelter {
+        +int ShelterId
+        +int AreaId
+        +int Capacity
+        +int CurrentOccupancy
+        +string Status
+    }
+    class ShelterPlacement {
+        +int PlacementId
+        +int ShelterId
+        +int? CitizenRequestId
+        +int PeopleCount
+        +string Status
+    }
+    class Volunteer {
+        +int VolunteerId
+        +string AvailabilityStatus
+        +string ApprovalStatus
+    }
+    class VolunteerAssignment {
+        +int AssignmentId
+        +int VolunteerId
+        +int CrisisId
+        +string Status
+    }
+
+    CitizenRequest "1" --> "0..*" AiRecommendation
+    CitizenRequest "1" --> "0..*" ResourceAllocation
+    CitizenRequest "1" --> "0..*" ShelterPlacement
+    WarehouseInventory "1" --> "0..*" ResourceAllocation
+    WarehouseInventory "1" --> "0..*" InventoryTransaction
+    Shelter "1" --> "0..*" ShelterPlacement
+    Volunteer "1" --> "0..*" VolunteerAssignment
+```
+
+### 6.3 Activity Diagram — Human-in-the-Loop AI Triage & Atomic Allocation
+
+```mermaid
+flowchart TD
+    A["Citizen Submits Request (Saved as Pending)"] --> B{"Coordinator Requests AI Triage?"}
+    B -->|No / AI 503 Outage| F["Coordinator Performs Manual Triage"]
+    B -->|Yes| C["Build Minimal Context (No Raw PII) & Call Groq/Gemini"]
+    C --> D{"Schema & Stock Validation Pass?"}
+    D -->|No| F
+    D -->|Yes| E["Persist AiRecommendation (PendingReview) + AuditLog"]
+    E --> G{"Human Reviewer Decision (AI.Review)"}
+    G -->|Approve / Override| H["Persist Decision + Reviewer + AuditLog"]
+    G -->|Reject| I["Mark Rejected + AuditLog (No Operational Action)"]
+    F --> J["Create & Approve ResourceAllocation"]
+    H --> J
+    J --> K["Dispatch Allocation (Serializable DB Transaction)"]
+    K --> L{"QuantityAvailable >= QuantityAllocated?"}
+    L -->|No| M["Rollback Transaction (400 Insufficient Stock)"]
+    L -->|Yes| N["Deduct Stock + Insert StockOut Tx + Mark Dispatched + Notify Citizen"]
+```
+
+### 6.4 Primary End-to-End Workflow Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -254,12 +394,12 @@ All test results below were directly executed and verified in this repository (n
 | Test Suite / Verification | Scope | Verified Result |
 | :--- | :--- | :--- |
 | **Backend `.NET 10` Release Build** | All 5 projects (`Domain`, `Application`, `Infrastructure`, `API`, `Tests`) | **PASS** — `0 Warning(s), 0 Error(s)` |
-| **Backend Automated Test Suite (xUnit)** | Unit tests (AI providers, retry/503/429, validation, sanitizer, services), SQLite persistence tests (12), AI API E2E review tests (14), Operational Workflow tests A–D (12), Full 11-step E2E Humanitarian Workflow tests (3) | **179 PASSED, 0 FAILED, 0 SKIPPED** |
+| **Backend Automated Test Suite (xUnit)** | Unit tests (AI providers, retry/503/429, validation, sanitizer, services), SQLite persistence tests (12), AI API E2E review tests (14), Operational Workflow tests A–D (12), Full 11-step E2E Humanitarian Workflow tests (3), Concurrency & Security Isolation tests (6) | **185 PASSED, 0 FAILED, 0 SKIPPED** |
 | **Opt-in Live Groq Synthetic Validation** | Real Groq API (`openai/gpt-oss-120b`) against 5 synthetic crisis scenarios | **5/5 PASSED** (verified in prior live run; no citizen data used) |
 | **Opt-in Authenticated Live HTTP E2E** | `Frontend/src/testE2eAuthenticated.mjs` against running API & `HumanitarianCrisisDB` | **24/24 PASSED** (non-destructive verified in prior live run) |
-| **Frontend Local Integration / Mapper / RBAC Tests** | `Frontend/src/testIntegration.mjs` local checks | **34/34 PASSED** (local checks; live HTTP checks require running API + credentials) |
-| **Frontend Production Build (`vite build`)** | React 19 + Vite 8 + Tailwind CSS v4 bundle | **PASS** (`2,863` modules transformed, 0 errors) |
-| **Frontend Linter (`oxlint`)** | Static analysis across `Frontend/src` | **0 Errors** (non-blocking unused-import / fast-refresh warnings remain) |
+| **Frontend Automated Mapper, Validation & RBAC Tests** | `Frontend/src/testIntegration.mjs` deterministic checks across Public, Citizen, Org & Admin mappers + error normalization | **44 PASSED, 0 FAILED, 11 SKIPPED** *(11 opt-in live HTTP checks skipped without env credentials)* |
+| **Frontend Production Build (`vite build`)** | React 19 + Vite 8 + Tailwind CSS v4 bundle | **PASS** (`2,865` modules transformed, 0 errors) |
+| **Frontend Linter (`oxlint`)** | Static analysis across `Frontend/src` | **0 Errors** (`120` non-blocking warnings) |
 
 ### Known Testing Limitations
 - Isolated backend API and workflow integration tests use EF Core's **SQLite in-memory** provider (`EnsureCreatedAsync`) to guarantee zero impact on `HumanitarianCrisisDB`. SQL Server-specific concurrency locking semantics and migration DDL are not exercised by SQLite in-memory tests and are verified against SQL Server in staging/live runs.

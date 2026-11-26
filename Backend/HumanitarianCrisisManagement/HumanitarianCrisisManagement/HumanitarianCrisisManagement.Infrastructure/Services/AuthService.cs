@@ -28,7 +28,7 @@ public class AuthService : IAuthService
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var existingUser = await _context.Users
-            .AnyAsync(u => u.Email == normalizedEmail);
+            .AnyAsync(u => u.Email.ToLower() == normalizedEmail);
 
         if (existingUser)
         {
@@ -66,7 +66,8 @@ public class AuthService : IAuthService
         user.UserRoles.Add(new UserRole
         {
             User = user,
-            RoleId = citizenRole.RoleId
+            RoleId = citizenRole.RoleId,
+            Role = citizenRole
         });
 
         _context.Users.Add(user);
@@ -81,11 +82,11 @@ public class AuthService : IAuthService
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var user = await _context.Users
-    .Include(u => u.UserRoles)
-        .ThenInclude(ur => ur.Role)
-    .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
-        if (user == null || !user.IsActive)
+        if (user == null || !user.IsActive || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             throw new UnauthorizedAccessException(
                 "Invalid email or password.");
@@ -150,5 +151,58 @@ public class AuthService : IAuthService
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .ToList()
         };
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword) ||
+            request.NewPassword.Length < 8)
+        {
+            throw new ArgumentException("Current password and a new password of at least 8 characters are required.");
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User account was not found.");
+        }
+
+        if (!_passwordHasher.VerifyPassword(user, user.PasswordHash, request.CurrentPassword))
+        {
+            throw new UnauthorizedAccessException("Current password is incorrect.");
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RequestPasswordResetAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException("Email address is required.");
+        }
+
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail && u.IsActive);
+
+        if (user != null)
+        {
+            _context.AuditLogs.Add(new Domain.Entities.AuditLog
+            {
+                ActorUserId = user.UserId,
+                ActorEmail = user.Email,
+                Action = "Auth.PasswordResetRequested",
+                EntityType = "User",
+                EntityId = user.UserId.ToString(),
+                Summary = $"Password reset requested for {user.Email}.",
+                Status = "Success",
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+        }
     }
 }

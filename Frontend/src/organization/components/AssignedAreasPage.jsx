@@ -8,13 +8,32 @@ import { AssignedAreasTable } from './AssignedAreasTable';
 import { AreaDetailsModal } from './AreaDetailsModal';
 import { AssignNewAreaModal } from './AssignNewAreaModal';
 import { assignedAreasService } from '../services/assignedAreasService';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { USE_MOCK_API } from '../../services/api/axiosClient';
 import { IconMapPin, IconPlus, IconAlertTriangle, IconSearch, IconCheckCircle } from './Icons';
 
 export const AssignedAreasPage = () => {
+  const { activeOrganizationId, hasOrgPermission } = useOrganization();
+  const { isAdmin } = useAuth();
+  const canManageAreas =
+    USE_MOCK_API ||
+    isAdmin ||
+    hasOrgPermission('Organizations.Manage') ||
+    hasOrgPermission('Areas.Manage');
+
   const [areas, setAreas] = useState([]);
+  const [availableCatalogAreas, setAvailableCatalogAreas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [liveAssignForm, setLiveAssignForm] = useState({
+    areaId: '',
+    assignmentStatus: 'Active',
+    primaryContact: '',
+    notes: '',
+  });
+  const [liveAssignOpen, setLiveAssignOpen] = useState(false);
+  const [liveActionMsg, setLiveActionMsg] = useState(null);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +56,13 @@ export const AssignedAreasPage = () => {
 
   // Load Areas Data
   const loadData = useCallback(async (stateMode = simState) => {
+    if (!USE_MOCK_API && !activeOrganizationId) {
+      setAreas([]);
+      setAvailableCatalogAreas([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -45,11 +71,18 @@ export const AssignedAreasPage = () => {
         return; // maintain skeleton loading
       }
 
-      const data = await assignedAreasService.getAllAssignedAreas({
-        simulateError: stateMode === 'error',
-        simulateEmpty: stateMode === 'empty'
-      });
+      const [data, catalog] = await Promise.all([
+        assignedAreasService.getAllAssignedAreas({
+          organizationId: activeOrganizationId,
+          simulateError: stateMode === 'error',
+          simulateEmpty: stateMode === 'empty',
+        }),
+        USE_MOCK_API
+          ? Promise.resolve([])
+          : assignedAreasService.getAvailableAreas().catch(() => []),
+      ]);
       setAreas(data);
+      setAvailableCatalogAreas(Array.isArray(catalog) ? catalog : []);
     } catch (err) {
       setError(err?.detail || err?.message || 'Failed to fetch geographic areas.');
       setAreas([]);
@@ -58,7 +91,7 @@ export const AssignedAreasPage = () => {
         setIsLoading(false);
       }
     }
-  }, [simState]);
+  }, [simState, activeOrganizationId]);
 
   useEffect(() => {
     loadData(simState);
@@ -216,8 +249,53 @@ export const AssignedAreasPage = () => {
   };
 
   if (!USE_MOCK_API) {
-    const activeCount = areas.filter(a => a.isActive).length;
-    const inactiveCount = areas.length - activeCount;
+    const activeCount = areas.filter(a => a.assignmentStatus === 'Active').length;
+    const totalOpenRequests = areas.reduce((sum, a) => sum + Number(a.openRequestsCount || 0), 0);
+    const totalTeams = areas.reduce((sum, a) => sum + Number(a.assignedTeamsCount || 0), 0);
+    const unassignedCatalog = availableCatalogAreas.filter(
+      (cat) => !areas.some((a) => Number(a.areaId) === Number(cat.areaId))
+    );
+
+    const handleLiveAssignSubmit = async (e) => {
+      e.preventDefault();
+      if (!liveAssignForm.areaId) return;
+      setLiveActionMsg(null);
+      try {
+        const created = await assignedAreasService.assignNewArea(activeOrganizationId, liveAssignForm);
+        setAreas((prev) => [created, ...prev]);
+        setLiveAssignOpen(false);
+        setLiveAssignForm({ areaId: '', assignmentStatus: 'Active', primaryContact: '', notes: '' });
+        setLiveActionMsg({ type: 'success', text: `Assigned ${created.areaName} to organization.` });
+      } catch (err) {
+        setLiveActionMsg({ type: 'error', text: err?.detail || err?.message || 'Unable to assign area.' });
+      }
+    };
+
+    const handleLiveStatusChange = async (area, nextStatus) => {
+      setLiveActionMsg(null);
+      try {
+        const updated = await assignedAreasService.updateArea(
+          activeOrganizationId,
+          area.organizationAreaId,
+          { assignmentStatus: nextStatus, primaryContact: area.primaryContact, notes: area.notes }
+        );
+        setAreas((prev) => prev.map((a) => (a.organizationAreaId === area.organizationAreaId ? updated : a)));
+        setLiveActionMsg({ type: 'success', text: `Updated ${area.areaName} to ${nextStatus}.` });
+      } catch (err) {
+        setLiveActionMsg({ type: 'error', text: err?.detail || err?.message || 'Unable to update area status.' });
+      }
+    };
+
+    const handleLiveRemove = async (area) => {
+      setLiveActionMsg(null);
+      try {
+        await assignedAreasService.removeArea(activeOrganizationId, area.organizationAreaId);
+        setAreas((prev) => prev.filter((a) => a.organizationAreaId !== area.organizationAreaId));
+        setLiveActionMsg({ type: 'success', text: `Removed ${area.areaName} from organization.` });
+      } catch (err) {
+        setLiveActionMsg({ type: 'error', text: err?.detail || err?.message || 'Unable to remove area.' });
+      }
+    };
 
     return (
       <div className="org-areas-page">
@@ -225,27 +303,106 @@ export const AssignedAreasPage = () => {
           <div className="org-page-title-wrap">
             <h1 className="org-page-title">
               <IconMapPin size={24} color="#10756F" />
-              <span>Geographic Areas Directory</span>
+              <span>Assigned Operational Areas</span>
             </h1>
             <p className="org-page-subtitle">
-              Platform geographical hierarchy records loaded from the HCMS Areas API (Provinces, Districts, DS/GN Divisions).
+              Geographic districts and divisions assigned to your organization for crisis response and aid coverage.
             </p>
           </div>
+          {canManageAreas && (
+            <div className="org-header-action-group">
+              <button
+                type="button"
+                className="org-btn-primary"
+                onClick={() => setLiveAssignOpen((v) => !v)}
+              >
+                <IconPlus size={16} />
+                <span>{liveAssignOpen ? 'Cancel' : 'Assign Area'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        <div
-          style={{
-            backgroundColor: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            padding: '12px 14px',
-            fontSize: '12.5px',
-            color: '#475569',
-            marginBottom: '16px',
-          }}
-        >
-          <strong>Note:</strong> These records represent global platform geographical areas. Organization-specific area assignments, field team deployments, risk levels, and shelter capacities are not yet supported by the backend Areas API.
-        </div>
+        {liveActionMsg && (
+          <div
+            style={{
+              marginBottom: '14px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              backgroundColor: liveActionMsg.type === 'error' ? '#FEF2F2' : '#ECFDF5',
+              color: liveActionMsg.type === 'error' ? '#991B1B' : '#047857',
+              border: `1px solid ${liveActionMsg.type === 'error' ? '#FECACA' : '#A7F3D0'}`,
+            }}
+          >
+            {liveActionMsg.text}
+          </div>
+        )}
+
+        {canManageAreas && liveAssignOpen && (
+          <form
+            onSubmit={handleLiveAssignSubmit}
+            className="org-filter-card"
+            style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', alignItems: 'end' }}
+          >
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Geographic Area *</label>
+              <select
+                className="org-filter-select"
+                style={{ width: '100%' }}
+                required
+                value={liveAssignForm.areaId}
+                onChange={(e) => setLiveAssignForm((p) => ({ ...p, areaId: e.target.value }))}
+              >
+                <option value="">-- Select Area --</option>
+                {unassignedCatalog.map((cat) => (
+                  <option key={cat.areaId} value={cat.areaId}>
+                    {cat.areaName} ({cat.areaType})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Status</label>
+              <select
+                className="org-filter-select"
+                style={{ width: '100%' }}
+                value={liveAssignForm.assignmentStatus}
+                onChange={(e) => setLiveAssignForm((p) => ({ ...p, assignmentStatus: e.target.value }))}
+              >
+                <option value="Active">Active</option>
+                <option value="Standby">Standby</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Primary Contact</label>
+              <input
+                type="text"
+                className="org-filter-search-input"
+                style={{ paddingLeft: '12px' }}
+                placeholder="Officer / Contact phone"
+                value={liveAssignForm.primaryContact}
+                onChange={(e) => setLiveAssignForm((p) => ({ ...p, primaryContact: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Notes</label>
+              <input
+                type="text"
+                className="org-filter-search-input"
+                style={{ paddingLeft: '12px' }}
+                placeholder="Coverage notes"
+                value={liveAssignForm.notes}
+                onChange={(e) => setLiveAssignForm((p) => ({ ...p, notes: e.target.value }))}
+              />
+            </div>
+            <button type="submit" className="org-btn-primary" style={{ height: '38px' }}>
+              Save Assignment
+            </button>
+          </form>
+        )}
 
         <div className="org-incidents-kpi-grid">
           <div className="org-incidents-kpi-card">
@@ -254,8 +411,8 @@ export const AssignedAreasPage = () => {
             </div>
             <div className="org-kpi-content">
               <span className="org-kpi-val">{areas.length}</span>
-              <span className="org-kpi-label">Total Geographic Areas</span>
-              <span className="org-kpi-subtext">Registered hierarchy records</span>
+              <span className="org-kpi-label">Assigned Areas</span>
+              <span className="org-kpi-subtext">Organization operational zones</span>
             </div>
           </div>
           <div className="org-incidents-kpi-card">
@@ -264,18 +421,18 @@ export const AssignedAreasPage = () => {
             </div>
             <div className="org-kpi-content">
               <span className="org-kpi-val">{activeCount}</span>
-              <span className="org-kpi-label">Active Areas</span>
-              <span className="org-kpi-subtext">Available for crisis reporting</span>
+              <span className="org-kpi-label">Active Assignments</span>
+              <span className="org-kpi-subtext">Currently covered zones</span>
             </div>
           </div>
           <div className="org-incidents-kpi-card">
-            <div className="org-kpi-icon-box" style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
-              <IconAlertTriangle size={22} color="#DC2626" />
+            <div className="org-kpi-icon-box" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+              <IconAlertTriangle size={22} color="#B45309" />
             </div>
             <div className="org-kpi-content">
-              <span className="org-kpi-val">{inactiveCount}</span>
-              <span className="org-kpi-label">Inactive Areas</span>
-              <span className="org-kpi-subtext">Deactivated hierarchy entries</span>
+              <span className="org-kpi-val">{totalOpenRequests}</span>
+              <span className="org-kpi-label">Open Aid Requests</span>
+              <span className="org-kpi-subtext">Across assigned areas</span>
             </div>
           </div>
           <div className="org-incidents-kpi-card">
@@ -283,9 +440,9 @@ export const AssignedAreasPage = () => {
               <IconMapPin size={22} color="#2563EB" />
             </div>
             <div className="org-kpi-content">
-              <span className="org-kpi-val">{availableAreaTypes.length}</span>
-              <span className="org-kpi-label">Area Types</span>
-              <span className="org-kpi-subtext">Distinct administrative levels</span>
+              <span className="org-kpi-val">{totalTeams}</span>
+              <span className="org-kpi-label">Assigned Teams</span>
+              <span className="org-kpi-subtext">Teams stationed in areas</span>
             </div>
           </div>
         </div>
@@ -333,11 +490,11 @@ export const AssignedAreasPage = () => {
                 className="org-filter-select"
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value)}
-                aria-label="Filter by active status"
+                aria-label="Filter by assignment status"
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="inactive">Standby / Completed</option>
               </select>
 
               {hasActiveFilters && (
@@ -358,13 +515,12 @@ export const AssignedAreasPage = () => {
         <div className="org-incidents-table-card">
           <div className="org-table-header-bar">
             <span className="org-table-count-label">
-              Geographic Areas ({filteredAreas.length} Records)
+              Assigned Areas ({filteredAreas.length} Records)
             </span>
           </div>
 
           {isLoading && (
             <div style={{ padding: '24px' }}>
-              <div className="org-skeleton-row"></div>
               <div className="org-skeleton-row"></div>
               <div className="org-skeleton-row"></div>
               <div className="org-skeleton-row"></div>
@@ -376,7 +532,7 @@ export const AssignedAreasPage = () => {
               <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <IconAlertTriangle size={26} color="#DC2626" />
               </div>
-              <h3 className="org-state-title">Unable to Load Geographic Areas</h3>
+              <h3 className="org-state-title">Unable to Load Assigned Areas</h3>
               <p className="org-state-desc">{error}</p>
               <button
                 className="org-btn-primary"
@@ -394,20 +550,12 @@ export const AssignedAreasPage = () => {
               <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#ECFBF8', color: '#10756F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <IconMapPin size={24} color="#10756F" />
               </div>
-              <h3 className="org-state-title">No Geographic Areas Found</h3>
+              <h3 className="org-state-title">No Assigned Areas Yet</h3>
               <p className="org-state-desc">
-                No geographic area records match your current filters.
+                {canManageAreas
+                  ? 'Assign districts or divisions to scope your organization aid requests and field teams.'
+                  : 'No geographic areas have been assigned to this organization yet.'}
               </p>
-              {hasActiveFilters && (
-                <button
-                  className="org-btn-secondary"
-                  onClick={handleResetFilters}
-                  style={{ marginTop: '8px' }}
-                  type="button"
-                >
-                  Clear All Filters
-                </button>
-              )}
             </div>
           )}
 
@@ -416,34 +564,66 @@ export const AssignedAreasPage = () => {
               <table className="org-incidents-table">
                 <thead>
                   <tr>
-                    <th>Area ID</th>
-                    <th>Area Name</th>
-                    <th>Area Type</th>
-                    <th>Parent Area</th>
-                    <th>Code</th>
+                    <th>Area</th>
+                    <th>Type</th>
+                    <th>Coordinates</th>
+                    <th>Open Requests</th>
+                    <th>Teams</th>
                     <th>Status</th>
+                    {canManageAreas && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAreas.map((area) => (
-                    <tr key={area.areaId}>
+                    <tr key={area.organizationAreaId || area.areaId}>
                       <td>
-                        <span className="org-incident-code">#{area.areaId}</span>
+                        <div style={{ fontWeight: 700, color: '#0F172A' }}>{area.areaName}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                          {area.parentAreaName ? `${area.parentAreaName} · ` : ''}#{area.areaId}
+                        </div>
                       </td>
-                      <td style={{ fontWeight: 700, color: '#0F172A' }}>{area.areaName}</td>
                       <td>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: '#10756F', backgroundColor: '#ECFBF8', padding: '2px 8px', borderRadius: '4px' }}>
                           {area.areaType}
                         </span>
                       </td>
-                      <td style={{ color: '#475569' }}>{area.parentAreaName || '—'}</td>
-                      <td style={{ color: '#64748B', fontFamily: 'monospace' }}>{area.code || '—'}</td>
-                      <td>
-                        <span className={`org-area-status-pill ${area.isActive ? 'active' : 'awaiting'}`}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: area.isActive ? '#059669' : '#DC2626' }}></span>
-                          {area.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                      <td style={{ fontSize: '12px', color: '#475569', fontFamily: 'monospace' }}>
+                        {area.latitude != null && area.longitude != null
+                          ? `${Number(area.latitude).toFixed(4)}, ${Number(area.longitude).toFixed(4)}`
+                          : 'No coordinates'}
                       </td>
+                      <td style={{ fontWeight: 600 }}>{area.openRequestsCount}</td>
+                      <td style={{ fontWeight: 600 }}>{area.assignedTeamsCount}</td>
+                      <td>
+                        {canManageAreas ? (
+                          <select
+                            className="org-filter-select"
+                            style={{ height: '30px', fontSize: '12px' }}
+                            value={area.assignmentStatus}
+                            onChange={(e) => handleLiveStatusChange(area, e.target.value)}
+                          >
+                            <option value="Active">Active</option>
+                            <option value="Standby">Standby</option>
+                            <option value="Completed">Completed</option>
+                          </select>
+                        ) : (
+                          <span className={`org-area-status-pill ${area.assignmentStatus === 'Active' ? 'active' : 'awaiting'}`}>
+                            {area.assignmentStatus}
+                          </span>
+                        )}
+                      </td>
+                      {canManageAreas && (
+                        <td>
+                          <button
+                            type="button"
+                            className="org-btn-secondary"
+                            style={{ height: '28px', padding: '0 10px', fontSize: '11px', color: '#DC2626' }}
+                            onClick={() => handleLiveRemove(area)}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

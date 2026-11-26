@@ -8,11 +8,35 @@ namespace HumanitarianCrisisManagement.Infrastructure.Services;
 
 public class OrganizationMembershipService : IOrganizationMembershipService
 {
-    private readonly ApplicationDbContext _context;
+    private static readonly HashSet<string> GlobalOnlySystemPermissions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Users.View",
+        "Users.Manage",
+        "Roles.Manage",
+        "Permissions.View",
+        "AuditLogs.View"
+    };
 
-    public OrganizationMembershipService(ApplicationDbContext context)
+    private static readonly string[] DefaultOrganizationAdminPermissions =
+    [
+        "Organizations.View",
+        "Organizations.Manage",
+        "Organizations.ApproveMembers",
+        "Resources.View",
+        "Resources.Manage",
+        "Resources.Allocate",
+        "Reports.View"
+    ];
+
+    private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService? _auditLogService;
+
+    public OrganizationMembershipService(
+        ApplicationDbContext context,
+        IAuditLogService? auditLogService = null)
     {
         _context = context;
+        _auditLogService = auditLogService;
     }
 
     public async Task<OrganizationMembershipResponse> RequestMembershipAsync(
@@ -62,6 +86,214 @@ public class OrganizationMembershipService : IOrganizationMembershipService
             ApprovedByUserId = membership.ApprovedByUserId
         };
     }
+
+    public async Task<OrganizationMembershipResponse> AddMemberAsync(
+        int organizationId,
+        AddOrganizationMemberRequest request)
+    {
+        var organization = await _context.Organizations
+            .FirstOrDefaultAsync(o => o.OrganizationId == organizationId);
+
+        if (organization == null)
+            throw new KeyNotFoundException("Organization not found.");
+
+        if (!organization.IsActive)
+            throw new InvalidOperationException(
+                "Cannot add members to an inactive organization.");
+
+        User? targetUser = null;
+        if (request.UserId.HasValue)
+        {
+            targetUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == request.UserId.Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            targetUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+        }
+        else
+        {
+            throw new ArgumentException("Either UserId or Email must be provided.");
+        }
+
+        if (targetUser == null)
+            throw new KeyNotFoundException("Target user account was not found.");
+
+        if (!targetUser.IsActive)
+            throw new InvalidOperationException("Cannot add an inactive user to an organization.");
+
+        var existingMembership = await _context.OrganizationMemberships
+            .AnyAsync(m =>
+                m.OrganizationId == organizationId &&
+                m.UserId == targetUser.UserId);
+
+        if (existingMembership)
+            throw new InvalidOperationException(
+                "This user already has a membership or pending request for this organization.");
+
+        var membership = new OrganizationMembership
+        {
+            UserId = targetUser.UserId,
+            OrganizationId = organizationId,
+            MembershipStatus = "Pending",
+            JoinedAt = DateTime.UtcNow
+        };
+
+        _context.OrganizationMemberships.Add(membership);
+        await _context.SaveChangesAsync();
+
+        return new OrganizationMembershipResponse
+        {
+            MembershipId = membership.MembershipId,
+            UserId = membership.UserId,
+            OrganizationId = membership.OrganizationId,
+            OrganizationName = organization.OrganizationName,
+            MembershipStatus = membership.MembershipStatus,
+            JoinedAt = membership.JoinedAt,
+            ApprovedAt = membership.ApprovedAt,
+            ApprovedByUserId = membership.ApprovedByUserId
+        };
+    }
+
+    public async Task<IReadOnlyList<OrganizationRoleResponse>> GetOrganizationRolesAsync(
+        int organizationId)
+    {
+        var orgExists = await _context.Organizations
+            .AnyAsync(o => o.OrganizationId == organizationId);
+
+        if (!orgExists)
+            throw new KeyNotFoundException("Organization not found.");
+
+        var roles = await _context.Roles
+            .AsNoTracking()
+            .Where(r => r.OrganizationId == organizationId && !r.IsSystemDefined)
+            .Include(r => r.RolePermissions)
+                .ThenInclude(rp => rp.Permission)
+            .OrderBy(r => r.RoleName)
+            .ToListAsync();
+
+        return roles.Select(MapOrganizationRole).ToList();
+    }
+
+    public async Task<OrganizationRoleResponse> CreateOrganizationRoleAsync(
+        int organizationId,
+        CreateOrganizationRoleRequest request,
+        int createdByUserId)
+    {
+        var organization = await _context.Organizations
+            .FirstOrDefaultAsync(o => o.OrganizationId == organizationId);
+
+        if (organization == null)
+            throw new KeyNotFoundException("Organization not found.");
+
+        if (!organization.IsActive)
+            throw new InvalidOperationException(
+                "Cannot create roles for an inactive organization.");
+
+        var roleName = request.RoleName.Trim();
+        if (string.IsNullOrWhiteSpace(roleName))
+            throw new ArgumentException("Role name is required.");
+
+        if (string.Equals(roleName, "Administrator", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "Global system role name 'Administrator' cannot be used as an organization role.");
+
+        var duplicateRole = await _context.Roles
+            .AnyAsync(r =>
+                r.OrganizationId == organizationId &&
+                r.RoleName.ToLower() == roleName.ToLower());
+
+        if (duplicateRole)
+            throw new InvalidOperationException(
+                $"Role '{roleName}' already exists for this organization.");
+
+        List<Permission> permissions;
+        if (request.PermissionIds != null && request.PermissionIds.Count > 0)
+        {
+            var distinctIds = request.PermissionIds.Distinct().ToList();
+            permissions = await _context.Permissions
+                .Where(p => distinctIds.Contains(p.PermissionId))
+                .ToListAsync();
+
+            if (permissions.Count != distinctIds.Count)
+                throw new ArgumentException("One or more specified permissions do not exist.");
+        }
+        else if (string.Equals(roleName, "OrganizationAdmin", StringComparison.OrdinalIgnoreCase))
+        {
+            permissions = await _context.Permissions
+                .Where(p => DefaultOrganizationAdminPermissions.Contains(p.PermissionName))
+                .ToListAsync();
+        }
+        else
+        {
+            throw new ArgumentException("At least one valid permission must be specified.");
+        }
+
+        var disallowed = permissions
+            .Where(p => GlobalOnlySystemPermissions.Contains(p.PermissionName))
+            .Select(p => p.PermissionName)
+            .ToList();
+
+        if (disallowed.Count > 0)
+            throw new InvalidOperationException(
+                $"Global system permissions cannot be assigned to organization-scoped roles: {string.Join(", ", disallowed)}.");
+
+        var role = new Role
+        {
+            RoleName = roleName,
+            Description = string.IsNullOrWhiteSpace(request.Description)
+                ? $"Organization-scoped role for {organization.OrganizationName}"
+                : request.Description.Trim(),
+            OrganizationId = organizationId,
+            IsSystemDefined = false
+        };
+
+        foreach (var permission in permissions)
+        {
+            role.RolePermissions.Add(new RolePermission
+            {
+                Role = role,
+                PermissionId = permission.PermissionId,
+                Permission = permission
+            });
+        }
+
+        _context.Roles.Add(role);
+        await _context.SaveChangesAsync();
+
+        if (_auditLogService != null)
+        {
+            await _auditLogService.RecordAsync(
+                createdByUserId,
+                null,
+                "Organization.RoleCreated",
+                "Role",
+                role.RoleId.ToString(),
+                $"Created organization role '{role.RoleName}' for organization #{organizationId} with {permissions.Count} permission(s).");
+        }
+
+        return MapOrganizationRole(role);
+    }
+
+    private static OrganizationRoleResponse MapOrganizationRole(Role role) => new()
+    {
+        RoleId = role.RoleId,
+        OrganizationId = role.OrganizationId ?? 0,
+        RoleName = role.RoleName,
+        Description = role.Description,
+        IsSystemDefined = role.IsSystemDefined,
+        Permissions = role.RolePermissions
+            .Select(rp => new OrganizationRolePermissionItem
+            {
+                PermissionId = rp.Permission.PermissionId,
+                PermissionName = rp.Permission.PermissionName,
+                Description = rp.Permission.Description
+            })
+            .OrderBy(p => p.PermissionName)
+            .ToList()
+    };
 
     public async Task<IReadOnlyList<OrganizationMemberResponse>> GetMembersAsync(
     int organizationId)
@@ -385,4 +617,52 @@ public class OrganizationMembershipService : IOrganizationMembershipService
         };
     }
 
+    public async Task RemoveMemberAsync(int organizationId, int membershipId, int actorUserId)
+    {
+        var membership = await _context.OrganizationMemberships
+            .Include(m => m.MembershipRoles)
+                .ThenInclude(mr => mr.Role)
+            .FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.MembershipId == membershipId)
+            ?? throw new KeyNotFoundException("Organization membership was not found.");
+
+        if (membership.UserId == actorUserId)
+        {
+            var isOrgAdmin = membership.MembershipRoles.Any(mr =>
+                string.Equals(mr.Role.RoleName, "OrganizationAdmin", StringComparison.OrdinalIgnoreCase));
+
+            if (isOrgAdmin)
+            {
+                var otherAdmins = await _context.OrganizationMemberships
+                    .CountAsync(m =>
+                        m.OrganizationId == organizationId &&
+                        m.MembershipId != membershipId &&
+                        m.MembershipStatus == "Approved" &&
+                        m.MembershipRoles.Any(mr => mr.Role.RoleName == "OrganizationAdmin"));
+
+                if (otherAdmins == 0)
+                {
+                    throw new InvalidOperationException("Cannot remove the last OrganizationAdmin from this organization.");
+                }
+            }
+        }
+
+        var teamMemberships = await _context.ResponseTeamMembers
+            .Where(tm => tm.MembershipId == membershipId)
+            .ToListAsync();
+        if (teamMemberships.Count > 0)
+        {
+            _context.ResponseTeamMembers.RemoveRange(teamMemberships);
+        }
+
+        var ledTeams = await _context.ResponseTeams
+            .Where(t => t.LeaderMembershipId == membershipId)
+            .ToListAsync();
+        foreach (var team in ledTeams)
+        {
+            team.LeaderMembershipId = null;
+        }
+
+        _context.OrganizationMemberships.Remove(membership);
+        await _context.SaveChangesAsync();
+    }
 }

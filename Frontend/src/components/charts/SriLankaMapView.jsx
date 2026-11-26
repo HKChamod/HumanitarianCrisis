@@ -2,24 +2,7 @@ import { useMemo, useState } from 'react';
 import { List, Map as MapIcon, MapPin, Users, X } from 'lucide-react';
 import { DISTRICTS, PROVINCES } from '../../data/sriLankaAreas';
 import { SeverityBadge, StatusBadge } from '../common/StatusBadge';
-
-// Approximate normalized SVG coordinates for Sri Lanka (lat 5.9..9.85, lng 79.6..81.9)
-function projectSriLanka(lat = 7.8731, lng = 80.7718) {
-  const minLat = 5.85;
-  const maxLat = 9.9;
-  const minLng = 79.55;
-  const maxLng = 82.0;
-  const x = ((lng - minLng) / (maxLng - minLng)) * 220 + 40;
-  const y = ((maxLat - lat) / (maxLat - minLat)) * 310 + 25;
-  return { x: Math.max(45, Math.min(255, x)), y: Math.max(30, Math.min(330, y)) };
-}
-
-const SEVERITY_COLORS = {
-  Critical: '#DC2626',
-  High: '#F59E0B',
-  Medium: '#0284C7',
-  Low: '#16A34A',
-};
+import { MapView, adaptCollectionToMapItems, adaptCrisisToMapItem } from '../../shared/maps';
 
 export function SriLankaMapView({
   crises = [],
@@ -149,57 +132,22 @@ export function SriLankaMapView({
 
       {viewMode === 'map' ? (
         <div className={`grid grid-cols-1 ${compact ? 'lg:grid-cols-5' : 'lg:grid-cols-12'} bg-[#F0FDFA]/50`}>
-          {/* Sri Lanka SVG Map Canvas */}
-          <div className={`${compact ? 'lg:col-span-3' : 'lg:col-span-7'} relative flex items-center justify-center p-4 min-h-[320px]`}>
-            <svg viewBox="0 0 300 360" className="w-full max-w-[300px] h-auto" role="img" aria-label="Sri Lanka crisis map">
-              {/* Stylized Sri Lanka island silhouette */}
-              <path
-                d="M126 24 L145 28 L156 44 L154 66 L172 95 L196 130 L215 170 L226 218 L215 268 L188 308 L150 332 L114 328 L90 298 L82 252 L78 205 L85 154 L98 106 L112 68 L116 38 Z"
-                fill="#FFFFFF"
-                stroke="#0F766E"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-              {/* Subtle province grid lines */}
-              <path d="M98 110 L180 118 M84 185 L218 190 M86 250 L214 245 M145 112 L152 330" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="3 3" />
-
-              {filteredCrises.map((crisis) => {
-                const { x, y } = projectSriLanka(crisis.location?.latitude, crisis.location?.longitude);
-                const color = SEVERITY_COLORS[crisis.severity] || '#0F766E';
-                const isSelected = selected?.id === crisis.id;
-                return (
-                  <g
-                    key={crisis.id}
-                    transform={`translate(${x}, ${y})`}
-                    onClick={() => setSelected(crisis)}
-                    className="cursor-pointer"
-                  >
-                    {crisis.severity === 'Critical' && (
-                      <circle r={isSelected ? 15 : 12} fill={color} opacity="0.2" />
-                    )}
-                    <circle
-                      r={isSelected ? 8 : 6.5}
-                      fill={color}
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                    />
-                    <title>
-                      {crisis.crisisName} ({crisis.severity}) — {crisis.location?.districtName}
-                    </title>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Legend */}
-            <div className="absolute bottom-3 left-3 bg-white/95 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 flex items-center gap-3 text-[11px] text-[#475569]">
-              {['Critical', 'High', 'Medium', 'Low'].map((sev) => (
-                <span key={sev} className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SEVERITY_COLORS[sev] }} />
-                  {sev}
-                </span>
-              ))}
-            </div>
+          {/* Unified Interactive Map Canvas */}
+          <div className={`${compact ? 'lg:col-span-3' : 'lg:col-span-7'} p-3`}>
+            {(() => {
+              const crisisMapData = adaptCollectionToMapItems(filteredCrises, adaptCrisisToMapItem);
+              return (
+                <MapView
+                  items={crisisMapData.items}
+                  missingCoordinatesCount={crisisMapData.missingCoordinatesCount}
+                  onSelectItem={(mapItem) => setSelected(mapItem?.properties?.raw || null)}
+                  heightClass={compact ? 'h-[340px]' : 'h-[430px]'}
+                  showSearch={false}
+                  showLayerControl={false}
+                  emptyMessage="No crisis events with valid coordinates match the selected filters."
+                />
+              );
+            })()}
           </div>
 
           {/* Detail Popup / Side Inspector */}

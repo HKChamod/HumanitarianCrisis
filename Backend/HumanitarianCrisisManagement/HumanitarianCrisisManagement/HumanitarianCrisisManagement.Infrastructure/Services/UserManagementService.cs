@@ -28,6 +28,11 @@ public class UserManagementService : IUserManagementService
             .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .Include(u => u.OrganizationMemberships)
+                .ThenInclude(m => m.Organization)
+            .Include(u => u.OrganizationMemberships)
+                .ThenInclude(m => m.MembershipRoles)
+                    .ThenInclude(mr => mr.Role)
             .AsQueryable();
 
         if (isActive.HasValue)
@@ -54,6 +59,11 @@ public class UserManagementService : IUserManagementService
             .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
+            .Include(u => u.OrganizationMemberships)
+                .ThenInclude(m => m.Organization)
+            .Include(u => u.OrganizationMemberships)
+                .ThenInclude(m => m.MembershipRoles)
+                    .ThenInclude(mr => mr.Role)
             .FirstOrDefaultAsync(u => u.UserId == userId);
 
         if (user == null)
@@ -238,16 +248,45 @@ public class UserManagementService : IUserManagementService
         return await GetByIdAsync(userId);
     }
 
-    private static UserAdminResponse MapUser(User u) => new()
+    private static UserAdminResponse MapUser(User u)
     {
-        UserId = u.UserId,
-        FullName = u.FullName,
-        Email = u.Email,
-        PhoneNumber = u.PhoneNumber,
-        IsActive = u.IsActive,
-        Roles = u.UserRoles.Select(ur => ur.Role.RoleName).OrderBy(r => r).ToList(),
-        CreatedAt = u.CreatedAt
-    };
+        var approvedMemberships = u.OrganizationMemberships
+            .Where(m => m.MembershipStatus == "Approved" && m.Organization != null && m.Organization.IsActive)
+            .ToList();
+
+        var organizations = approvedMemberships
+            .Select(m => m.Organization.OrganizationName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        var organizationRoles = approvedMemberships
+            .SelectMany(m => m.MembershipRoles
+                .Where(mr =>
+                    mr.OrganizationId == m.OrganizationId &&
+                    mr.Role != null &&
+                    mr.Role.OrganizationId == m.OrganizationId &&
+                    !mr.Role.IsSystemDefined)
+                .Select(mr => $"{mr.Role.RoleName} ({m.Organization.OrganizationName})"))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(r => r, StringComparer.Ordinal)
+            .ToList();
+
+        return new UserAdminResponse
+        {
+            UserId = u.UserId,
+            FullName = u.FullName,
+            Email = u.Email,
+            PhoneNumber = u.PhoneNumber,
+            IsActive = u.IsActive,
+            Department = organizations.Count > 0 ? string.Join(", ", organizations) : null,
+            Organizations = organizations,
+            Roles = u.UserRoles.Select(ur => ur.Role.RoleName).OrderBy(r => r).ToList(),
+            OrganizationRoles = organizationRoles,
+            CreatedAt = u.CreatedAt
+        };
+    }
 }
 
 public class RoleManagementService : IRoleManagementService
@@ -268,6 +307,8 @@ public class RoleManagementService : IRoleManagementService
         var roles = await _context.Roles
             .AsNoTracking()
             .Include(r => r.UserRoles)
+            .Include(r => r.MembershipRoles)
+                .ThenInclude(mr => mr.Membership)
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
             .OrderBy(r => r.RoleId)
@@ -336,6 +377,8 @@ public class RoleManagementService : IRoleManagementService
         var reloaded = await _context.Roles
             .AsNoTracking()
             .Include(r => r.UserRoles)
+            .Include(r => r.MembershipRoles)
+                .ThenInclude(mr => mr.Membership)
             .Include(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
             .FirstAsync(r => r.RoleId == roleId);
@@ -343,20 +386,31 @@ public class RoleManagementService : IRoleManagementService
         return MapRole(reloaded);
     }
 
-    private static RoleDetailResponse MapRole(Role r) => new()
+    private static RoleDetailResponse MapRole(Role r)
     {
-        RoleId = r.RoleId,
-        RoleName = r.RoleName,
-        Description = r.Description,
-        UserCount = r.UserRoles.Count,
-        Permissions = r.RolePermissions
-            .Select(rp => new PermissionItemResponse
-            {
-                PermissionId = rp.Permission.PermissionId,
-                PermissionName = rp.Permission.PermissionName,
-                Description = rp.Permission.Description
-            })
-            .OrderBy(p => p.PermissionName)
-            .ToList()
-    };
+        var distinctUserCount = r.UserRoles
+            .Select(ur => ur.UserId)
+            .Concat(r.MembershipRoles
+                .Where(mr => mr.Membership != null && mr.Membership.MembershipStatus == "Approved")
+                .Select(mr => mr.Membership.UserId))
+            .Distinct()
+            .Count();
+
+        return new RoleDetailResponse
+        {
+            RoleId = r.RoleId,
+            RoleName = r.RoleName,
+            Description = r.Description,
+            UserCount = distinctUserCount,
+            Permissions = r.RolePermissions
+                .Select(rp => new PermissionItemResponse
+                {
+                    PermissionId = rp.Permission.PermissionId,
+                    PermissionName = rp.Permission.PermissionName,
+                    Description = rp.Permission.Description
+                })
+                .OrderBy(p => p.PermissionName)
+                .ToList()
+        };
+    }
 }

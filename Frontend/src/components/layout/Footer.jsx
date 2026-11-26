@@ -3,7 +3,7 @@ import { Shield, Phone, Mail, Lock, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function Footer() {
-  const { t, setLang } = useLanguage();
+  const { lang, t, setLang } = useLanguage();
 
   return (
     <>
@@ -94,8 +94,17 @@ export function Footer() {
                 <li>
                   <button
                     type="button"
+                    className={lang === 'si' ? 'active' : ''}
                     onClick={() => setLang('si')}
-                    style={{ color: '#94A3B8', cursor: 'pointer', textAlign: 'left' }}
+                    style={{
+                      color: lang === 'si' ? '#5EEAD4' : '#94A3B8',
+                      fontWeight: lang === 'si' ? 600 : 400,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                    }}
                   >
                     සිංහල (Sinhala)
                   </button>
@@ -103,8 +112,17 @@ export function Footer() {
                 <li>
                   <button
                     type="button"
+                    className={lang === 'ta' ? 'active' : ''}
                     onClick={() => setLang('ta')}
-                    style={{ color: '#94A3B8', cursor: 'pointer', textAlign: 'left' }}
+                    style={{
+                      color: lang === 'ta' ? '#5EEAD4' : '#94A3B8',
+                      fontWeight: lang === 'ta' ? 600 : 400,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                    }}
                   >
                     தமிழ் (Tamil)
                   </button>
@@ -112,8 +130,17 @@ export function Footer() {
                 <li>
                   <button
                     type="button"
+                    className={lang === 'en' ? 'active' : ''}
                     onClick={() => setLang('en')}
-                    style={{ color: '#5EEAD4', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                    style={{
+                      color: lang === 'en' ? '#5EEAD4' : '#94A3B8',
+                      fontWeight: lang === 'en' ? 600 : 400,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                    }}
                   >
                     English
                   </button>

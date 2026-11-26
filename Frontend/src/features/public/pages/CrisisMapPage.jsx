@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   MapPin,
-  Home,
   LifeBuoy,
 } from 'lucide-react';
 import { publicApi } from '../../../api/publicApi';
 import { Badge } from '../../../components/common/Badge';
 import { useLanguage } from '../../../context/LanguageContext';
+import {
+  MapView,
+  adaptCollectionToMapItems,
+  adaptCrisisToMapItem,
+  adaptShelterToMapItem,
+} from '../../../shared/maps';
 
 export function CrisisMapPage() {
   const { t, lang } = useLanguage();
@@ -23,21 +28,23 @@ export function CrisisMapPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [cRes, sRes] = await Promise.all([
+        const [cResult, sResult] = await Promise.allSettled([
           publicApi.getCrises(),
           publicApi.getShelters(),
         ]);
-        setCrises(cRes.data);
-        setShelters(sRes.data);
+        const cData = cResult.status === 'fulfilled' && Array.isArray(cResult.value?.data) ? cResult.value.data : [];
+        const sData = sResult.status === 'fulfilled' && Array.isArray(sResult.value?.data) ? sResult.value.data : [];
+        setCrises(cData);
+        setShelters(sData);
 
         // Highlight requested shelter if provided
         if (highlightedShelterId) {
-          const found = sRes.data.find((s) => s.id === highlightedShelterId);
+          const found = sData.find((s) => String(s.id) === String(highlightedShelterId));
           if (found) {
             setSelectedItem({ type: 'shelter', data: found });
           }
-        } else if (cRes.data.length > 0) {
-          setSelectedItem({ type: 'crisis', data: cRes.data[0] });
+        } else if (cData.length > 0) {
+          setSelectedItem({ type: 'crisis', data: cData[0] });
         }
       } catch (e) {
         console.error(e);
@@ -48,18 +55,27 @@ export function CrisisMapPage() {
     load();
   }, [highlightedShelterId]);
 
-  // Coordinates mapping to relative % position on Sri Lanka map viewBox
-  // Sri Lanka bounds roughly: Lat 5.9° to 9.8° N, Lng 79.5° to 81.9° E
-  const getMapCoordinates = (lat, lng) => {
-    const minLat = 5.8;
-    const maxLat = 9.9;
-    const minLng = 79.4;
-    const maxLng = 82.0;
+  const unifiedMapData = useMemo(() => {
+    const crisisResult =
+      filterType === 'all' || filterType === 'crises'
+        ? adaptCollectionToMapItems(crises, adaptCrisisToMapItem)
+        : { items: [], missingCoordinatesCount: 0 };
+    const shelterResult =
+      filterType === 'all' || filterType === 'shelters'
+        ? adaptCollectionToMapItems(shelters, adaptShelterToMapItem)
+        : { items: [], missingCoordinatesCount: 0 };
+    return {
+      items: [...crisisResult.items, ...shelterResult.items],
+      missingCoordinatesCount:
+        crisisResult.missingCoordinatesCount + shelterResult.missingCoordinatesCount,
+    };
+  }, [crises, shelters, filterType]);
 
-    const y = 100 - ((lat - minLat) / (maxLat - minLat)) * 100;
-    const x = ((lng - minLng) / (maxLng - minLng)) * 100;
-    return { top: `${Math.max(5, Math.min(95, y))}%`, left: `${Math.max(5, Math.min(95, x))}%` };
-  };
+  const activeMapItem = useMemo(() => {
+    if (!selectedItem?.data?.id) return null;
+    const prefix = selectedItem.type === 'shelter' ? 'shelter' : 'crisis';
+    return unifiedMapData.items.find((i) => i.id === `${prefix}-${selectedItem.data.id}`) || null;
+  }, [unifiedMapData.items, selectedItem]);
 
   return (
     <div style={{ backgroundColor: 'var(--color-surface-subtle)', padding: '2rem 0 4rem' }}>
@@ -257,134 +273,30 @@ export function CrisisMapPage() {
             )}
           </div>
 
-          {/* Right Map Canvas with Interactive Geo Points */}
-          <div className="map-canvas-container" style={{ minHeight: '600px', backgroundColor: '#EFF6FF', position: 'relative' }}>
-            {/* SVG Silhouette representation of Sri Lanka */}
-            <svg
-              viewBox="0 0 400 650"
-              style={{
-                width: '80%',
-                maxHeight: '560px',
-                filter: 'drop-shadow(0 15px 25px rgba(15, 118, 110, 0.15))',
+          {/* Right Map Canvas with Unified MapLibre Interactive Map */}
+          <div className="map-canvas-container p-3" style={{ minHeight: '600px', backgroundColor: '#F8FAFC' }}>
+            <MapView
+              items={unifiedMapData.items}
+              missingCoordinatesCount={unifiedMapData.missingCoordinatesCount}
+              selectedItem={activeMapItem}
+              onSelectItem={(item) => {
+                if (!item) {
+                  setSelectedItem(null);
+                  return;
+                }
+                const entityId = String(item.properties?.entityId ?? '');
+                if (item.type === 'shelter') {
+                  const found = shelters.find((s) => String(s.id) === entityId);
+                  if (found) setSelectedItem({ type: 'shelter', data: found });
+                } else {
+                  const found = crises.find((c) => String(c.id) === entityId);
+                  if (found) setSelectedItem({ type: 'crisis', data: found });
+                }
               }}
-            >
-              <path
-                d="M 180 50 Q 200 40 220 70 Q 250 120 270 190 Q 290 270 295 340 Q 300 430 260 520 Q 220 590 190 610 Q 150 620 130 570 Q 110 500 115 420 Q 120 330 130 250 Q 140 160 160 90 Z"
-                fill="#CCFBF1"
-                stroke="#0F766E"
-                strokeWidth="2.5"
-              />
-              <path
-                d="M 160 40 Q 180 20 200 30 Q 190 50 170 50 Z"
-                fill="#CCFBF1"
-                stroke="#0F766E"
-                strokeWidth="1.5"
-              />
-            </svg>
-
-            {/* Interactive Crisis Markers */}
-            {(filterType === 'all' || filterType === 'crises') &&
-              crises.map((c) => {
-                const pos = getMapCoordinates(c.coordinates.lat, c.coordinates.lng);
-                const isSelected = selectedItem?.data?.id === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelectedItem({ type: 'crisis', data: c })}
-                    style={{
-                      position: 'absolute',
-                      top: pos.top,
-                      left: pos.left,
-                      transform: 'translate(-50%, -50%)',
-                      background: c.severityLevel === 'Critical' ? '#DC2626' : '#F59E0B',
-                      color: '#FFFFFF',
-                      width: isSelected ? '38px' : '30px',
-                      height: isSelected ? '38px' : '30px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                      border: '3px solid #FFFFFF',
-                      cursor: 'pointer',
-                      zIndex: 10,
-                      transition: 'all 0.2s',
-                    }}
-                    title={`${c.crisisName} (${c.districtName})`}
-                  >
-                    ⚠️
-                  </button>
-                );
-              })}
-
-            {/* Interactive Shelter Markers */}
-            {(filterType === 'all' || filterType === 'shelters') &&
-              shelters.map((s) => {
-                const pos = getMapCoordinates(s.coordinates.lat, s.coordinates.lng);
-                const isSelected = selectedItem?.data?.id === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedItem({ type: 'shelter', data: s })}
-                    style={{
-                      position: 'absolute',
-                      top: pos.top,
-                      left: pos.left,
-                      transform: 'translate(-50%, -50%)',
-                      background: 'var(--color-primary)',
-                      color: '#FFFFFF',
-                      width: isSelected ? '38px' : '28px',
-                      height: isSelected ? '38px' : '28px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 10px rgba(15,118,110,0.35)',
-                      border: '2px solid #FFFFFF',
-                      cursor: 'pointer',
-                      zIndex: 9,
-                      transition: 'all 0.2s',
-                    }}
-                    title={`${s.name} (${s.districtName})`}
-                  >
-                    <Home size={14} />
-                  </button>
-                );
-              })}
-
-            {/* Map Legend */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '1rem',
-                left: '1rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(4px)',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-sm)',
-                border: '1px solid var(--color-slate-200)',
-                fontSize: '0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#DC2626' }} />
-                <span>{t('urgencyCritical')} {t('mapLegendCrisis')}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
-                <span>{t('urgencyHigh')} / {t('urgencyMedium')}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#0F766E' }} />
-                <span>{t('mapLegendShelter')}</span>
-              </div>
-            </div>
+              loading={loading}
+              heightClass="h-[560px]"
+              emptyMessage="No crises or shelters with valid coordinates match the current filter."
+            />
           </div>
         </div>
       </div>

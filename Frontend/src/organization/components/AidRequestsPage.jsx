@@ -6,12 +6,17 @@ import { AidRequestFilters } from './AidRequestFilters';
 import { AidRequestTable } from './AidRequestTable';
 import { AidRequestDetailsModal } from './AidRequestDetailsModal';
 import { aidRequestsService } from '../services/aidRequestsService';
+import { responseTeamsService } from '../services/responseTeamsService';
+import { useOrganization } from '../../app/providers/OrganizationProvider';
+import { USE_MOCK_API } from '../../services/api/axiosClient';
 import { IconHandHeart } from './Icons';
 import { useTranslation } from 'react-i18next';
 
 export const AidRequestsPage = () => {
   const { t } = useTranslation();
+  const { activeOrganizationId } = useOrganization();
   const [requests, setRequests] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -31,6 +36,13 @@ export const AidRequestsPage = () => {
 
   // Load Data
   const loadData = useCallback(async (stateMode = simState) => {
+    if (!USE_MOCK_API && !activeOrganizationId) {
+      setRequests([]);
+      setTeams([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -39,11 +51,18 @@ export const AidRequestsPage = () => {
         return; // maintain skeleton loading
       }
 
-      const data = await aidRequestsService.getAllAidRequests({
-        simulateError: stateMode === 'error',
-        simulateEmpty: stateMode === 'empty'
-      });
+      const [data, teamList] = await Promise.all([
+        aidRequestsService.getAllAidRequests({
+          organizationId: activeOrganizationId,
+          simulateError: stateMode === 'error',
+          simulateEmpty: stateMode === 'empty'
+        }),
+        USE_MOCK_API
+          ? Promise.resolve([])
+          : responseTeamsService.getAllTeams({ organizationId: activeOrganizationId }).catch(() => []),
+      ]);
       setRequests(data);
+      setTeams(Array.isArray(teamList) ? teamList : []);
     } catch (err) {
       setError(err?.detail || err?.message || 'Failed to fetch aid requests.');
       setRequests([]);
@@ -52,7 +71,7 @@ export const AidRequestsPage = () => {
         setIsLoading(false);
       }
     }
-  }, [simState]);
+  }, [simState, activeOrganizationId]);
 
   useEffect(() => {
     loadData(simState);
@@ -142,40 +161,46 @@ export const AidRequestsPage = () => {
 
   // Functional Status Update
   const handleUpdateStatus = async (requestId, newStatus) => {
-    const updated = await aidRequestsService.updateStatus(requestId, newStatus);
+    const updated = await aidRequestsService.updateStatus(requestId, newStatus, activeOrganizationId);
     const nextStatus = updated?.status || newStatus;
     setRequests(prev =>
       prev.map(item =>
-        item.requestId === requestId ? { ...item, status: nextStatus } : item
+        item.requestId === requestId ? { ...item, ...updated, status: nextStatus } : item
       )
     );
     if (selectedRequest && selectedRequest.requestId === requestId) {
-      setSelectedRequest(prev => ({ ...prev, status: nextStatus }));
+      setSelectedRequest(prev => ({ ...prev, ...updated, status: nextStatus }));
     }
   };
 
   // Functional Response Team Assignment
-  const handleAssignTeam = async (requestId, teamName) => {
-    await aidRequestsService.assignTeam(requestId, teamName);
+  const handleAssignTeam = async (requestId, teamIdOrName) => {
+    const updated = await aidRequestsService.assignTeam(requestId, teamIdOrName, activeOrganizationId);
     setRequests(prev =>
       prev.map(item => {
         if (item.requestId === requestId) {
+          if (!USE_MOCK_API && updated) {
+            return { ...item, ...updated };
+          }
           const updatedStatus =
-            item.status === 'Pending Review' && teamName !== 'Unassigned'
+            item.status === 'Pending Review' && teamIdOrName !== 'Unassigned'
               ? 'In Progress'
               : item.status;
-          return { ...item, assignedTeam: teamName, status: updatedStatus };
+          return { ...item, assignedTeam: teamIdOrName, status: updatedStatus };
         }
         return item;
       })
     );
     if (selectedRequest && selectedRequest.requestId === requestId) {
       setSelectedRequest(prev => {
+        if (!USE_MOCK_API && updated) {
+          return { ...prev, ...updated };
+        }
         const updatedStatus =
-          prev.status === 'Pending Review' && teamName !== 'Unassigned'
+          prev.status === 'Pending Review' && teamIdOrName !== 'Unassigned'
             ? 'In Progress'
             : prev.status;
-        return { ...prev, assignedTeam: teamName, status: updatedStatus };
+        return { ...prev, assignedTeam: teamIdOrName, status: updatedStatus };
       });
     }
   };
@@ -230,6 +255,7 @@ export const AidRequestsPage = () => {
       {/* 6 & 7. Request Details Modal / Side Panel */}
       <AidRequestDetailsModal
         request={selectedRequest}
+        teams={teams}
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
         onUpdateStatus={handleUpdateStatus}

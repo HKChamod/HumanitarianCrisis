@@ -10,6 +10,8 @@ public class AiRecommendationResponse
     public string CurrentUrgencyLevel { get; set; } = string.Empty;
     public string CurrentRequestStatus { get; set; } = string.Empty;
     public string AreaName { get; set; } = string.Empty;
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
     public int? CrisisId { get; set; }
     public string? CrisisName { get; set; }
 

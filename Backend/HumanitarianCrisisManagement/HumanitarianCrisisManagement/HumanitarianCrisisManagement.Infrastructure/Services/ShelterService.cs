@@ -83,6 +83,8 @@ public class ShelterService : IShelterService
             ShelterName = request.ShelterName.Trim(),
             AreaId = request.AreaId,
             Address = request.Address.Trim(),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             Capacity = request.Capacity,
             CurrentOccupancy = request.CurrentOccupancy,
             Status = normalizedStatus,
@@ -126,6 +128,8 @@ public class ShelterService : IShelterService
         shelter.ShelterName = request.ShelterName.Trim();
         shelter.AreaId = request.AreaId;
         shelter.Address = request.Address.Trim();
+        shelter.Latitude = request.Latitude;
+        shelter.Longitude = request.Longitude;
         shelter.Capacity = request.Capacity;
         shelter.CurrentOccupancy = request.CurrentOccupancy;
         shelter.Status = NormalizeStatus(request.Status, request.CurrentOccupancy, request.Capacity);
@@ -309,6 +313,8 @@ public class ShelterService : IShelterService
         AreaId = s.AreaId,
         AreaName = s.Area.AreaName,
         Address = s.Address,
+        Latitude = s.Latitude,
+        Longitude = s.Longitude,
         Capacity = s.Capacity,
         CurrentOccupancy = s.CurrentOccupancy,
         Status = s.Status,

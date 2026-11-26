@@ -49,6 +49,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<Donation> Donations => Set<Donation>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<ResponseTeam> ResponseTeams => Set<ResponseTeam>();
+    public DbSet<ResponseTeamMember> ResponseTeamMembers => Set<ResponseTeamMember>();
+    public DbSet<ResponseTeamDeployment> ResponseTeamDeployments => Set<ResponseTeamDeployment>();
+    public DbSet<OrganizationArea> OrganizationAreas => Set<OrganizationArea>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

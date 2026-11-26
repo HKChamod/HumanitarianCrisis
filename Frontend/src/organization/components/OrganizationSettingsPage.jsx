@@ -12,6 +12,7 @@ import {
   IconRotateCcw
 } from './Icons';
 import { organizationSettingsService } from '../services/organizationSettingsService';
+import { organizationOperationsService } from '../services/organizationOperationsService';
 import { OrganizationProfileSection } from './OrganizationProfileSection';
 import { AdminProfileSection } from './AdminProfileSection';
 import { OperationalPreferencesSection } from './OperationalPreferencesSection';
@@ -28,7 +29,7 @@ export const OrganizationSettingsPage = () => {
     orgRoles,
     refreshMemberships,
   } = useOrganization();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Active settings subtab
   const [activeSubTab, setActiveSubTab] = useState('profile');
@@ -50,6 +51,14 @@ export const OrganizationSettingsPage = () => {
   const [localPrefs, setLocalPrefs] = useState(() =>
     organizationSettingsService.getLocalPreferences(activeOrganizationId)
   );
+  const [orgRolesList, setOrgRolesList] = useState([]);
+  const [orgMembersList, setOrgMembersList] = useState([]);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
   const requestSeqRef = useRef(0);
   const activeOrgIdRef = useRef(activeOrganizationId);
 
@@ -79,10 +88,16 @@ export const OrganizationSettingsPage = () => {
     setFeedback(null);
 
     try {
-      const profile = await organizationSettingsService.getOrganizationProfile(activeOrganizationId);
+      const [profile, rolesRes, membersRes] = await Promise.all([
+        organizationSettingsService.getOrganizationProfile(activeOrganizationId),
+        organizationOperationsService.getOrganizationRoles(activeOrganizationId).catch(() => ({ items: [] })),
+        organizationOperationsService.getOrganizationMembers(activeOrganizationId).catch(() => ({ items: [] })),
+      ]);
       if (requestSeqRef.current !== seq || activeOrgIdRef.current !== activeOrganizationId) return;
       setLiveProfile(profile);
       setSavedLiveProfile(profile);
+      setOrgRolesList(Array.isArray(rolesRes?.items) ? rolesRes.items : []);
+      setOrgMembersList(Array.isArray(membersRes?.items) ? membersRes.items : []);
       setLiveLoading(false);
     } catch (err) {
       if (requestSeqRef.current !== seq || activeOrgIdRef.current !== activeOrganizationId) return;
@@ -346,15 +361,31 @@ export const OrganizationSettingsPage = () => {
             onClick={() => handleSelectSubTab('profile')}
           >
             <IconBuilding size={16} />
-            Organization Profile (API)
+            Organization Profile &amp; Contacts
           </button>
           <button
             type="button"
-            className={`org-settings-tab-btn ${activeSubTab === 'local' ? 'active' : ''}`}
-            onClick={() => handleSelectSubTab('local')}
+            className={`org-settings-tab-btn ${activeSubTab === 'preferences' ? 'active' : ''}`}
+            onClick={() => handleSelectSubTab('preferences')}
           >
             <IconBell size={16} />
-            Local Browser Preferences
+            Organization Preferences
+          </button>
+          <button
+            type="button"
+            className={`org-settings-tab-btn ${activeSubTab === 'access' ? 'active' : ''}`}
+            onClick={() => handleSelectSubTab('access')}
+          >
+            <IconShieldCheck size={16} />
+            Membership &amp; Access
+          </button>
+          <button
+            type="button"
+            className={`org-settings-tab-btn ${activeSubTab === 'security' ? 'active' : ''}`}
+            onClick={() => handleSelectSubTab('security')}
+          >
+            <IconLock size={16} />
+            Account Security
           </button>
         </nav>
 
@@ -487,6 +518,63 @@ export const OrganizationSettingsPage = () => {
                     {errors.address && <span className="org-field-error">{errors.address}</span>}
                   </div>
 
+                  <div className="org-form-field">
+                    <label htmlFor="liveWebsite">Website</label>
+                    <input
+                      id="liveWebsite"
+                      type="url"
+                      placeholder="https://organization.org"
+                      value={liveProfile.website || ''}
+                      onChange={(e) => handleLiveFieldChange('website', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="org-form-field">
+                    <label htmlFor="livePrimaryContact">Primary Contact Person</label>
+                    <input
+                      id="livePrimaryContact"
+                      type="text"
+                      placeholder="Contact officer full name"
+                      value={liveProfile.primaryContactName || ''}
+                      onChange={(e) => handleLiveFieldChange('primaryContactName', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="org-form-field">
+                    <label htmlFor="liveEmergencyPhone">Emergency Contact Phone</label>
+                    <input
+                      id="liveEmergencyPhone"
+                      type="text"
+                      placeholder="+94 11 000 0000"
+                      value={liveProfile.emergencyContactPhone || ''}
+                      onChange={(e) => handleLiveFieldChange('emergencyContactPhone', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="org-form-field">
+                    <label htmlFor="liveLatitude">Latitude</label>
+                    <input
+                      id="liveLatitude"
+                      type="number"
+                      step="0.000001"
+                      placeholder="6.9271"
+                      value={liveProfile.latitude ?? ''}
+                      onChange={(e) => handleLiveFieldChange('latitude', e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
+
+                  <div className="org-form-field">
+                    <label htmlFor="liveLongitude">Longitude</label>
+                    <input
+                      id="liveLongitude"
+                      type="number"
+                      step="0.000001"
+                      placeholder="79.8612"
+                      value={liveProfile.longitude ?? ''}
+                      onChange={(e) => handleLiveFieldChange('longitude', e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
+
                   <div className="org-form-field" style={{ gridColumn: '1 / -1' }}>
                     <label htmlFor="liveDescription">Description</label>
                     <textarea
@@ -528,56 +616,260 @@ export const OrganizationSettingsPage = () => {
           </div>
         )}
 
-        {activeSubTab === 'local' && (
+        {activeSubTab === 'preferences' && (
           <div className="org-settings-section-card">
-            <div className="org-settings-alert notice" style={{ marginBottom: '16px' }}>
-              <IconShieldCheck size={18} color="#0369A1" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div className="org-settings-alert-content">
-                <div className="org-settings-alert-title">Local Browser Preferences Only</div>
-                <div>
-                  These display preferences are stored only in this browser&apos;s localStorage for your current workspace. They are not synchronized with the HCMS backend or shared with other organization members.
+            {!liveProfile ? (
+              <div style={{ fontSize: '13px', color: '#64748B' }}>
+                {liveLoading ? 'Loading organization preferences...' : 'Select an active organization to manage preferences.'}
+              </div>
+            ) : (
+              <form onSubmit={handleLiveSaveProfile}>
+                <div className="org-settings-section-header">
+                  <div>
+                    <h2 className="org-settings-section-title">Organization Preferences</h2>
+                    <p className="org-settings-section-desc">
+                      Persisted in SQL Server for <strong>{liveProfile.organizationName}</strong> across sessions.
+                    </p>
+                  </div>
                 </div>
+
+                <div className="org-form-grid" style={{ marginBottom: '16px' }}>
+                  <div className="org-form-field">
+                    <label htmlFor="livePreferredLanguage">Preferred Language</label>
+                    <select
+                      id="livePreferredLanguage"
+                      value={liveProfile.preferredLanguage || 'en'}
+                      onChange={(e) => handleLiveFieldChange('preferredLanguage', e.target.value)}
+                    >
+                      <option value="en">English (en)</option>
+                      <option value="si">Sinhala (si)</option>
+                      <option value="ta">Tamil (ta)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(liveProfile.emailAlertsEnabled)}
+                      onChange={(e) => handleLiveFieldChange('emailAlertsEnabled', e.target.checked)}
+                    />
+                    <span>Enable email alerts for organization operations</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(liveProfile.crisisAlertsEnabled)}
+                      onChange={(e) => handleLiveFieldChange('crisisAlertsEnabled', e.target.checked)}
+                    />
+                    <span>Enable crisis alert notifications</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(liveProfile.requestAlertsEnabled)}
+                      onChange={(e) => handleLiveFieldChange('requestAlertsEnabled', e.target.checked)}
+                    />
+                    <span>Enable citizen aid request notifications</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(liveProfile.autoAssignNotifications)}
+                      onChange={(e) => handleLiveFieldChange('autoAssignNotifications', e.target.checked)}
+                    />
+                    <span>Notify team leaders on response team deployment</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(liveProfile.compactTables)}
+                      onChange={(e) => handleLiveFieldChange('compactTables', e.target.checked)}
+                    />
+                    <span>Use compact table row density</span>
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                  <button
+                    type="button"
+                    className="org-btn-secondary"
+                    disabled={!isDirty || liveSaving}
+                    onClick={() => {
+                      setLiveProfile(savedLiveProfile ? { ...savedLiveProfile } : null);
+                      setFeedback(null);
+                    }}
+                  >
+                    Discard Changes
+                  </button>
+                  <button
+                    type="submit"
+                    className="org-btn-primary"
+                    disabled={!isDirty || liveSaving}
+                  >
+                    <IconCheckCircle size={16} />
+                    {liveSaving ? 'Saving...' : 'Save Organization Preferences'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {activeSubTab === 'access' && (
+          <div className="org-settings-section-card">
+            <div className="org-settings-section-header">
+              <div>
+                <h2 className="org-settings-section-title">Organization Membership &amp; Scoped Access</h2>
+                <p className="org-settings-section-desc">
+                  Roles assigned here are strictly scoped to <strong>{liveProfile?.organizationName || 'this organization'}</strong> and cannot grant global system administrator privileges.
+                </p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(localPrefs.emailAlerts)}
-                  onChange={(e) => setLocalPrefs((prev) => ({ ...prev, emailAlerts: e.target.checked }))}
-                />
-                <span>Highlight urgent alert banners in this browser</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(localPrefs.criticalBannerSound)}
-                  onChange={(e) => setLocalPrefs((prev) => ({ ...prev, criticalBannerSound: e.target.checked }))}
-                />
-                <span>Play audible alert chime for critical notices (local browser only)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0F172A' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(localPrefs.compactTables)}
-                  onChange={(e) => setLocalPrefs((prev) => ({ ...prev, compactTables: e.target.checked }))}
-                />
-                <span>Prefer compact table row density (local browser only)</span>
-              </label>
+            <div style={{ marginBottom: '16px', fontSize: '13px' }}>
+              <strong>Your Active Organization Roles:</strong>{' '}
+              {orgRoles.length > 0 ? orgRoles.join(', ') : 'Approved Member'}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>Organization Administrators</h3>
+              {orgMembersList.filter((m) => (m.roles || []).includes('OrganizationAdmin')).length === 0 ? (
+                <div style={{ fontSize: '13px', color: '#64748B' }}>No OrganizationAdmin records visible for your current permission level.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {orgMembersList
+                    .filter((m) => (m.roles || []).includes('OrganizationAdmin'))
+                    .map((admin) => (
+                      <div key={admin.membershipId} style={{ padding: '8px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}>
+                        <strong>{admin.fullName}</strong> · <span style={{ color: '#64748B' }}>{admin.email}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>Available Organization-Scoped Roles</h3>
+              {orgRolesList.length === 0 ? (
+                <div style={{ fontSize: '13px', color: '#64748B' }}>No custom organization roles loaded.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {orgRolesList.map((r) => (
+                    <div key={r.roleId} style={{ padding: '10px 12px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12.5px' }}>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{r.roleName}</div>
+                      {r.description && <div style={{ color: '#64748B', marginTop: '2px' }}>{r.description}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === 'security' && (
+          <div className="org-settings-section-card">
+            <div className="org-settings-section-header">
+              <div>
+                <h2 className="org-settings-section-title">Account Security</h2>
+                <p className="org-settings-section-desc">
+                  Signed in as <strong>{user?.fullName || 'User'}</strong> ({user?.email}).
+                </p>
+              </div>
               <button
                 type="button"
-                className="org-btn-primary"
-                onClick={handleSaveLocalPreferences}
-                disabled={!activeOrganizationId}
+                className="org-btn-secondary"
+                style={{ color: '#DC2626', borderColor: '#FECACA' }}
+                onClick={logout}
               >
-                <IconCheckCircle size={16} />
-                Save Local Preferences
+                Sign Out
               </button>
             </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setFeedback(null);
+                if (!passwordForm.currentPassword || passwordForm.newPassword.length < 8) {
+                  setFeedback({
+                    type: 'error',
+                    title: 'Validation Error',
+                    message: 'Enter your current password and a new password of at least 8 characters.',
+                  });
+                  return;
+                }
+                if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                  setFeedback({
+                    type: 'error',
+                    title: 'Password Mismatch',
+                    message: 'New password and confirmation do not match.',
+                  });
+                  return;
+                }
+                setChangingPassword(true);
+                try {
+                  await organizationSettingsService.changePassword(
+                    passwordForm.currentPassword,
+                    passwordForm.newPassword
+                  );
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setFeedback({
+                    type: 'success',
+                    title: 'Password Updated',
+                    message: 'Your account password has been updated.',
+                  });
+                } catch (err) {
+                  setFeedback({
+                    type: 'error',
+                    title: 'Password Update Failed',
+                    message: err?.detail || err?.message || 'Unable to update password.',
+                  });
+                } finally {
+                  setChangingPassword(false);
+                }
+              }}
+              style={{ maxWidth: '460px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              <div className="org-form-field">
+                <label htmlFor="orgSecCurrentPass">Current Password</label>
+                <input
+                  id="orgSecCurrentPass"
+                  type="password"
+                  required
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))}
+                />
+              </div>
+              <div className="org-form-field">
+                <label htmlFor="orgSecNewPass">New Password (min 8 chars)</label>
+                <input
+                  id="orgSecNewPass"
+                  type="password"
+                  required
+                  minLength={8}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))}
+                />
+              </div>
+              <div className="org-form-field">
+                <label htmlFor="orgSecConfirmPass">Confirm New Password</label>
+                <input
+                  id="orgSecConfirmPass"
+                  type="password"
+                  required
+                  minLength={8}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
+                <button type="submit" className="org-btn-primary" disabled={changingPassword}>
+                  <IconLock size={15} />
+                  {changingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>

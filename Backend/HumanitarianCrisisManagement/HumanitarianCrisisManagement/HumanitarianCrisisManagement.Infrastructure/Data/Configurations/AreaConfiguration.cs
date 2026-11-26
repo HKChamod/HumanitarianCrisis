@@ -22,6 +22,12 @@ public class AreaConfiguration : IEntityTypeConfiguration<Area>
         builder.Property(a => a.Code)
             .HasMaxLength(50);
 
+        builder.Property(a => a.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(a => a.Longitude)
+            .HasPrecision(9, 6);
+
         builder.Property(a => a.IsActive)
             .IsRequired()
             .HasDefaultValue(true);

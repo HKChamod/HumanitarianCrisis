@@ -20,13 +20,18 @@ import {
 
 const AidRequestDetailsModalContent = ({
   request,
+  teams = [],
   onClose,
   onUpdateStatus,
   onAssignTeam
 }) => {
   const { t, i18n } = useTranslation();
   const [selectedStatus, setSelectedStatus] = useState(request.status);
-  const [selectedTeam, setSelectedTeam] = useState(request.assignedTeam || 'Unassigned');
+  const [selectedTeam, setSelectedTeam] = useState(
+    USE_MOCK_API
+      ? request.assignedTeam || 'Unassigned'
+      : request.assignedTeamId ? String(request.assignedTeamId) : ''
+  );
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isAssigningTeam, setIsAssigningTeam] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -244,12 +249,41 @@ const AidRequestDetailsModalContent = ({
                     }}
                     type="button"
                   >
-                    {isAssigningTeam ? t('aidRequests.details.assigningTeam') : t('aidRequests.details.assignTeam')}
+                    {isAssigningTeam ? t('aidRequests.details.assigning') : t('aidRequests.details.assignTeam')}
                   </button>
                 </div>
               ) : (
-                <div style={{ fontSize: '12px', color: '#64748B', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '8px 10px' }}>
-                  Response team assignment is not yet supported by the backend CitizenRequests API.
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    className="org-team-select"
+                    value={selectedTeam}
+                    onChange={(e) => setSelectedTeam(e.target.value)}
+                    disabled={teams.length === 0}
+                  >
+                    <option value="">
+                      {teams.length === 0 ? 'No response teams created yet' : '-- Select Response Team --'}
+                    </option>
+                    {teams.map((team) => (
+                      <option key={team.teamId} value={team.teamId} disabled={team.status === 'Inactive' || team.status === 'Unavailable'}>
+                        {team.teamName} ({team.status})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="org-btn-secondary"
+                    onClick={handleTeamAssign}
+                    disabled={isAssigningTeam || !selectedTeam || String(selectedTeam) === String(request.assignedTeamId || '')}
+                    style={{
+                      height: '38px',
+                      padding: '0 16px',
+                      fontSize: '12px',
+                      borderColor: '#10756F',
+                      color: '#10756F',
+                    }}
+                    type="button"
+                  >
+                    {isAssigningTeam ? t('aidRequests.details.assigning') : t('aidRequests.details.assignTeam')}
+                  </button>
                 </div>
               )}
             </div>
@@ -361,6 +395,7 @@ const AidRequestDetailsModalContent = ({
 
 export const AidRequestDetailsModal = ({
   request,
+  teams = [],
   isOpen = false,
   onClose = () => {},
   onUpdateStatus = () => {},
@@ -372,6 +407,7 @@ export const AidRequestDetailsModal = ({
     <AidRequestDetailsModalContent
       key={request.requestId}
       request={request}
+      teams={teams}
       onClose={onClose}
       onUpdateStatus={onUpdateStatus}
       onAssignTeam={onAssignTeam}

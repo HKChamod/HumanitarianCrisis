@@ -19,12 +19,19 @@ export const TeamDetailsModal = ({
   onClose = () => {},
   onUpdateStatus = () => {},
   onDeploy = () => {},
+  onCompleteDeployment = () => {},
+  onAddMember = () => {},
+  onRemoveMember = () => {},
+  orgMembers = [],
+  canManageTeams = true,
   onEdit = () => {}
 }) => {
   const { t } = useTranslation();
 
   const [selectedStatus, setSelectedStatus] = useState('');
   const [deploymentTarget, setDeploymentTarget] = useState('');
+  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [selectedRoleInTeam, setSelectedRoleInTeam] = useState('Member');
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -244,7 +251,7 @@ export const TeamDetailsModal = ({
                     setSelectedStatus(e.target.value)
                   }
                 >
-                  {TEAM_STATUSES.map((s) => (
+                  {['Available', 'Deployed', 'Unavailable', 'Inactive'].map((s) => (
                     <option key={s} value={s}>
                       {translateStatus(s)}
                     </option>
@@ -470,6 +477,171 @@ export const TeamDetailsModal = ({
                 color: '#1E40AF'
               }}>
                 🎯 {team.deployedIncident}
+              </div>
+            </div>
+          )}
+
+          {/* Team Members Management */}
+          <div className="org-drawer-section">
+            <div className="org-drawer-section-title">
+              <IconUsers size={15} color="#10756F" />
+              <span>Team Members ({Array.isArray(team.members) ? team.members.length : team.membersCount || 0})</span>
+            </div>
+
+            {canManageTeams && orgMembers.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                <select
+                  className="org-team-select"
+                  style={{ flex: '1 1 180px' }}
+                  value={selectedMemberId}
+                  onChange={(e) => setSelectedMemberId(e.target.value)}
+                >
+                  <option value="">Select approved member...</option>
+                  {orgMembers
+                    .filter((om) => !(team.members || []).some((tm) => tm.membershipId === om.membershipId))
+                    .map((om) => (
+                      <option key={om.membershipId} value={om.membershipId}>
+                        {om.fullName} ({om.email})
+                      </option>
+                    ))}
+                </select>
+                <select
+                  className="org-team-select"
+                  style={{ width: '115px' }}
+                  value={selectedRoleInTeam}
+                  onChange={(e) => setSelectedRoleInTeam(e.target.value)}
+                >
+                  <option value="Member">Member</option>
+                  <option value="Leader">Leader</option>
+                  <option value="Medic">Medic</option>
+                  <option value="Coordinator">Coordinator</option>
+                </select>
+                <button
+                  type="button"
+                  className="org-btn-primary"
+                  disabled={!selectedMemberId || isUpdating}
+                  style={{ height: '38px', padding: '0 14px', fontSize: '12px' }}
+                  onClick={async () => {
+                    if (!selectedMemberId) return;
+                    setIsUpdating(true);
+                    setFeedback(null);
+                    try {
+                      await onAddMember(team.teamId, Number(selectedMemberId), selectedRoleInTeam);
+                      setSelectedMemberId('');
+                      setFeedback({ type: 'success', text: 'Member added to team.' });
+                    } catch (err) {
+                      setFeedback({ type: 'error', text: err?.detail || err?.message || 'Unable to add member.' });
+                    } finally {
+                      setIsUpdating(false);
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            {Array.isArray(team.members) && team.members.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {team.members.map((m) => (
+                  <div
+                    key={m.responseTeamMemberId || m.membershipId}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 10px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <strong>{m.fullName}</strong>{' '}
+                      <span style={{ color: '#64748B' }}>({m.roleInTeam})</span>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>{m.email}</div>
+                    </div>
+                    {canManageTeams && (
+                      <button
+                        type="button"
+                        className="org-btn-secondary"
+                        style={{ height: '26px', padding: '0 8px', fontSize: '11px', color: '#DC2626' }}
+                        onClick={async () => {
+                          setIsUpdating(true);
+                          try {
+                            await onRemoveMember(team.teamId, m.membershipId);
+                            setFeedback({ type: 'success', text: 'Member removed from team.' });
+                          } catch (err) {
+                            setFeedback({ type: 'error', text: err?.detail || err?.message || 'Unable to remove member.' });
+                          } finally {
+                            setIsUpdating(false);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: '12px', color: '#64748B' }}>No members assigned to this team yet.</div>
+            )}
+          </div>
+
+          {/* Deployment History */}
+          {Array.isArray(team.deployments) && team.deployments.length > 0 && (
+            <div className="org-drawer-section">
+              <div className="org-drawer-section-title">
+                <IconClock size={15} color="#10756F" />
+                <span>Deployment History ({team.deployments.length})</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {team.deployments.map((d) => (
+                  <div
+                    key={d.deploymentId}
+                    style={{
+                      padding: '10px 12px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      backgroundColor: d.status === 'Active' ? '#EFF6FF' : '#F8FAFC',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <strong>{d.missionTitle}</strong>
+                      <span style={{ fontWeight: 700, color: d.status === 'Active' ? '#1D4ED8' : '#047857' }}>
+                        {d.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                      Deployed: {formatDate(d.deployedAt)}
+                      {d.completedAt ? ` · Completed: ${formatDate(d.completedAt)}` : ''}
+                    </div>
+                    {canManageTeams && d.status === 'Active' && (
+                      <div style={{ marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          className="org-btn-primary"
+                          style={{ height: '28px', padding: '0 10px', fontSize: '11px' }}
+                          onClick={async () => {
+                            setIsUpdating(true);
+                            try {
+                              await onCompleteDeployment(team.teamId, d.deploymentId, 'Completed');
+                              setFeedback({ type: 'success', text: 'Deployment marked completed.' });
+                            } catch (err) {
+                              setFeedback({ type: 'error', text: err?.detail || err?.message || 'Unable to complete deployment.' });
+                            } finally {
+                              setIsUpdating(false);
+                            }
+                          }}
+                        >
+                          Mark Completed
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

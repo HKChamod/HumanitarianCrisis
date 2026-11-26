@@ -32,6 +32,8 @@ public class OrganizationService : IOrganizationService
             Email = Normalize(request.Email),
             PhoneNumber = Normalize(request.PhoneNumber),
             Address = Normalize(request.Address),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -57,6 +59,17 @@ public class OrganizationService : IOrganizationService
                 Email = o.Email,
                 PhoneNumber = o.PhoneNumber,
                 Address = o.Address,
+                Latitude = o.Latitude,
+                Longitude = o.Longitude,
+                Website = o.Website,
+                PrimaryContactName = o.PrimaryContactName,
+                EmergencyContactPhone = o.EmergencyContactPhone,
+                PreferredLanguage = o.PreferredLanguage,
+                EmailAlertsEnabled = o.EmailAlertsEnabled,
+                CrisisAlertsEnabled = o.CrisisAlertsEnabled,
+                RequestAlertsEnabled = o.RequestAlertsEnabled,
+                AutoAssignNotifications = o.AutoAssignNotifications,
+                CompactTables = o.CompactTables,
                 IsActive = o.IsActive,
                 CreatedAt = o.CreatedAt,
                 MemberCount = o.Memberships.Count()
@@ -79,6 +92,17 @@ public class OrganizationService : IOrganizationService
                 Email = o.Email,
                 PhoneNumber = o.PhoneNumber,
                 Address = o.Address,
+                Latitude = o.Latitude,
+                Longitude = o.Longitude,
+                Website = o.Website,
+                PrimaryContactName = o.PrimaryContactName,
+                EmergencyContactPhone = o.EmergencyContactPhone,
+                PreferredLanguage = o.PreferredLanguage,
+                EmailAlertsEnabled = o.EmailAlertsEnabled,
+                CrisisAlertsEnabled = o.CrisisAlertsEnabled,
+                RequestAlertsEnabled = o.RequestAlertsEnabled,
+                AutoAssignNotifications = o.AutoAssignNotifications,
+                CompactTables = o.CompactTables,
                 IsActive = o.IsActive,
                 CreatedAt = o.CreatedAt,
                 MemberCount = o.Memberships.Count()
@@ -114,6 +138,19 @@ public class OrganizationService : IOrganizationService
         organization.Email = Normalize(request.Email);
         organization.PhoneNumber = Normalize(request.PhoneNumber);
         organization.Address = Normalize(request.Address);
+        organization.Latitude = request.Latitude;
+        organization.Longitude = request.Longitude;
+        organization.Website = Normalize(request.Website);
+        organization.PrimaryContactName = Normalize(request.PrimaryContactName);
+        organization.EmergencyContactPhone = Normalize(request.EmergencyContactPhone);
+        organization.PreferredLanguage = string.IsNullOrWhiteSpace(request.PreferredLanguage)
+            ? "en"
+            : request.PreferredLanguage.Trim().ToLowerInvariant();
+        organization.EmailAlertsEnabled = request.EmailAlertsEnabled;
+        organization.CrisisAlertsEnabled = request.CrisisAlertsEnabled;
+        organization.RequestAlertsEnabled = request.RequestAlertsEnabled;
+        organization.AutoAssignNotifications = request.AutoAssignNotifications;
+        organization.CompactTables = request.CompactTables;
         organization.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync();
@@ -188,6 +225,17 @@ public class OrganizationService : IOrganizationService
             Email = organization.Email,
             PhoneNumber = organization.PhoneNumber,
             Address = organization.Address,
+            Latitude = organization.Latitude,
+            Longitude = organization.Longitude,
+            Website = organization.Website,
+            PrimaryContactName = organization.PrimaryContactName,
+            EmergencyContactPhone = organization.EmergencyContactPhone,
+            PreferredLanguage = organization.PreferredLanguage,
+            EmailAlertsEnabled = organization.EmailAlertsEnabled,
+            CrisisAlertsEnabled = organization.CrisisAlertsEnabled,
+            RequestAlertsEnabled = organization.RequestAlertsEnabled,
+            AutoAssignNotifications = organization.AutoAssignNotifications,
+            CompactTables = organization.CompactTables,
             IsActive = organization.IsActive,
             CreatedAt = organization.CreatedAt,
             MemberCount = memberCount

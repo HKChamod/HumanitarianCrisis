@@ -1,29 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '../../../components/common/Button';
 import { useLanguage } from '../../../context/LanguageContext';
-import { isAdminUser, useAuth } from '../../../app/providers/AuthProvider';
-import { isEligibleMembership } from '../../../app/providers/OrganizationProvider';
+import { useAuth } from '../../../app/providers/AuthProvider';
+import { useOrganization } from '../../../app/providers/OrganizationProvider';
+import { isAdminUser, resolvePostLoginRoute } from '../../../app/authRouting';
 import { organizationService } from '../../../services/api/adminServices';
 import { USE_MOCK_API } from '../../../services/api/apiConfig';
-
-function isAllowedInternalPath(path, prefix) {
-  if (typeof path !== 'string') return false;
-  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return false;
-  return path === prefix || path.startsWith(`${prefix}/`);
-}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
-  const { loginWithCredentials } = useAuth();
+  const { user, authLoading, isAuthenticated, loginWithCredentials } = useAuth();
+  const { memberships: contextMemberships, orgLoading } = useOrganization();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Redirect already-authenticated users (e.g. page refresh or direct navigation to /login)
+  useEffect(() => {
+    if (loading || success || authLoading || !isAuthenticated || !user) return;
+    if (!isAdminUser(user) && orgLoading) return;
+
+    const target = resolvePostLoginRoute({
+      user,
+      requestedPath: location.state?.from,
+      memberships: contextMemberships,
+      isMock: USE_MOCK_API,
+    });
+    navigate(target, { replace: true });
+  }, [authLoading, isAuthenticated, user, orgLoading, contextMemberships, loading, success, location.state, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,34 +51,23 @@ export function LoginPage() {
     try {
       const loggedInUser = await loginWithCredentials(email.trim(), password);
       setSuccess(t('loginSuccess'));
-      const requestedPath = location.state?.from;
-      const adminEligible = isAdminUser(loggedInUser);
-      let target = '/citizen';
 
-      if (adminEligible) {
-        if (
-          isAllowedInternalPath(requestedPath, '/admin') ||
-          isAllowedInternalPath(requestedPath, '/organization') ||
-          isAllowedInternalPath(requestedPath, '/citizen')
-        ) {
-          target = requestedPath;
-        } else {
-          target = '/admin';
-        }
-      } else if (isAllowedInternalPath(requestedPath, '/organization')) {
-        target = requestedPath;
-      } else if (isAllowedInternalPath(requestedPath, '/citizen')) {
-        target = requestedPath;
-      } else {
-        try {
-          const memberships = await organizationService.getMyMemberships();
-          const hasApprovedOrg = Array.isArray(memberships) && memberships.some(isEligibleMembership);
-          target = hasApprovedOrg ? '/organization' : '/citizen';
-        } catch {
-          target = '/citizen';
-        }
+      let memberships = [];
+      try {
+        const res = await organizationService.getMyMemberships();
+        if (Array.isArray(res)) memberships = res;
+      } catch {
+        memberships = [];
       }
-      setTimeout(() => navigate(target, { replace: true }), 600);
+
+      const target = resolvePostLoginRoute({
+        user: loggedInUser,
+        requestedPath: location.state?.from,
+        memberships,
+        isMock: USE_MOCK_API,
+      });
+
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err?.detail || err?.title || t('loginErrorInvalid'));
     } finally {

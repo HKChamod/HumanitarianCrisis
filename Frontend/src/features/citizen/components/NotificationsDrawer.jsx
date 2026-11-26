@@ -5,6 +5,7 @@ export function NotificationsDrawer({
   onClose,
   notifications = [],
   onMarkAllRead,
+  onMarkRead,
   onSelectReference
 }) {
   if (!isOpen) return null;
@@ -64,12 +65,15 @@ export function NotificationsDrawer({
                 key={item.id}
                 className={`notification-item-card ${!item.read ? 'unread' : ''}`}
                 onClick={() => {
+                  if (!item.read && onMarkRead) {
+                    onMarkRead(item.id);
+                  }
                   if (item.referenceNumber && onSelectReference) {
                     onSelectReference(item.referenceNumber);
                     onClose();
                   }
                 }}
-                style={{ cursor: item.referenceNumber ? 'pointer' : 'default' }}
+                style={{ cursor: item.referenceNumber || !item.read ? 'pointer' : 'default' }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                   <div style={{ marginTop: '2px' }}>

@@ -8,6 +8,18 @@ public interface IOrganizationMembershipService
         int organizationId,
         int userId);
 
+    Task<OrganizationMembershipResponse> AddMemberAsync(
+        int organizationId,
+        AddOrganizationMemberRequest request);
+
+    Task<IReadOnlyList<OrganizationRoleResponse>> GetOrganizationRolesAsync(
+        int organizationId);
+
+    Task<OrganizationRoleResponse> CreateOrganizationRoleAsync(
+        int organizationId,
+        CreateOrganizationRoleRequest request,
+        int createdByUserId);
+
     Task<IReadOnlyList<OrganizationMemberResponse>> GetMembersAsync(
         int organizationId);
 
@@ -32,4 +44,9 @@ public interface IOrganizationMembershipService
     Task<MyOrganizationAccessResponse?> GetMyOrganizationAccessAsync(
         int organizationId,
         int userId);
+
+    Task RemoveMemberAsync(
+        int organizationId,
+        int membershipId,
+        int actorUserId);
 }
