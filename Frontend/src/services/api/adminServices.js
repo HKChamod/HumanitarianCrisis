@@ -364,6 +364,63 @@ export const organizationService = {
     membershipStore = membershipStore.map((m) => (m.id === membershipId ? { ...m, status: 'Suspended' } : m));
     return membershipStore.find((m) => m.id === membershipId);
   },
+  async addMember(orgId, email) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post(`/organizations/${orgId}/members`, {
+        email: String(email || '').trim().toLowerCase(),
+      });
+      return res.data;
+    }
+    await delay();
+    const created = {
+      id: String(Date.now()),
+      membershipId: Date.now(),
+      userId: '999',
+      userName: email,
+      userEmail: email,
+      organizationId: String(orgId),
+      organizationName: '',
+      roles: [],
+      scopedRole: 'Member',
+      status: 'Pending',
+      joinedAt: new Date().toISOString(),
+    };
+    membershipStore = [created, ...membershipStore];
+    return created;
+  },
+  async getRoles(orgId) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.get(`/organizations/${orgId}/roles`);
+      return Array.isArray(res.data) ? res.data : [];
+    }
+    await delay();
+    return [];
+  },
+  async createRole(orgId, payload) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.post(`/organizations/${orgId}/roles`, payload);
+      return res.data;
+    }
+    await delay();
+    return {
+      roleId: Date.now(),
+      organizationId: Number(orgId),
+      roleName: payload.roleName,
+      description: payload.description || '',
+      isSystemDefined: false,
+      permissions: [],
+    };
+  },
+  async assignMemberRoles(orgId, membershipId, roleIds) {
+    if (!USE_MOCK_API) {
+      const res = await axiosClient.put(`/organizations/${orgId}/members/${membershipId}/roles`, {
+        roleIds,
+      });
+      return res.data;
+    }
+    await delay();
+    return { membershipId, roles: [] };
+  },
   async listMemberships() {
     if (!USE_MOCK_API) {
       const orgs = await this.list();

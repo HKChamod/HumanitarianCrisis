@@ -19,6 +19,13 @@ export const OrganizationMembersAndAllocationsPage = () => {
     forbidden: false,
     error: null,
   });
+  const [rolesState, setRolesState] = useState({
+    loading: true,
+    items: [],
+    forbidden: false,
+  });
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [selectedRoleByMembership, setSelectedRoleByMembership] = useState({});
   const [allocationsState, setAllocationsState] = useState({
     loading: true,
     items: [],
@@ -40,11 +47,22 @@ export const OrganizationMembersAndAllocationsPage = () => {
     setAllocationsState((prev) => ({ ...prev, loading: true, error: null }));
     setInventoryState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const [membersRes, allocRes, invRes] = await Promise.allSettled([
+    const [membersRes, rolesRes, allocRes, invRes] = await Promise.allSettled([
       organizationOperationsService.getOrganizationMembers(activeOrganizationId),
+      organizationOperationsService.getOrganizationRoles(activeOrganizationId),
       organizationOperationsService.getResourceAllocations(),
       organizationOperationsService.getWarehouseInventories(),
     ]);
+
+    if (rolesRes.status === 'fulfilled') {
+      setRolesState({
+        loading: false,
+        items: rolesRes.value.items,
+        forbidden: rolesRes.value.forbidden,
+      });
+    } else {
+      setRolesState({ loading: false, items: [], forbidden: false });
+    }
 
     if (membersRes.status === 'fulfilled') {
       setMembersState({
@@ -136,8 +154,75 @@ export const OrganizationMembersAndAllocationsPage = () => {
     }
   };
 
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    if (!activeOrganizationId || !newMemberEmail.trim()) return;
+    setActionFeedback(null);
+    try {
+      await organizationOperationsService.addMemberByEmail(activeOrganizationId, newMemberEmail);
+      setNewMemberEmail('');
+      setActionFeedback({
+        type: 'success',
+        message: 'Member added with Pending membership status. Approve to grant organization access.',
+      });
+      await loadData();
+    } catch (err) {
+      setActionFeedback({
+        type: 'error',
+        message: err?.detail || err?.message || 'Unable to add member.',
+      });
+    }
+  };
+
+  const handleCreateOrgAdminRole = async () => {
+    if (!activeOrganizationId) return;
+    setActionFeedback(null);
+    try {
+      await organizationOperationsService.createOrganizationRole(activeOrganizationId, {
+        roleName: 'OrganizationAdmin',
+        description: 'Organization-scoped administrator role',
+        permissionIds: [],
+      });
+      setActionFeedback({
+        type: 'success',
+        message: 'OrganizationAdmin role created with organization-scoped permissions.',
+      });
+      await loadData();
+    } catch (err) {
+      setActionFeedback({
+        type: 'error',
+        message: err?.detail || err?.message || 'Unable to create OrganizationAdmin role.',
+      });
+    }
+  };
+
+  const handleAssignRole = async (membershipId) => {
+    const roleId = Number(selectedRoleByMembership[membershipId]);
+    if (!activeOrganizationId || !roleId) return;
+    setBusyMembershipId(membershipId);
+    setActionFeedback(null);
+    try {
+      await organizationOperationsService.assignMemberRoles(activeOrganizationId, membershipId, [roleId]);
+      setActionFeedback({
+        type: 'success',
+        message: 'Organization role assigned successfully.',
+      });
+      await loadData();
+    } catch (err) {
+      setActionFeedback({
+        type: 'error',
+        message: err?.detail || err?.message || 'Unable to assign role.',
+      });
+    } finally {
+      setBusyMembershipId(null);
+    }
+  };
+
   const orgDisplayName =
     activeOrganizationAccess?.organizationName || 'Active Organization';
+  const effectivePermissions = Array.isArray(activeOrganizationAccess?.permissions)
+    ? activeOrganizationAccess.permissions
+    : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -187,6 +272,45 @@ export const OrganizationMembersAndAllocationsPage = () => {
         )}
       </div>
 
+      {/* Section 0: Effective Organization Permissions */}
+      <section className="org-section-card" aria-label="Effective Organization Permissions">
+        <div className="org-section-header">
+          <div className="org-section-title-wrap">
+            <h2 className="org-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <IconShieldCheck size={18} color="#10756F" />
+              <span>Your Organization-Scoped Permissions</span>
+            </h2>
+            <p className="org-section-subtitle">
+              Loaded from <code>GET /api/Organizations/{activeOrganizationId || '{id}'}/my-access</code>
+            </p>
+          </div>
+        </div>
+        <div style={{ padding: '14px 20px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {effectivePermissions.length === 0 ? (
+            <span style={{ fontSize: '13px', color: '#64748B' }}>
+              No organization-scoped permissions assigned to your membership yet.
+            </span>
+          ) : (
+            effectivePermissions.map((perm) => (
+              <span
+                key={perm}
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  padding: '4px 10px',
+                  borderRadius: '9999px',
+                  backgroundColor: '#F0FDFA',
+                  border: '1px solid #99F6E4',
+                  color: '#0F766E',
+                }}
+              >
+                {perm}
+              </span>
+            ))
+          )}
+        </div>
+      </section>
+
       {/* Section 1: Organization Memberships */}
       <section className="org-section-card" aria-label="Organization Members">
         <div className="org-section-header">
@@ -199,9 +323,47 @@ export const OrganizationMembersAndAllocationsPage = () => {
               Scoped to <code>GET /api/Organizations/{activeOrganizationId || '{id}'}/members</code>
             </p>
           </div>
+          {activeOrganizationId && !rolesState.items.some((r) => r.roleName === 'OrganizationAdmin') && !rolesState.forbidden && (
+            <button
+              type="button"
+              className="org-btn-secondary"
+              onClick={handleCreateOrgAdminRole}
+              style={{ fontSize: '12px', padding: '6px 12px' }}
+            >
+              + Create OrganizationAdmin Role
+            </button>
+          )}
         </div>
 
         <div style={{ padding: '16px 20px' }}>
+          {activeOrganizationId && !membersState.forbidden && (
+            <form
+              onSubmit={handleAddMember}
+              style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}
+            >
+              <input
+                type="email"
+                required
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                placeholder="Add registered user by email (e.g., admin@test.com)"
+                style={{
+                  flex: '1 1 260px',
+                  padding: '7px 10px',
+                  fontSize: '13px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                }}
+              />
+              <button
+                type="submit"
+                className="org-btn-primary"
+                style={{ fontSize: '12px', padding: '7px 14px' }}
+              >
+                Add Member
+              </button>
+            </form>
+          )}
           {!activeOrganizationId ? (
             <div style={{ fontSize: '13px', color: '#64748B' }}>
               Select an active organization to inspect memberships.
@@ -291,6 +453,43 @@ export const OrganizationMembersAndAllocationsPage = () => {
                                 }}
                               >
                                 Reject
+                              </button>
+                            </div>
+                          ) : rolesState.items.length > 0 ? (
+                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                              <select
+                                value={selectedRoleByMembership[m.membershipId] ?? ''}
+                                onChange={(e) =>
+                                  setSelectedRoleByMembership((prev) => ({
+                                    ...prev,
+                                    [m.membershipId]: e.target.value,
+                                  }))
+                                }
+                                style={{ fontSize: '12px', padding: '4px 6px', borderRadius: '6px', border: '1px solid #CBD5E1' }}
+                              >
+                                <option value="">Select role...</option>
+                                {rolesState.items.map((r) => (
+                                  <option key={r.roleId} value={r.roleId}>
+                                    {r.roleName}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={!selectedRoleByMembership[m.membershipId] || busyMembershipId === m.membershipId}
+                                onClick={() => handleAssignRole(m.membershipId)}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  backgroundColor: '#0F766E',
+                                  color: '#FFFFFF',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Assign
                               </button>
                             </div>
                           ) : (

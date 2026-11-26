@@ -155,15 +155,18 @@ export function mapRequestStatusToApi(status) {
 }
 
 export function mapMemberFromApi(dto, orgId, orgName) {
+  const roles = Array.isArray(dto.roles) ? dto.roles : [];
   return {
     id: String(dto.membershipId ?? dto.id),
+    membershipId: Number(dto.membershipId ?? dto.id),
     userId: String(dto.userId ?? ''),
     userName: dto.fullName || dto.userName || 'Member',
     userEmail: dto.email || dto.userEmail || '—',
     organizationId: String(orgId),
     organizationName: orgName,
-    scopedRole: Array.isArray(dto.roles) && dto.roles.length > 0 ? dto.roles.join(', ') : dto.scopedRole || 'Member',
-    status: dto.status || 'Active',
+    roles,
+    scopedRole: roles.length > 0 ? roles.join(', ') : dto.scopedRole || 'Member',
+    status: dto.membershipStatus || dto.status || 'Pending',
     joinedAt: dto.joinedAt || dto.createdAt || new Date().toISOString(),
   };
 }

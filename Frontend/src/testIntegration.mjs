@@ -13,6 +13,7 @@ import {
   mapCrisisCreateToApi,
   mapRequestFromApi,
   mapOrganizationFromApi,
+  mapMemberFromApi,
   mapResourceFromApi,
   mapWarehouseFromApi,
   mapWarehouseInventoryFromApi,
@@ -462,6 +463,25 @@ async function runTests() {
       err403.detail === 'Missing AI.Review permission.' &&
       errNet.title === 'Network Unavailable',
     'normalizeApiError normalizes 401, 403, and offline status=0 responses consistently'
+  );
+
+  const mappedAdminMember = mapMemberFromApi(
+    {
+      membershipId: 55,
+      userId: 12,
+      fullName: 'TEST Org Admin',
+      email: 'admin@test.com',
+      membershipStatus: 'Pending',
+      roles: [],
+    },
+    10,
+    'TEST'
+  );
+  assert(
+    mappedAdminMember.membershipId === 55 &&
+      mappedAdminMember.status === 'Pending' &&
+      mappedAdminMember.userEmail === 'admin@test.com',
+    'mapMemberFromApi maps backend membershipStatus Pending accurately'
   );
 
   // --- TEST 3: RBAC & ADMIN PERMISSION GUARD ---
