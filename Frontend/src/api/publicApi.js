@@ -47,6 +47,88 @@ function setLocal(key, value) {
 // Artificial delay for smooth realistic UX
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function normalizePublicCrisis(c) {
+  return {
+    ...c,
+    id: String(c.crisisId ?? c.id ?? ''),
+    crisisId: c.crisisId ?? c.id,
+    crisisName: c.crisisName || c.title || 'Crisis Event',
+    districtName: c.districtName || c.locationName || c.location || c.areaName || '',
+    affectedPeopleEstimated: Number(c.affectedPeopleEstimated ?? c.affectedPopulation ?? 0),
+    activeSheltersCount: Number(c.activeSheltersCount ?? 0),
+    latitude: c.latitude ?? null,
+    longitude: c.longitude ?? null,
+  };
+}
+
+function normalizePublicShelter(s) {
+  const facilitiesList = Array.isArray(s.amenities)
+    ? s.amenities
+    : typeof s.facilities === 'string' && s.facilities.trim()
+      ? s.facilities.split(',').map((f) => f.trim()).filter(Boolean)
+      : [];
+
+  return {
+    ...s,
+    id: String(s.shelterId ?? s.id ?? ''),
+    shelterId: s.shelterId ?? s.id,
+    name: s.shelterName || s.name || 'Emergency Shelter',
+    shelterName: s.shelterName || s.name || 'Emergency Shelter',
+    districtName: s.areaName || s.districtName || '',
+    address: s.address || s.locationName || '',
+    totalBeds: Number(s.capacity ?? s.totalBeds ?? 0),
+    usedBeds: Number(s.currentOccupancy ?? s.usedBeds ?? 0),
+    phone: s.contactPhone || s.phone || '',
+    amenities: facilitiesList,
+    isOpen: s.isOpen ?? (String(s.status || 'Open').toLowerCase() === 'open'),
+    latitude: s.latitude ?? null,
+    longitude: s.longitude ?? null,
+  };
+}
+
+function filterCrisesList(list, params = {}) {
+  let result = list;
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    result = result.filter(
+      (c) =>
+        (c.crisisName || '').toLowerCase().includes(q) ||
+        (c.districtName || '').toLowerCase().includes(q) ||
+        (c.description || '').toLowerCase().includes(q)
+    );
+  }
+  if (params.type && params.type !== 'All') {
+    result = result.filter((c) => (c.crisisType || '').toLowerCase() === params.type.toLowerCase());
+  }
+  if (params.severity && params.severity !== 'All') {
+    result = result.filter((c) => (c.severityLevel || '').toLowerCase() === params.severity.toLowerCase());
+  }
+  if (params.districtId && params.districtId !== 'All') {
+    result = result.filter((c) => c.districtId === params.districtId || String(c.areaId) === String(params.districtId));
+  }
+  return result;
+}
+
+function filterSheltersList(list, params = {}) {
+  let result = list;
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    result = result.filter(
+      (s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.districtName || '').toLowerCase().includes(q) ||
+        (s.address || '').toLowerCase().includes(q)
+    );
+  }
+  if (params.districtId && params.districtId !== 'All') {
+    result = result.filter((s) => s.districtId === params.districtId || String(s.areaId) === String(params.districtId));
+  }
+  if (params.isOpenOnly) {
+    result = result.filter((s) => s.isOpen);
+  }
+  return result;
+}
+
 export const publicApi = {
   /**
    * GET /public/crises
@@ -56,33 +138,16 @@ export const publicApi = {
     if (!USE_MOCK) {
       try {
         const res = await httpClient.get('/CrisisEvents');
-        if (res && Array.isArray(res) && res.length > 0) {
-          return { data: res, pagination: { totalItems: res.length, page: 1, pageSize: 20 } };
+        if (Array.isArray(res)) {
+          const normalized = filterCrisesList(res.map(normalizePublicCrisis), params);
+          return { data: normalized, pagination: { totalItems: normalized.length, page: 1, pageSize: 20 } };
         }
       } catch {
         // Fall back to localized dataset when backend endpoint is restricted or unavailable
       }
     }
     await delay();
-    let list = getLocal('hcms_crises', INITIAL_CRISES);
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.crisisName.toLowerCase().includes(q) ||
-          c.districtName.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q)
-      );
-    }
-    if (params.type && params.type !== 'All') {
-      list = list.filter((c) => c.crisisType.toLowerCase() === params.type.toLowerCase());
-    }
-    if (params.severity && params.severity !== 'All') {
-      list = list.filter((c) => c.severityLevel.toLowerCase() === params.severity.toLowerCase());
-    }
-    if (params.districtId && params.districtId !== 'All') {
-      list = list.filter((c) => c.districtId === params.districtId);
-    }
+    const list = filterCrisesList(getLocal('hcms_crises', INITIAL_CRISES), params);
     return { data: list, pagination: { totalItems: list.length, page: 1, pageSize: 20 } };
   },
 
@@ -93,7 +158,7 @@ export const publicApi = {
     if (!USE_MOCK) {
       try {
         const res = await httpClient.get(`/CrisisEvents/${crisisId}`);
-        if (res && res.crisisId) return { data: res };
+        if (res && res.crisisId) return { data: normalizePublicCrisis(res) };
       } catch {
         // Fallback to local
       }
@@ -118,38 +183,28 @@ export const publicApi = {
   },
 
   /**
-   * GET /public/shelters
+   * GET /Shelters
    */
   async getShelters(params = {}) {
     if (!USE_MOCK) {
-      return httpClient.get('/public/shelters', params);
+      const query = params.isOpenOnly ? { activeOnly: true } : undefined;
+      const res = await httpClient.get('/Shelters', query);
+      const rawList = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      const normalized = filterSheltersList(rawList.map(normalizePublicShelter), params);
+      return { data: normalized, pagination: { totalItems: normalized.length, page: 1, pageSize: 20 } };
     }
     await delay();
-    let shelters = getLocal('hcms_shelters', INITIAL_SHELTERS);
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      shelters = shelters.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.districtName.toLowerCase().includes(q) ||
-          s.address.toLowerCase().includes(q)
-      );
-    }
-    if (params.districtId && params.districtId !== 'All') {
-      shelters = shelters.filter((s) => s.districtId === params.districtId);
-    }
-    if (params.isOpenOnly) {
-      shelters = shelters.filter((s) => s.isOpen);
-    }
+    const shelters = filterSheltersList(getLocal('hcms_shelters', INITIAL_SHELTERS), params);
     return { data: shelters, pagination: { totalItems: shelters.length, page: 1, pageSize: 20 } };
   },
 
   /**
-   * GET /public/shelters/{shelterId}
+   * GET /Shelters/{shelterId}
    */
   async getShelterById(shelterId) {
     if (!USE_MOCK) {
-      return httpClient.get(`/public/shelters/${shelterId}`);
+      const res = await httpClient.get(`/Shelters/${shelterId}`);
+      return { data: normalizePublicShelter(res) };
     }
     await delay();
     const shelters = getLocal('hcms_shelters', INITIAL_SHELTERS);

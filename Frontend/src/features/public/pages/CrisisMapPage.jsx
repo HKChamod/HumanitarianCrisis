@@ -28,21 +28,23 @@ export function CrisisMapPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [cRes, sRes] = await Promise.all([
+        const [cResult, sResult] = await Promise.allSettled([
           publicApi.getCrises(),
           publicApi.getShelters(),
         ]);
-        setCrises(cRes.data);
-        setShelters(sRes.data);
+        const cData = cResult.status === 'fulfilled' && Array.isArray(cResult.value?.data) ? cResult.value.data : [];
+        const sData = sResult.status === 'fulfilled' && Array.isArray(sResult.value?.data) ? sResult.value.data : [];
+        setCrises(cData);
+        setShelters(sData);
 
         // Highlight requested shelter if provided
         if (highlightedShelterId) {
-          const found = sRes.data.find((s) => s.id === highlightedShelterId);
+          const found = sData.find((s) => String(s.id) === String(highlightedShelterId));
           if (found) {
             setSelectedItem({ type: 'shelter', data: found });
           }
-        } else if (cRes.data.length > 0) {
-          setSelectedItem({ type: 'crisis', data: cRes.data[0] });
+        } else if (cData.length > 0) {
+          setSelectedItem({ type: 'crisis', data: cData[0] });
         }
       } catch (e) {
         console.error(e);
@@ -71,7 +73,8 @@ export function CrisisMapPage() {
 
   const activeMapItem = useMemo(() => {
     if (!selectedItem?.data?.id) return null;
-    return unifiedMapData.items.find((i) => i.id === selectedItem.data.id) || null;
+    const prefix = selectedItem.type === 'shelter' ? 'shelter' : 'crisis';
+    return unifiedMapData.items.find((i) => i.id === `${prefix}-${selectedItem.data.id}`) || null;
   }, [unifiedMapData.items, selectedItem]);
 
   return (
@@ -281,10 +284,14 @@ export function CrisisMapPage() {
                   setSelectedItem(null);
                   return;
                 }
-                setSelectedItem({
-                  type: item.type === 'shelter' ? 'shelter' : 'crisis',
-                  data: item.properties?.raw,
-                });
+                const entityId = String(item.properties?.entityId ?? '');
+                if (item.type === 'shelter') {
+                  const found = shelters.find((s) => String(s.id) === entityId);
+                  if (found) setSelectedItem({ type: 'shelter', data: found });
+                } else {
+                  const found = crises.find((c) => String(c.id) === entityId);
+                  if (found) setSelectedItem({ type: 'crisis', data: found });
+                }
               }}
               loading={loading}
               heightClass="h-[560px]"

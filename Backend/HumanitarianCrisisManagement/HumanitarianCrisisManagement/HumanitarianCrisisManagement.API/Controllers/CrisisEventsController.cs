@@ -32,7 +32,7 @@ public class CrisisEventsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "CrisisEvents.View")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
         var result = await _crisisEventService.GetAllAsync();
@@ -41,7 +41,7 @@ public class CrisisEventsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Policy = "CrisisEvents.View")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _crisisEventService.GetByIdAsync(id);
