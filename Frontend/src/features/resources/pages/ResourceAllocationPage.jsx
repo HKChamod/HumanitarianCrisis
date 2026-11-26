@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Eye, Plus, Send, Truck, XCircle, Ban } from 'lucide-react';
+import { CheckCircle2, Eye, Map as MapIcon, Plus, Send, Truck, XCircle, Ban } from 'lucide-react';
 import {
   crisisService,
   resourceAllocationService,
@@ -14,6 +14,12 @@ import { FilterPanel, FormField, SearchBar } from '../../../components/forms/For
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Drawer, Modal } from '../../../components/common/Modal';
 import { PermissionGate, useAuth } from '../../../app/providers/AuthProvider';
+import {
+  MAP_ENTITY_TYPES,
+  MapView,
+  createRoutingProvider,
+  parseCoordinates,
+} from '../../../shared/maps';
 
 export function ResourceAllocationPage({ mode = 'allocations' }) {
   const { hasPermission } = useAuth();
@@ -29,6 +35,7 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(mode === 'requests' ? 'Pending' : '');
+  const [showMap, setShowMap] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Create form state (live uses inventoryId + crisisId + quantityRequested + referenceNumber + notes)
@@ -468,7 +475,88 @@ export function ResourceAllocationPage({ mode = 'allocations' }) {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+            showMap
+              ? 'bg-[#0F766E] text-white border-[#0F766E]'
+              : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          {showMap ? 'Hide Map' : 'Allocation Map'}
+        </button>
       </FilterPanel>
+
+      {showMap && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3 space-y-2">
+          {(() => {
+            const router = createRoutingProvider();
+            const items = [];
+            const seenIds = new Set();
+            let missingCount = 0;
+
+            filtered.forEach((a) => {
+              const whCoords = parseCoordinates(a.warehouseLatitude, a.warehouseLongitude);
+              const destLat = a.citizenRequestLatitude ?? a.crisisLatitude;
+              const destLng = a.citizenRequestLongitude ?? a.crisisLongitude;
+              const destCoords = parseCoordinates(destLat, destLng);
+
+              if (!whCoords && !destCoords) {
+                missingCount += 1;
+              }
+              if (whCoords) {
+                const whKey = `alloc-wh-${a.inventoryId}-${a.warehouseName}`;
+                if (!seenIds.has(whKey)) {
+                  seenIds.add(whKey);
+                  items.push({
+                    id: whKey,
+                    type: MAP_ENTITY_TYPES.WAREHOUSE,
+                    title: `Source: ${a.warehouseName}`,
+                    latitude: whCoords.latitude,
+                    longitude: whCoords.longitude,
+                    status: a.status,
+                    properties: { districtName: a.resourceName },
+                  });
+                }
+              }
+              if (destCoords) {
+                const destKey = `alloc-dest-${a.crisisId}-${a.citizenRequestId || 'crisis'}`;
+                if (!seenIds.has(destKey)) {
+                  seenIds.add(destKey);
+                  items.push({
+                    id: destKey,
+                    type: a.citizenRequestId ? MAP_ENTITY_TYPES.CITIZEN_REQUEST : MAP_ENTITY_TYPES.CRISIS,
+                    title: `Destination: ${a.crisisName}`,
+                    latitude: destCoords.latitude,
+                    longitude: destCoords.longitude,
+                    status: a.status,
+                    properties: { districtName: a.resourceName },
+                  });
+                }
+              }
+            });
+
+            return (
+              <>
+                {!router.isConfigured && (
+                  <p className="text-[11px] text-[#64748B] px-1">
+                    Showing verified source warehouse and destination markers. Road routing geometry requires <code>VITE_ROUTING_API_URL</code> (straight-line paths are not displayed as road routes).
+                  </p>
+                )}
+                <MapView
+                  items={items}
+                  missingCoordinatesCount={missingCount}
+                  heightClass="h-[360px]"
+                  showSearch={false}
+                  emptyMessage="No allocation source warehouses or destination crises have valid coordinates."
+                />
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       <DataTable
         data={filtered}

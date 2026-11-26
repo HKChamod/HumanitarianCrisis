@@ -37,6 +37,8 @@ public class WarehouseService : IWarehouseService
             WarehouseCode = warehouseCode,
             Description = request.Description?.Trim(),
             Address = request.Address.Trim(),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             AreaId = request.AreaId,
             ContactPerson = request.ContactPerson?.Trim(),
             ContactNumber = request.ContactNumber?.Trim(),
@@ -103,6 +105,8 @@ public class WarehouseService : IWarehouseService
         warehouse.WarehouseCode = warehouseCode;
         warehouse.Description = request.Description?.Trim();
         warehouse.Address = request.Address.Trim();
+        warehouse.Latitude = request.Latitude;
+        warehouse.Longitude = request.Longitude;
         warehouse.AreaId = request.AreaId;
         warehouse.ContactPerson = request.ContactPerson?.Trim();
         warehouse.ContactNumber = request.ContactNumber?.Trim();
@@ -134,6 +138,8 @@ public class WarehouseService : IWarehouseService
             WarehouseCode = warehouse.WarehouseCode,
             Description = warehouse.Description,
             Address = warehouse.Address,
+            Latitude = warehouse.Latitude,
+            Longitude = warehouse.Longitude,
             AreaId = warehouse.AreaId,
             AreaName = warehouse.Area.AreaName,
             ContactPerson = warehouse.ContactPerson,

@@ -9,6 +9,30 @@
 
 import { TRANSLATIONS } from './data/translations.js';
 import {
+  isValidLatitude,
+  isValidLongitude,
+  parseCoordinates,
+  toLngLatArray,
+  computeBounds,
+} from './shared/maps/utils/coordinateUtils.js';
+import {
+  filterMapItems,
+  mapItemsToGeoJson,
+  buildRouteGeoJson,
+} from './shared/maps/utils/geoJsonUtils.js';
+import {
+  adaptCrisisToMapItem,
+  adaptShelterToMapItem,
+  adaptOrganizationToMapItem,
+  adaptCitizenRequestToMapItem,
+  adaptWarehouseToMapItem,
+  adaptVolunteerToMapItem,
+  adaptAiRecommendationToMapItem,
+  adaptCollectionToMapItems,
+} from './shared/maps/services/mapDataAdapter.js';
+import { getMapConfiguration } from './shared/maps/services/mapConfig.js';
+import { createRoutingProvider } from './shared/maps/services/mapProvider.js';
+import {
   mapCrisisFromApi,
   mapCrisisCreateToApi,
   mapRequestFromApi,
@@ -641,6 +665,230 @@ async function runTests() {
       }
     }
   }
+
+  console.log('\n📋 [Test 5] Unified Interactive Mapping System (Coordinates, GeoJSON, Adapters, Config, Routing)...');
+
+  // 5.1 Coordinate validation & [lng, lat] order
+  assert(isValidLatitude(6.9271) === true && isValidLatitude(95) === false, 'isValidLatitude enforces [-90, 90]');
+  assert(isValidLongitude(79.8612) === true && isValidLongitude(-181) === false, 'isValidLongitude enforces [-180, 180]');
+  assert(parseCoordinates(null, 79.86) === null, 'parseCoordinates rejects null latitude');
+  assert(parseCoordinates(0, 0) === null, 'parseCoordinates rejects (0, 0) placeholder by default');
+  const parsedColombo = parseCoordinates('6.9271', '79.8612');
+  assert(
+    parsedColombo && parsedColombo.latitude === 6.9271 && parsedColombo.longitude === 79.8612,
+    'parseCoordinates parses valid numeric strings'
+  );
+  const lngLat = toLngLatArray(6.9271, 79.8612);
+  assert(
+    Array.isArray(lngLat) && lngLat[0] === 79.8612 && lngLat[1] === 6.9271,
+    'toLngLatArray enforces GeoJSON [lng, lat] coordinate order'
+  );
+  const bounds = computeBounds([
+    { latitude: 6.9271, longitude: 79.8612 },
+    { latitude: 7.2906, longitude: 80.6337 },
+  ]);
+  assert(
+    bounds && bounds[0][0] === 79.8612 && bounds[0][1] === 6.9271 && bounds[1][0] === 80.6337 && bounds[1][1] === 7.2906,
+    'computeBounds returns [[minLng, minLat], [maxLng, maxLat]]'
+  );
+
+  // 5.2 DTO adapters & missing coordinate counting
+  const adaptedCrisis = adaptCrisisToMapItem({
+    id: 'C-1',
+    crisisName: 'Kelani Flood',
+    severity: 'Critical',
+    status: 'Active',
+    location: { districtName: 'Colombo', latitude: 6.9271, longitude: 79.8612 },
+  });
+  assert(
+    adaptedCrisis && adaptedCrisis.id === 'crisis-C-1' && adaptedCrisis.type === 'crisis' && adaptedCrisis.longitude === 79.8612,
+    'adaptCrisisToMapItem produces unified map item'
+  );
+  assert(
+    adaptCrisisToMapItem({ id: 'C-2', crisisName: 'No Coords', location: { districtName: 'Galle' } }) === null,
+    'adaptCrisisToMapItem returns null when coordinates are missing (never invents coordinates)'
+  );
+
+  const adaptedShelter = adaptShelterToMapItem({
+    id: 'S-1',
+    name: 'Town Hall Shelter',
+    district: 'Colombo',
+    capacity: 200,
+    currentOccupancy: 120,
+    coordinates: { lat: 6.915, lng: 79.863 },
+  });
+  assert(
+    adaptedShelter && adaptedShelter.type === 'shelter' && adaptedShelter.properties.availableCapacity === 80,
+    'adaptShelterToMapItem computes availableCapacity and normalizes coordinates'
+  );
+
+  const adaptedOrg = adaptOrganizationToMapItem({
+    organizationId: 5,
+    name: 'Relief Lanka',
+    status: 'Active',
+    latitude: 7.2906,
+    longitude: 80.6337,
+  });
+  assert(adaptedOrg && adaptedOrg.type === 'organization', 'adaptOrganizationToMapItem adapts valid organization coordinates');
+
+  const adaptedReq = adaptCitizenRequestToMapItem({
+    requestId: 88,
+    requestType: 'Food',
+    urgencyLevel: 'Critical',
+    status: 'Pending',
+    latitude: 6.5854,
+    longitude: 79.9607,
+  });
+  assert(adaptedReq && adaptedReq.type === 'citizen_request', 'adaptCitizenRequestToMapItem adapts citizen request coordinates');
+
+  const adaptedWh = adaptWarehouseToMapItem({
+    warehouseId: 9,
+    warehouseName: 'Central Depot',
+    latitude: 7.4863,
+    longitude: 80.3623,
+    isActive: true,
+  });
+  assert(adaptedWh && adaptedWh.type === 'warehouse', 'adaptWarehouseToMapItem adapts warehouse coordinates');
+
+  assert(
+    adaptVolunteerToMapItem({ volunteerId: 1, fullName: 'Hidden', latitude: 6.9, longitude: 79.8 }, { allowExact: false }) === null,
+    'adaptVolunteerToMapItem enforces privacy gate when allowExact is false'
+  );
+  assert(
+    adaptVolunteerToMapItem({ volunteerId: 1, fullName: 'Responder A', latitude: 6.9, longitude: 79.8 }, { allowExact: true }) !== null,
+    'adaptVolunteerToMapItem allows authorized volunteer coordinates when allowExact is true'
+  );
+
+  const adaptedAi = adaptAiRecommendationToMapItem({
+    recommendationId: 12,
+    citizenRequestId: 88,
+    suggestedCategory: 'Medicine',
+    suggestedUrgencyLevel: 'Critical',
+    reviewStatus: 'PendingReview',
+    latitude: 6.5854,
+    longitude: 79.9607,
+  });
+  assert(
+    adaptedAi && adaptedAi.properties.isAdvisoryRecommendation === true,
+    'adaptAiRecommendationToMapItem marks AI recommendations as advisory'
+  );
+
+  const collectionResult = adaptCollectionToMapItems(
+    [
+      { id: '1', crisisName: 'Valid', location: { latitude: 6.9, longitude: 79.8 } },
+      { id: '2', crisisName: 'Missing' },
+    ],
+    adaptCrisisToMapItem
+  );
+  assert(
+    collectionResult.items.length === 1 && collectionResult.missingCoordinatesCount === 1,
+    'adaptCollectionToMapItems excludes missing-coordinate records and reports missingCoordinatesCount'
+  );
+
+  // 5.3 Filtering & GeoJSON conversion
+  const geoJson = mapItemsToGeoJson([adaptedCrisis, adaptedShelter]);
+  assert(
+    geoJson.type === 'FeatureCollection' && geoJson.features.length === 2 && geoJson.features[0].geometry.coordinates[0] === 79.8612,
+    'mapItemsToGeoJson builds FeatureCollection with [lng, lat] coordinates'
+  );
+  const filteredOnlyCrises = filterMapItems([adaptedCrisis, adaptedShelter], {
+    visibleTypes: new Set(['crisis']),
+    searchQuery: 'kelani',
+  });
+  assert(filteredOnlyCrises.length === 1 && filteredOnlyCrises[0].id === 'crisis-C-1', 'filterMapItems filters by layer type and search query');
+
+  // 5.4 Map config & routing safety
+  const unconfiguredMap = getMapConfiguration();
+  assert(
+    unconfiguredMap.isConfigured === false && typeof unconfiguredMap.configurationError === 'string' && unconfiguredMap.configurationError.length > 0,
+    'getMapConfiguration reports unconfigured state cleanly without fake fallback'
+  );
+
+  const unconfiguredRouter = createRoutingProvider();
+  const routeCheck = await unconfiguredRouter.getRoute({
+    origin: { latitude: 6.92, longitude: 79.86 },
+    destination: { latitude: 7.29, longitude: 80.63 },
+  });
+  assert(
+    routeCheck.supported === false && routeCheck.reason.includes('VITE_ROUTING_API_URL'),
+    'createRoutingProvider refuses to fake a straight-line route as a road route'
+  );
+  assert(buildRouteGeoJson(routeCheck) === null, 'buildRouteGeoJson returns null when no road route exists');
+
+  // 5.5 Backend-to-Frontend Coordinate DTO Mapper Round-Trips
+  const crisisWithCoords = mapCrisisFromApi({
+    crisisId: 202,
+    crisisName: 'Kalu Ganga Flood',
+    crisisType: 'Flood',
+    severityLevel: 'High',
+    status: 'Active',
+    locationName: 'Kalutara',
+    latitude: 6.5854,
+    longitude: 79.9607,
+  });
+  assert(
+    crisisWithCoords.latitude === 6.5854 && crisisWithCoords.location.longitude === 79.9607,
+    'mapCrisisFromApi preserves persisted crisis latitude/longitude'
+  );
+  const crisisCreateWithCoords = mapCrisisCreateToApi(crisisWithCoords);
+  assert(
+    crisisCreateWithCoords.latitude === 6.5854 && crisisCreateWithCoords.locationName === 'Kalutara',
+    'mapCrisisCreateToApi forwards latitude/longitude/locationName to backend'
+  );
+
+  const orgWithCoords = mapOrganizationFromApi({
+    organizationId: 10,
+    organizationName: 'Colombo Relief',
+    organizationType: 'NGO',
+    isActive: true,
+    latitude: 6.9271,
+    longitude: 79.8612,
+  });
+  assert(
+    orgWithCoords.latitude === 6.9271 && orgWithCoords.longitude === 79.8612,
+    'mapOrganizationFromApi preserves organization coordinates'
+  );
+
+  const whWithCoords = mapWarehouseFromApi({
+    warehouseId: 11,
+    warehouseName: 'Kandy Depot',
+    warehouseCode: 'WH-KDY',
+    address: 'Peradeniya Rd',
+    areaId: 4,
+    latitude: 7.2906,
+    longitude: 80.6337,
+  });
+  assert(
+    whWithCoords.latitude === 7.2906 && whWithCoords.longitude === 80.6337,
+    'mapWarehouseFromApi preserves warehouse coordinates'
+  );
+
+  const allocWithCoords = mapResourceAllocationFromApi({
+    allocationId: 12,
+    inventoryId: 1,
+    warehouseName: 'Kandy Depot',
+    warehouseLatitude: 7.2906,
+    warehouseLongitude: 80.6337,
+    crisisId: 202,
+    crisisName: 'Kalu Ganga Flood',
+    crisisLatitude: 6.5854,
+    crisisLongitude: 79.9607,
+  });
+  assert(
+    allocWithCoords.warehouseLatitude === 7.2906 && allocWithCoords.crisisLatitude === 6.5854,
+    'mapResourceAllocationFromApi preserves warehouse and crisis endpoint coordinates'
+  );
+
+  const aiWithCoords = mapAiRecommendationFromApi({
+    recommendationId: 13,
+    citizenRequestId: 88,
+    latitude: 6.5854,
+    longitude: 79.9607,
+  });
+  assert(
+    aiWithCoords.latitude === 6.5854 && aiWithCoords.longitude === 79.9607,
+    'mapAiRecommendationFromApi preserves citizen request coordinates for AI advisory map'
+  );
 
   console.log('\n=====================================================');
   console.log(`📊 TEST SUITE SUMMARY: ${passed} PASSED, ${failed} FAILED, ${skipped} SKIPPED`);

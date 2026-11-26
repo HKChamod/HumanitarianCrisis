@@ -9,6 +9,8 @@ public class ShelterResponse
     public int AreaId { get; set; }
     public string AreaName { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
     public int Capacity { get; set; }
     public int CurrentOccupancy { get; set; }
     public int AvailableCapacity => Math.Max(0, Capacity - CurrentOccupancy);
@@ -28,6 +30,10 @@ public class CreateShelterRequest
     public int AreaId { get; set; }
     [Required, MaxLength(500)]
     public string Address { get; set; } = string.Empty;
+    [Range(-90, 90)]
+    public decimal? Latitude { get; set; }
+    [Range(-180, 180)]
+    public decimal? Longitude { get; set; }
     [Range(1, 100000)]
     public int Capacity { get; set; }
     [Range(0, 100000)]
@@ -49,6 +55,10 @@ public class UpdateShelterRequest
     public int AreaId { get; set; }
     [Required, MaxLength(500)]
     public string Address { get; set; } = string.Empty;
+    [Range(-90, 90)]
+    public decimal? Latitude { get; set; }
+    [Range(-180, 180)]
+    public decimal? Longitude { get; set; }
     [Range(1, 100000)]
     public int Capacity { get; set; }
     [Range(0, 100000)]

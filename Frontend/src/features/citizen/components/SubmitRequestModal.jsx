@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ShieldCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, ShieldCheck, AlertCircle, RefreshCw, MapPin } from 'lucide-react';
 import { PROVINCES, DISTRICTS } from '../../../data/sriLankaAreas';
 import { citizenApi } from '../../../services/api/citizenApi';
 import { USE_MOCK_API } from '../../../services/api/apiConfig';
+import { MapView, MAP_ENTITY_TYPES } from '../../../shared/maps';
 
 const CATEGORIES = [
   'Food',
@@ -33,6 +34,8 @@ export function SubmitRequestModal({
   const [consent, setConsent] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [pickedCoords, setPickedCoords] = useState(null);
 
   // Live backend Geographic Areas state
   const [liveAreas, setLiveAreas] = useState([]);
@@ -126,11 +129,15 @@ export function SubmitRequestModal({
             addressLine: addressLine.trim(),
             urgencyLevel,
             description: description.trim(),
+            latitude: pickedCoords?.latitude,
+            longitude: pickedCoords?.longitude,
           };
 
       await onSubmitSuccess(payload);
       setDescription('');
       setAddressLine('');
+      setPickedCoords(null);
+      setShowMapPicker(false);
       onClose();
     } catch (err) {
       setError(err?.detail || err?.message || 'Failed to submit request. Please try again.');
@@ -367,6 +374,49 @@ export function SubmitRequestModal({
                 onChange={(e) => setAddressLine(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="citizen-form-group">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowMapPicker((prev) => !prev)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:underline"
+                >
+                  <MapPin size={14} />
+                  {showMapPicker ? 'Hide Map Coordinate Picker' : 'Pin Exact Coordinates on Map (Optional)'}
+                </button>
+                {pickedCoords && (
+                  <span className="text-[11px] font-mono text-[#475569]">
+                    {pickedCoords.latitude.toFixed(5)}, {pickedCoords.longitude.toFixed(5)}
+                  </span>
+                )}
+              </div>
+              {showMapPicker && (
+                <MapView
+                  items={
+                    pickedCoords
+                      ? [
+                          {
+                            id: 'picked-request-location',
+                            type: MAP_ENTITY_TYPES.CITIZEN_REQUEST,
+                            title: 'Selected Location',
+                            latitude: pickedCoords.latitude,
+                            longitude: pickedCoords.longitude,
+                            status: urgencyLevel,
+                            properties: {},
+                          },
+                        ]
+                      : []
+                  }
+                  onMapClick={(coords) => setPickedCoords(coords)}
+                  heightClass="h-[220px]"
+                  showSearch={false}
+                  showLayerControl={false}
+                  showLegend={false}
+                  emptyMessage="Click anywhere on the map to pin your exact location."
+                />
+              )}
             </div>
 
             <div className="citizen-form-group">

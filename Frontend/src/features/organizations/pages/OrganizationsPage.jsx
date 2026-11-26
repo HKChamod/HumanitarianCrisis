@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCircle2, Eye, Mail, Phone, Plus, Shield, UserPlus, Users, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Eye, Mail, Map as MapIcon, Phone, Plus, Shield, UserPlus, Users, XCircle } from 'lucide-react';
 import { organizationService, permissionService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DataTable } from '../../../components/tables/DataTable';
@@ -7,6 +7,13 @@ import { FilterPanel, SearchBar } from '../../../components/forms/FormControls';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { ConfirmationDialog, Drawer, Modal } from '../../../components/common/Modal';
 import { PermissionGate } from '../../../app/providers/AuthProvider';
+import {
+  LocationPickerField,
+  MAP_ENTITY_TYPES,
+  MapView,
+  adaptCollectionToMapItems,
+  adaptOrganizationToMapItem,
+} from '../../../shared/maps';
 
 const ORG_ADMIN_DEFAULT_PERMISSION_NAMES = [
   'Organizations.View',
@@ -57,6 +64,7 @@ export function OrganizationsPage({ mode = 'all' }) {
   const [creatingRole, setCreatingRole] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: '',
     type: 'NGO',
@@ -64,6 +72,8 @@ export function OrganizationsPage({ mode = 'all' }) {
     contactEmail: '',
     contactPhone: '',
     district: '',
+    latitude: null,
+    longitude: null,
     description: '',
   });
   const [createError, setCreateError] = useState('');
@@ -493,7 +503,43 @@ export function OrganizationsPage({ mode = 'all' }) {
             </select>
           </>
         )}
+        {mode !== 'memberships' && (
+          <button
+            type="button"
+            onClick={() => setShowMap((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+              showMap
+                ? 'bg-[#0F766E] text-white border-[#0F766E]'
+                : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+            }`}
+          >
+            <MapIcon className="w-3.5 h-3.5" />
+            {showMap ? 'Hide Map' : 'Map Overview'}
+          </button>
+        )}
       </FilterPanel>
+
+      {showMap && mode !== 'memberships' && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3">
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filteredOrgs, adaptOrganizationToMapItem);
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                onSelectItem={(item) => {
+                  const found = filteredOrgs.find((o) => `org-${o.id}` === item?.id);
+                  if (found) setSelectedOrg(found);
+                }}
+                heightClass="h-[360px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="No organizations in the current view have valid coordinates."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       {mode === 'memberships' ? (
         <DataTable data={filteredMemberships} columns={membershipColumns} loading={loading} error={error} onRetry={loadData} />
@@ -953,6 +999,17 @@ export function OrganizationsPage({ mode = 'all' }) {
               className="w-full px-3 py-2 border border-[#CBD5E1] rounded-lg"
             />
           </div>
+          <LocationPickerField
+            label="Organization Headquarters Coordinates (Optional)"
+            latitude={createForm.latitude}
+            longitude={createForm.longitude}
+            onChange={({ latitude, longitude }) => setCreateForm((p) => ({ ...p, latitude, longitude }))}
+            onAddressSuggested={(addr) =>
+              setCreateForm((p) => ({ ...p, district: p.district || addr }))
+            }
+            entityType={MAP_ENTITY_TYPES.ORGANIZATION}
+            heightClass="h-[200px]"
+          />
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"

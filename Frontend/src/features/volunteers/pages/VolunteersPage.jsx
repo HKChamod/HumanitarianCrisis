@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, UserCheck } from 'lucide-react';
+import { Map as MapIcon, Plus, ShieldCheck, UserCheck } from 'lucide-react';
 import { crisisService, volunteerService } from '../../../services/api/adminServices';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { DataTable } from '../../../components/tables/DataTable';
 import { FilterPanel, FormField, SearchBar } from '../../../components/forms/FormControls';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Modal } from '../../../components/common/Modal';
+import { MapView, adaptCollectionToMapItems, adaptVolunteerToMapItem } from '../../../shared/maps';
 
 export function VolunteersPage({ mode = 'volunteers' }) {
   const [volunteers, setVolunteers] = useState([]);
@@ -16,6 +17,7 @@ export function VolunteersPage({ mode = 'volunteers' }) {
 
   const [search, setSearch] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('');
+  const [showMap, setShowMap] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
   const [volunteerId, setVolunteerId] = useState('');
@@ -210,7 +212,45 @@ export function VolunteersPage({ mode = 'volunteers' }) {
             <option value="Unavailable">Unavailable</option>
           </select>
         )}
+        <button
+          type="button"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border ${
+            showMap
+              ? 'bg-[#0F766E] text-white border-[#0F766E]'
+              : 'bg-white text-[#0F172A] border-[#E2E8F0] hover:bg-slate-50'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          {showMap ? 'Hide Map' : 'Privacy-Safe Map'}
+        </button>
       </FilterPanel>
+
+      {showMap && (
+        <div className="mb-5 bg-white border border-[#E2E8F0] rounded-xl p-3 space-y-2.5">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-50 border border-teal-200 text-xs text-teal-900">
+            <ShieldCheck className="w-4 h-4 shrink-0 text-[#0F766E]" />
+            <span>
+              Privacy Protection Active: Exact personal volunteer GPS coordinates are withheld. Only authorized area-level summaries are displayed.
+            </span>
+          </div>
+          {(() => {
+            const mapped = adaptCollectionToMapItems(filteredVolunteers, (v) =>
+              adaptVolunteerToMapItem(v, { allowExact: false }),
+            );
+            return (
+              <MapView
+                items={mapped.items}
+                missingCoordinatesCount={mapped.missingCoordinatesCount}
+                heightClass="h-[320px]"
+                showSearch={false}
+                showLayerControl={false}
+                emptyMessage="Exact volunteer locations are protected and not plotted."
+              />
+            );
+          })()}
+        </div>
+      )}
 
       {mode === 'assignments' ? (
         <DataTable data={filteredAssignments} columns={assignmentColumns} loading={loading} error={error} onRetry={loadData} />

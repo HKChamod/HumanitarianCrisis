@@ -28,4 +28,10 @@ public class CreateOrganizationRequest
 
     [StringLength(500)]
     public string? Address { get; set; }
+
+    [Range(-90, 90)]
+    public decimal? Latitude { get; set; }
+
+    [Range(-180, 180)]
+    public decimal? Longitude { get; set; }
 }

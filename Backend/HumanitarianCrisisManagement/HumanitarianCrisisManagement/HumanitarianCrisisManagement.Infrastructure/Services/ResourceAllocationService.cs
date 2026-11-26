@@ -117,6 +117,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .FirstOrDefaultAsync(a => a.AllocationId == id);
@@ -130,13 +131,19 @@ public class ResourceAllocationService : IResourceAllocationService
 
             InventoryId = allocation.InventoryId,
             WarehouseName = allocation.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = allocation.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = allocation.Inventory.Warehouse.Longitude,
 
             ResourceId = allocation.Inventory.ResourceId,
             ResourceName = allocation.Inventory.Resource.ResourceName,
 
             CrisisId = allocation.CrisisId,
             CrisisName = allocation.Crisis.CrisisName,
+            CrisisLatitude = allocation.Crisis.Latitude,
+            CrisisLongitude = allocation.Crisis.Longitude,
             CitizenRequestId = allocation.CitizenRequestId,
+            CitizenRequestLatitude = allocation.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = allocation.CitizenRequest?.Longitude,
 
             QuantityRequested = allocation.QuantityRequested,
             QuantityAllocated = allocation.QuantityAllocated,
@@ -166,6 +173,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .OrderByDescending(a => a.CreatedAt)
@@ -176,11 +184,17 @@ public class ResourceAllocationService : IResourceAllocationService
             AllocationId = a.AllocationId,
             InventoryId = a.InventoryId,
             WarehouseName = a.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = a.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = a.Inventory.Warehouse.Longitude,
             ResourceId = a.Inventory.ResourceId,
             ResourceName = a.Inventory.Resource.ResourceName,
             CrisisId = a.CrisisId,
             CrisisName = a.Crisis.CrisisName,
+            CrisisLatitude = a.Crisis.Latitude,
+            CrisisLongitude = a.Crisis.Longitude,
             CitizenRequestId = a.CitizenRequestId,
+            CitizenRequestLatitude = a.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = a.CitizenRequest?.Longitude,
             QuantityRequested = a.QuantityRequested,
             QuantityAllocated = a.QuantityAllocated,
             Status = a.Status.ToString(),
@@ -206,6 +220,7 @@ public class ResourceAllocationService : IResourceAllocationService
             .Include(a => a.Inventory)
                 .ThenInclude(i => i.Resource)
             .Include(a => a.Crisis)
+            .Include(a => a.CitizenRequest)
             .Include(a => a.RequestedByUser)
             .Include(a => a.ApprovedByUser)
             .OrderByDescending(a => a.CreatedAt)
@@ -216,11 +231,17 @@ public class ResourceAllocationService : IResourceAllocationService
             AllocationId = a.AllocationId,
             InventoryId = a.InventoryId,
             WarehouseName = a.Inventory.Warehouse.WarehouseName,
+            WarehouseLatitude = a.Inventory.Warehouse.Latitude,
+            WarehouseLongitude = a.Inventory.Warehouse.Longitude,
             ResourceId = a.Inventory.ResourceId,
             ResourceName = a.Inventory.Resource.ResourceName,
             CrisisId = a.CrisisId,
             CrisisName = a.Crisis.CrisisName,
+            CrisisLatitude = a.Crisis.Latitude,
+            CrisisLongitude = a.Crisis.Longitude,
             CitizenRequestId = a.CitizenRequestId,
+            CitizenRequestLatitude = a.CitizenRequest?.Latitude,
+            CitizenRequestLongitude = a.CitizenRequest?.Longitude,
             QuantityRequested = a.QuantityRequested,
             QuantityAllocated = a.QuantityAllocated,
             Status = a.Status.ToString(),

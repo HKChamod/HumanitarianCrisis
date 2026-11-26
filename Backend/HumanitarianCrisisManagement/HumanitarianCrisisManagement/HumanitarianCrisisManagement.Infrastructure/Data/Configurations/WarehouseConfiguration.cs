@@ -25,6 +25,12 @@ public class WarehouseConfiguration : IEntityTypeConfiguration<Warehouse>
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(w => w.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(w => w.Longitude)
+            .HasPrecision(9, 6);
+
         builder.Property(w => w.ContactPerson)
             .HasMaxLength(150);
 

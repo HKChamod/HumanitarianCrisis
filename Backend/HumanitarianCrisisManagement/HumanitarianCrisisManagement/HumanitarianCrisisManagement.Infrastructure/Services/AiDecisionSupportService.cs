@@ -376,6 +376,8 @@ public class AiDecisionSupportService : IAiDecisionSupportService
             CurrentUrgencyLevel = item.CitizenRequest.UrgencyLevel,
             CurrentRequestStatus = item.CitizenRequest.Status,
             AreaName = item.CitizenRequest.Area.AreaName,
+            Latitude = item.CitizenRequest.Latitude,
+            Longitude = item.CitizenRequest.Longitude,
             CrisisId = item.CrisisId,
             CrisisName = item.CrisisEvent?.CrisisName,
             SuggestedCategory = item.SuggestedCategory,

@@ -33,6 +33,12 @@ public class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
         builder.Property(o => o.Address)
             .HasMaxLength(500);
 
+        builder.Property(o => o.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(o => o.Longitude)
+            .HasPrecision(9, 6);
+
         builder.Property(o => o.IsActive)
             .IsRequired()
             .HasDefaultValue(true);

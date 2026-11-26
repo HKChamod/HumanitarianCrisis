@@ -27,6 +27,8 @@ public class AreaService : IAreaService
             AreaType = request.AreaType.Trim(),
             ParentAreaId = request.ParentAreaId,
             Code = NormalizeCode(request.Code),
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
             IsActive = true
         };
 
@@ -51,6 +53,8 @@ public class AreaService : IAreaService
                     ? a.ParentArea.AreaName
                     : null,
                 Code = a.Code,
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
                 IsActive = a.IsActive
             })
             .ToListAsync();
@@ -71,6 +75,8 @@ public class AreaService : IAreaService
                     ? a.ParentArea.AreaName
                     : null,
                 Code = a.Code,
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
                 IsActive = a.IsActive
             })
             .FirstOrDefaultAsync();
@@ -94,6 +100,8 @@ public class AreaService : IAreaService
                 AreaName = a.AreaName,
                 AreaType = a.AreaType,
                 Code = a.Code,
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
                 IsActive = a.IsActive
             });
 
@@ -137,6 +145,8 @@ public class AreaService : IAreaService
         area.AreaType = request.AreaType.Trim();
         area.ParentAreaId = request.ParentAreaId;
         area.Code = NormalizeCode(request.Code);
+        area.Latitude = request.Latitude;
+        area.Longitude = request.Longitude;
         area.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync();
