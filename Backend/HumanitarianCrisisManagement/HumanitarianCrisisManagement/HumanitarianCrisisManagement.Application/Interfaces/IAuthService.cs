@@ -11,4 +11,6 @@ public interface IAuthService
     Task<CurrentUserResponse?> GetCurrentUserAsync(int userId);
 
     Task ChangePasswordAsync(int userId, ChangePasswordRequest request);
+
+    Task RequestPasswordResetAsync(string email);
 }

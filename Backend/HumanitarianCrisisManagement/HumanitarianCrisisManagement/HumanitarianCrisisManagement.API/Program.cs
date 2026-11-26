@@ -370,8 +370,7 @@ static Task WriteSafeHealthResponse(HttpContext context, HealthReport report)
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
-    Predicate = _ => false,
-    ResponseWriter = WriteSafeHealthResponse
+    Predicate = _ => false
 });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {

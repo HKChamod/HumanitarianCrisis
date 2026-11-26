@@ -338,11 +338,30 @@ export const publicApi = {
   },
 
   /**
-   * POST /public/volunteer-applications
+   * POST /Volunteers
    */
   async submitVolunteerApplication(payload) {
     if (!USE_MOCK) {
-      return httpClient.post('/public/volunteer-applications', payload);
+      const skillsText = Array.isArray(payload.selectedSkills) && payload.selectedSkills.length > 0
+        ? payload.selectedSkills.join(', ')
+        : payload.skills || 'General Relief Support';
+      const availability = payload.availability === 'Full-Time'
+        ? 'Available'
+        : 'Available';
+      const reqPayload = {
+        fullName: (payload.fullName || '').trim(),
+        email: (payload.email || '').trim() || `volunteer.${Date.now()}@hcms.public.local`,
+        phoneNumber: (payload.mobileNumber || payload.phoneNumber || '').trim() || null,
+        skills: skillsText,
+        availabilityStatus: availability,
+      };
+      const res = await httpClient.post('/Volunteers', reqPayload);
+      return {
+        data: {
+          ...res,
+          referenceNumber: `VOL-2026-${String(res?.volunteerId || 0).padStart(4, '0')}`,
+        },
+      };
     }
     await delay(400);
     const applications = getLocal('hcms_volunteers', []);
@@ -359,11 +378,31 @@ export const publicApi = {
   },
 
   /**
-   * GET /donation-campaigns
+   * GET /CrisisEvents mapped as active relief campaigns
    */
   async getDonationCampaigns() {
     if (!USE_MOCK) {
-      return httpClient.get('/donation-campaigns');
+      try {
+        const res = await httpClient.get('/CrisisEvents');
+        const list = Array.isArray(res) ? res : [];
+        const campaigns = list
+          .filter((c) => c.status === 'Active' || c.status === 'Reported')
+          .map((c) => ({
+            id: `camp-${c.crisisId}`,
+            crisisId: c.crisisId,
+            title: `${c.crisisName} Relief Fund`,
+            districtName: c.locationName || 'Sri Lanka',
+            category: c.crisisType || 'Emergency Relief',
+            urgency: c.severityLevel || 'High',
+            description: c.description || 'Verified active crisis relief campaign.',
+            targetAmountLkr: 5000000,
+            raisedAmountLkr: 0,
+            status: c.status,
+          }));
+        return { data: campaigns };
+      } catch {
+        return { data: [] };
+      }
     }
     await delay();
     return { data: INITIAL_CAMPAIGNS };

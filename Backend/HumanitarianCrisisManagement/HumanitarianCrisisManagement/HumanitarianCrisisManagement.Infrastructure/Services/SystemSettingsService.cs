@@ -54,9 +54,9 @@ public class SystemSettingsService : ISystemSettingsService
         {
             var env = _configuration["ASPNETCORE_ENVIRONMENT"]
                 ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-                ?? "Production";
-            return !string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(env, "Testing", StringComparison.OrdinalIgnoreCase);
+                ?? string.Empty;
+            return string.Equals(env, "Production", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(env, "Staging", StringComparison.OrdinalIgnoreCase);
         }
     }
 
