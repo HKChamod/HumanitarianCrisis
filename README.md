@@ -150,7 +150,7 @@ All versions below are verified from `.csproj` and `Frontend/package.json`:
 
 ## 5. Database Design
 
-`ApplicationDbContext` defines **22 DbSets** backed by **14 EF Core migrations** in `Infrastructure/Data/Migrations/` (latest migration: `20261123175324_AddOperationalModules`).
+`ApplicationDbContext` defines **22 DbSets** backed by **17 EF Core migrations** in `Infrastructure/Data/Migrations/` (latest migration: `20261126130601_AddOrganizationOperationsAndSettings`).
 
 ### Entity Implementation & Migration Status
 
@@ -162,8 +162,6 @@ All versions below are verified from `.csproj` and `Frontend/package.json`:
 | **Inventory & Allocations** | `Resource`, `Warehouse`, `WarehouseInventory`, `InventoryTransaction`, `ResourceAllocation` | Yes | Yes |
 | **AI Decision Support** | `AiRecommendation` | Yes | Yes |
 | **Operational Modules** | `Shelter`, `ShelterPlacement`, `Volunteer`, `VolunteerAssignment`, `Donation`, `Notification`, `AuditLog` | Yes | Yes |
-
-*(Note: A separate legacy SSDT `.sqlproj` exists under `DataBase/`; runtime schema management is driven by EF Core migrations targeting `HumanitarianCrisisDB`.)*
 
 ### Simplified Entity Relationship Diagram
 
@@ -319,6 +317,7 @@ Store sensitive keys (`Jwt:Key`, `AiProvider:GroqApiKey`, `AiProvider:GeminiApiK
 ```env
 VITE_API_BASE_URL=http://localhost:5107/api
 VITE_USE_MOCK_API=false
+VITE_MAPTILER_KEY=YOUR_MAPTILER_API_KEY_HERE
 ```
 
 ---
@@ -350,7 +349,7 @@ VITE_USE_MOCK_API=false
   - **Unit & Provider Tests:** `AiTextPrivacySanitizerTests.cs`, `GeminiAiAnalysisProviderTests.cs`, `GroqAiAnalysisProviderTests.cs`, `OperationalModuleValidationTests.cs`
   - **Persistence Integration Tests (SQLite in-memory):** `AiRecommendationReviewPersistenceTests.cs`
   - **API E2E Integration Tests (`WebApplicationFactory` + SQLite in-memory):** `AiRecommendationApiIntegrationTests.cs`, `OperationalWorkflowIntegrationTests.cs`, `EndToEndHumanitarianWorkflowTests.cs`
-  - **Concurrency, Citizen Data Isolation & Organization Scoping Tests:** `ConcurrencyAndSecurityIsolationTests.cs` (isolated file-backed SQLite contention tests + opt-in SQL Server staging guard; see [DEPLOYMENT.md](DEPLOYMENT.md))
+  - **Concurrency, Citizen Data Isolation & Organization Scoping Tests:** `ConcurrencyAndSecurityIsolationTests.cs` (isolated file-backed SQLite contention tests + opt-in SQL Server staging guard)
   - **Opt-In Live AI Synthetic Harness:** `LiveGroqSyntheticValidationTests.cs` + `SyntheticGroqScenarios.cs` (opt-in; requires configured Groq key)
 
 ### Frontend Tests & Quality Scripts (`Frontend/`)
@@ -381,11 +380,9 @@ HumanitarianCrisis/
 │           ├── HumanitarianCrisisManagement.API/            # 19 Controllers, Authorization, GlobalExceptionHandler, Program.cs
 │           ├── HumanitarianCrisisManagement.Application/    # DTOs, Service & AI Interfaces, Options, Exceptions
 │           ├── HumanitarianCrisisManagement.Domain/         # 22 Entities, Domain Enums
-│           ├── HumanitarianCrisisManagement.Infrastructure/ # ApplicationDbContext, 14 Migrations, Services, AI Providers
+│           ├── HumanitarianCrisisManagement.Infrastructure/ # ApplicationDbContext, 17 Migrations, Services, AI Providers
 │           ├── HumanitarianCrisisManagement.Tests/          # xUnit Unit, Persistence, API & Workflow Integration Tests
 │           └── HumanitarianCrisisManagement.sln
-├── DataBase/
-│   └── HumanitarianCrisisDataBase/                          # Legacy SSDT SQL Server Database Project (.sqlproj)
 ├── Frontend/
 │   ├── src/
 │   │   ├── api/                                             # Public API helpers & optional mock data
@@ -400,9 +397,6 @@ HumanitarianCrisis/
 │   │   └── testE2eAuthenticated.mjs
 │   ├── .env.example
 │   └── package.json
-├── usabledox/                                               # API Integration & UI/UX Specifications
-├── DEPLOYMENT.md                                            # Staging & production deployment checklist
-├── FINAL_PROJECT_REPORT.md                                  # Academic project report with diagrams
 └── README.md
 ```
 
@@ -410,11 +404,11 @@ HumanitarianCrisis/
 
 ## 12. Current Development Status
 
-- **Completed:** Core `.NET 10` Clean Architecture backend (19 controllers, 22 entities, 14 EF Core migrations), JWT + permission-based RBAC, Groq & Gemini AI decision-support providers with human-in-the-loop review and privacy guardrails, transactional warehouse/inventory/allocation/shelter/volunteer workflows, audit logging, four live-wired React 19 portals, deployment documentation (`DEPLOYMENT.md`), and automated unit/persistence/API/workflow integration tests.
+- **Completed:** Core `.NET 10` Clean Architecture backend (19 controllers, 22 entities, 17 EF Core migrations), JWT + permission-based RBAC, Groq & Gemini AI decision-support providers with human-in-the-loop review and privacy guardrails, transactional warehouse/inventory/allocation/shelter/volunteer workflows, audit logging, four live-wired React 19 portals, and automated unit/persistence/API/workflow integration tests.
 - **Partially Completed:** Frontend `oxlint` passes with 0 errors while non-blocking unused-import/fast-refresh warnings remain; System Settings UI is intentionally read-only/informational in live mode; automated integration tests run against SQLite in-memory rather than a dedicated CI SQL Server instance.
 - **Planned / Not Implemented:** Live payment gateway integration, automated SMS/push notification providers, predictive demand forecasting, and CI-automated browser E2E testing.
 
-The system is currently suitable for **local demonstration and staging deployment** (see [DEPLOYMENT.md](DEPLOYMENT.md) for production hardening steps).
+The system is currently prepared for **local demonstration and academic evaluation**.
 
 ---
 
