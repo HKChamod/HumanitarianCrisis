@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, ChevronDown, LogOut, Menu, Search, ShieldCheck, User } from 'lucide-react';
+import { Bell, Building2, CheckCheck, ChevronDown, Globe, LayoutGrid, LogOut, Menu, Search, ShieldCheck, User, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Breadcrumbs } from './Breadcrumbs';
 import { useAuth } from '../../app/providers/AuthProvider';
@@ -11,9 +11,11 @@ export function TopNavbar({ onOpenMobileSidebar }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const notifRef = useRef(null);
+  const portalRef = useRef(null);
   const profileRef = useRef(null);
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export function TopNavbar({ onOpenMobileSidebar }) {
   useEffect(() => {
     const handleOutside = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+      if (portalRef.current && !portalRef.current.contains(e.target)) setPortalOpen(false);
       if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
     };
     document.addEventListener('mousedown', handleOutside);
@@ -151,6 +154,61 @@ export function TopNavbar({ onOpenMobileSidebar }) {
                   View all notifications
                 </Link>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Portal Switcher */}
+        <div className="relative" ref={portalRef}>
+          <button
+            type="button"
+            onClick={() => setPortalOpen((prev) => !prev)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E2E8F0] text-xs font-medium text-[#0F172A] hover:bg-slate-50 transition-colors"
+            title="Switch Portal"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-[#0F766E]" />
+            <span className="hidden sm:inline">Portals</span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#64748B]" />
+          </button>
+
+          {portalOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E2E8F0] rounded-xl shadow-lg overflow-hidden z-40 p-1.5">
+              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">
+                Switch HCMS Portal
+              </div>
+              <Link
+                to="/"
+                onClick={() => setPortalOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs text-[#0F172A] hover:bg-slate-50 rounded-lg"
+              >
+                <Globe className="w-3.5 h-3.5 text-[#0F766E]" />
+                <div>
+                  <div className="font-medium">Public Portal</div>
+                  <div className="text-[10px] text-[#64748B]">Crises, Map &amp; Guest Help</div>
+                </div>
+              </Link>
+              <Link
+                to="/citizen"
+                onClick={() => setPortalOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs text-[#0F172A] hover:bg-slate-50 rounded-lg"
+              >
+                <Users className="w-3.5 h-3.5 text-[#0F766E]" />
+                <div>
+                  <div className="font-medium">Citizen Portal</div>
+                  <div className="text-[10px] text-[#64748B]">My Requests &amp; Shelters</div>
+                </div>
+              </Link>
+              <Link
+                to="/organization"
+                onClick={() => setPortalOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-xs text-[#0F172A] hover:bg-slate-50 rounded-lg"
+              >
+                <Building2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                <div>
+                  <div className="font-medium">Organization Portal</div>
+                  <div className="text-[10px] text-[#64748B]">Teams, Areas &amp; Logistics</div>
+                </div>
+              </Link>
             </div>
           )}
         </div>
